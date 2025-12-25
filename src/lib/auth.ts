@@ -289,6 +289,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
               name: user.name!,
               password: randomPassword,
               type: 'Google',
+              createdAt: new Date(), // Important for trial period calculation
               emailVerifiedAt: new Date(),
               balanceGenerateProduct: trialPlan?.limitGenerateProduct ?? 0,
               balanceVideoGeneration: trialPlan?.limitVideoGeneration ?? 0,
@@ -393,7 +394,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
               }
             } else {
               // Trial or expired - check if within trial period
-              const trialHours = dbUser.utmSource === 'Marcuus' ? 168 : 119 // 7 days vs 5 days
+              const trialHours = 168 // 7 days trial for all users
               const createdAtTime = dbUser.createdAt ? new Date(dbUser.createdAt).getTime() : Date.now()
               const hoursSinceCreation = Math.floor(
                 (Date.now() - createdAtTime) / (1000 * 60 * 60)

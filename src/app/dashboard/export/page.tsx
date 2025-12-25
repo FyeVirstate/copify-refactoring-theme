@@ -393,13 +393,13 @@ export default function ExportProductsPage() {
                     stroke="#E5E7EB"
                     strokeWidth="3"
                   />
-                  {/* Progress circle - show remaining/limit ratio */}
+                  {/* Progress circle - show used/limit ratio (empty when 0 used, full when limit reached) */}
                   <circle
                     cx="20"
                     cy="20"
                     r="16"
                     fill="none"
-                    stroke="#335CFF"
+                    stroke={credits && credits.remaining <= 0 && !credits.isUnlimited ? '#ef4444' : '#335CFF'}
                     strokeWidth="3"
                     strokeLinecap="round"
                     strokeDasharray={`${2 * Math.PI * 16}`}
@@ -407,15 +407,21 @@ export default function ExportProductsPage() {
                       credits 
                         ? credits.isUnlimited 
                           ? 0 
-                          : (2 * Math.PI * 16) - ((credits.remaining / Math.max(credits.limit, 1)) * 2 * Math.PI * 16)
+                          : (2 * Math.PI * 16) - ((credits.used / Math.max(credits.limit, 1)) * 2 * Math.PI * 16)
                         : 2 * Math.PI * 16
                     }
                     style={{ transition: 'stroke-dashoffset 0.3s ease' }}
                   />
                 </svg>
                 <div className="d-flex flex-column" style={{ lineHeight: 1.2 }}>
-                  <span className="fw-600" style={{ fontSize: '14px', color: '#0E121B' }}>
-                    {credits === null ? '...' : credits.isUnlimited ? '∞' : `${credits.remaining}/${credits.limit}`}
+                  <span 
+                    className="fw-600" 
+                    style={{ 
+                      fontSize: '14px', 
+                      color: credits && credits.remaining <= 0 && !credits.isUnlimited ? '#ef4444' : '#0E121B' 
+                    }}
+                  >
+                    {credits === null ? '...' : credits.isUnlimited ? '∞' : `${credits.used}/${credits.limit}`}
                   </span>
                   <span style={{ fontSize: '12px', color: '#6B7280' }}>Produits exportés</span>
                 </div>

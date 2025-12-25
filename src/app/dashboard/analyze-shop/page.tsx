@@ -374,7 +374,14 @@ export default function AnalyzeShopPage() {
                   </svg>
                 </div>
                 <div className="progress-details">
-                  <div className="progress-text fw-600" style={{ fontSize: '15px', lineHeight: 1.2 }}>
+                  <div 
+                    className="progress-text fw-600" 
+                    style={{ 
+                      fontSize: '15px', 
+                      lineHeight: 1.2,
+                      color: limits && limits.remaining === 0 ? '#ef4444' : undefined 
+                    }}
+                  >
                     {limits ? `${limits.used}/${limits.max}` : '0/0'}
                   </div>
                   <div className="progress-label text-muted" style={{ fontSize: '11px' }}>Boutiques suivies</div>

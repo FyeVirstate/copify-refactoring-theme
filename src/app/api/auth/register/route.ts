@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 12)
 
-    // Create user
+    // Create user with createdAt for trial period calculation
     const user = await prisma.user.create({
       data: {
         name,
@@ -70,6 +70,7 @@ export async function POST(request: NextRequest) {
         type: 'email',
         lang,
         utmSource,
+        createdAt: new Date(), // Important for trial period calculation
         balanceGenerateProduct: trialPlan?.limitGenerateProduct ?? 0,
         balanceVideoGeneration: trialPlan?.limitVideoGeneration ?? 0,
         balanceImageGeneration: trialPlan?.limitImageGeneration ?? 0,

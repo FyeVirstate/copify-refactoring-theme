@@ -9,6 +9,8 @@ interface UserStats {
     identifier: string;
     title: string;
     isOnTrial: boolean;
+    isExpired: boolean;
+    trialDaysRemaining: number;
     isPro: boolean;
     isBasic: boolean;
     isUnlimited: boolean;
@@ -50,15 +52,24 @@ interface DashboardHeaderProps {
 }
 
 // Calculate SVG circle progress
-function calculateProgress(used: number, limit: number): { dasharray: string; dashoffset: number; text: string } {
+function calculateProgress(used: number, limit: number): { 
+  dasharray: string; 
+  dashoffset: number; 
+  text: string;
+  isLimitReached: boolean;
+  color: string;
+} {
   const circumference = 2 * Math.PI * 12; // radius = 12
   const progress = limit > 0 ? Math.min(used / limit, 1) : 0;
   const dashoffset = circumference * (1 - progress);
+  const isLimitReached = limit > 0 && used >= limit;
   
   return {
     dasharray: `${circumference}`,
     dashoffset,
     text: `${used}/${limit}`,
+    isLimitReached,
+    color: isLimitReached ? '#ef4444' : '#0c6cfb', // Red when limit reached, blue otherwise
   };
 }
 
@@ -103,11 +114,10 @@ export default function DashboardHeader({
     }
   };
 
-  // Calculate shop progress
+  // Calculate progress for all stats
   const shopProgress = stats ? calculateProgress(stats.trackedShops.used, stats.trackedShops.limit) : null;
-
-  // Determine if user is on trial (hide stats for trial users based on Laravel logic)
-  const isOnTrial = stats?.plan?.isOnTrial ?? false;
+  const exportProgress = stats ? calculateProgress(stats.productExports.used, stats.productExports.limit) : null;
+  const storeProgress = stats ? calculateProgress(stats.storeGeneration.used, stats.storeGeneration.limit) : null;
 
   return (
     <motion.header 
@@ -196,9 +206,61 @@ export default function DashboardHeader({
             </div>
           )}
           
-          {/* Stats - Only show if user is NOT on trial and has an active plan */}
-          {showStats && !loading && stats && !isOnTrial && (
-          <div className="d-none d-md-flex gap-3 gap-xl-4">
+          {/* Stats - Show usage for all users */}
+          {showStats && !loading && stats && (
+          <div className="d-none d-md-flex gap-3 gap-xl-4 align-items-center">
+            {/* Plan Status Indicator - Show trial days or expired status */}
+            {(stats.plan.isOnTrial || stats.plan.isExpired) && (
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.4, delay: 0.1, ease: "easeOut" }}
+                className="d-flex gap-2 align-items-center"
+                style={{ 
+                  padding: '6px 12px',
+                  borderRadius: '20px',
+                  backgroundColor: stats.plan.isExpired ? '#fef2f2' : '#fef3c7',
+                  border: `1px solid ${stats.plan.isExpired ? '#fecaca' : '#fde68a'}`,
+                }}
+              >
+                <div 
+                  style={{ 
+                    width: '28px',
+                    height: '28px',
+                    borderRadius: '50%',
+                    backgroundColor: stats.plan.isExpired ? '#fee2e2' : '#fef9c3',
+                    border: `2px solid ${stats.plan.isExpired ? '#ef4444' : '#f59e0b'}`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontWeight: 700,
+                    fontSize: '12px',
+                    color: stats.plan.isExpired ? '#ef4444' : '#d97706',
+                  }}
+                >
+                  {stats.plan.isExpired ? (
+                    <i className="ri-close-line" style={{ fontSize: '16px' }}></i>
+                  ) : (
+                    stats.plan.trialDaysRemaining
+                  )}
+                </div>
+                <div className="d-flex flex-column" style={{ lineHeight: 1.2 }}>
+                  <span 
+                    style={{ 
+                      fontSize: '12px', 
+                      fontWeight: 600,
+                      color: stats.plan.isExpired ? '#ef4444' : '#d97706',
+                    }}
+                  >
+                    {stats.plan.isExpired ? 'Expired' : `${stats.plan.trialDaysRemaining}J`}
+                  </span>
+                  <span style={{ fontSize: '10px', color: stats.plan.isExpired ? '#f87171' : '#fbbf24' }}>
+                    {stats.plan.isExpired ? 'Trial Period' : "d'essai"}
+                  </span>
+                </div>
+              </motion.div>
+            )}
+
             {/* Boutiques suivies - Progress Circle */}
             <motion.div 
               initial={{ opacity: 0, scale: 0.8 }}
@@ -216,7 +278,7 @@ export default function DashboardHeader({
                     cx="16" 
                     cy="16" 
                     r="12" 
-                    stroke="#0c6cfb" 
+                    stroke={shopProgress?.color || '#0c6cfb'} 
                     strokeDasharray={shopProgress?.dasharray} 
                     strokeDashoffset={shopProgress?.dashoffset}
                     style={{
@@ -227,7 +289,7 @@ export default function DashboardHeader({
                 </svg>
               </div>
               <div className="progress-details">
-                <div className="progress-text">{shopProgress?.text}</div>
+                <div className="progress-text" style={{ color: shopProgress?.isLimitReached ? '#ef4444' : undefined }}>{shopProgress?.text}</div>
                 <div className="progress-label">Boutiques suivies</div>
               </div>
             </motion.div>
@@ -254,7 +316,7 @@ export default function DashboardHeader({
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ duration: 0.4, delay: 0.3, ease: "easeOut" }}
                 className="progress-circle d-flex gap-2 flex-column flex-md-row"
-                data-progress={stats.productExports.remaining}
+                data-progress={stats.productExports.used}
                 data-total={stats.productExports.limit}
               >
                 <div className="progress-circle-wrapper">
@@ -265,9 +327,9 @@ export default function DashboardHeader({
                       cx="16" 
                       cy="16" 
                       r="12" 
-                      stroke="#0c6cfb" 
-                      strokeDasharray={calculateProgress(stats.productExports.remaining, stats.productExports.limit).dasharray}
-                      strokeDashoffset={calculateProgress(stats.productExports.remaining, stats.productExports.limit).dashoffset}
+                      stroke={exportProgress?.color || '#0c6cfb'}
+                      strokeDasharray={exportProgress?.dasharray}
+                      strokeDashoffset={exportProgress?.dashoffset}
                       style={{
                         transform: 'rotate(-90deg)',
                         transformOrigin: 'center',
@@ -276,7 +338,7 @@ export default function DashboardHeader({
                   </svg>
                 </div>
                 <div className="progress-details">
-                  <div className="progress-text">{stats.productExports.remaining}/{stats.productExports.limit}</div>
+                  <div className="progress-text" style={{ color: exportProgress?.isLimitReached ? '#ef4444' : undefined }}>{exportProgress?.text}</div>
                   <div className="progress-label">Produits exportés</div>
                 </div>
               </motion.div>
@@ -304,7 +366,7 @@ export default function DashboardHeader({
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ duration: 0.4, delay: 0.4, ease: "easeOut" }}
                 className="progress-circle d-flex gap-2 flex-column flex-md-row"
-                data-progress={stats.storeGeneration.remaining}
+                data-progress={stats.storeGeneration.used}
                 data-total={stats.storeGeneration.limit}
               >
                 <div className="progress-circle-wrapper">
@@ -315,9 +377,9 @@ export default function DashboardHeader({
                       cx="16" 
                       cy="16" 
                       r="12" 
-                      stroke="#0c6cfb" 
-                      strokeDasharray={calculateProgress(stats.storeGeneration.remaining, stats.storeGeneration.limit).dasharray}
-                      strokeDashoffset={calculateProgress(stats.storeGeneration.remaining, stats.storeGeneration.limit).dashoffset}
+                      stroke={storeProgress?.color || '#0c6cfb'}
+                      strokeDasharray={storeProgress?.dasharray}
+                      strokeDashoffset={storeProgress?.dashoffset}
                       style={{
                         transform: 'rotate(-90deg)',
                         transformOrigin: 'center',
@@ -326,7 +388,7 @@ export default function DashboardHeader({
                   </svg>
                 </div>
                 <div className="progress-details">
-                  <div className="progress-text">{stats.storeGeneration.remaining}/{stats.storeGeneration.limit}</div>
+                  <div className="progress-text" style={{ color: storeProgress?.isLimitReached ? '#ef4444' : undefined }}>{storeProgress?.text}</div>
                   <div className="progress-label">Génération de boutique</div>
                 </div>
               </motion.div>

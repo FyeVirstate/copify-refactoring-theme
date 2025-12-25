@@ -4,8 +4,25 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { useState, useEffect, useRef } from "react";
-import { signOut } from "next-auth/react";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { signOut, useSession } from "next-auth/react";
+
+interface UserStats {
+  plan: {
+    identifier: string;
+    title: string;
+    isOnTrial: boolean;
+    isExpired: boolean;
+    trialDaysRemaining: number;
+    isPro: boolean;
+    isBasic: boolean;
+    isUnlimited: boolean;
+  };
+  trackedShops: {
+    used: number;
+    limit: number;
+  };
+}
 
 interface SidebarProps {
   onNavigate?: () => void;
@@ -13,8 +30,48 @@ interface SidebarProps {
 
 export default function Sidebar({ onNavigate }: SidebarProps) {
   const pathname = usePathname();
+  const { data: session } = useSession();
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [userStats, setUserStats] = useState<UserStats | null>(null);
+  const [trialDaysRemaining, setTrialDaysRemaining] = useState<number | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  
+  // Fetch user stats to determine trial status
+  const fetchUserStats = useCallback(async () => {
+    try {
+      const response = await fetch('/api/user/stats');
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.stats) {
+          setUserStats(data.stats);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to fetch user stats:', error);
+    }
+  }, []);
+  
+  // Calculate trial days from session user's created_at
+  useEffect(() => {
+    if (session?.user?.createdAt) {
+      const createdAt = new Date(session.user.createdAt);
+      const now = new Date();
+      const trialHours = 168; // 7 days trial
+      const hoursSinceCreation = (now.getTime() - createdAt.getTime()) / (1000 * 60 * 60);
+      const hoursRemaining = trialHours - hoursSinceCreation;
+      const daysRemaining = Math.max(0, Math.ceil(hoursRemaining / 24));
+      setTrialDaysRemaining(daysRemaining);
+    }
+    fetchUserStats();
+  }, [session, fetchUserStats]);
+  
+  // Determine if we should show trial/expired notice
+  const isOnTrial = userStats?.plan?.isOnTrial || userStats?.plan?.identifier === 'trial';
+  const isExpired = userStats?.plan?.isExpired || userStats?.plan?.identifier === 'expired';
+  const apiTrialDays = userStats?.plan?.trialDaysRemaining ?? 0;
+  
+  // Show upgrade section for trial OR expired users (not for pro/basic users)
+  const showUpgradeSection = isOnTrial || isExpired;
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -348,7 +405,7 @@ export default function Sidebar({ onNavigate }: SidebarProps) {
         </div>
       </div>
 
-      {/* Bottom Section - Formation + Trial */}
+      {/* Bottom Section - Formation + Trial/Expired */}
       <div className="ps-3 pe-3 pb-3 pt-2">
         <Link 
           href="/dashboard/courses" 
@@ -361,21 +418,43 @@ export default function Sidebar({ onNavigate }: SidebarProps) {
           <span>Formation E-Commerce</span>
         </Link>
 
-        {/* Trial Notice */}
-        <div className="mt-3 trial-notice-wrapper">
-          <div className="mb-3 text-white justify-content-center d-flex align-items-center">
-            <div className="days-left text-center me-2">7</div>
-            <div className="fs-xs">Jours d&apos;essai restants</div>
+        {/* Trial/Expired Notice - Show for trial or expired users */}
+        {showUpgradeSection && (
+          <div className="mt-3 trial-notice-wrapper" style={isExpired && !isOnTrial ? { backgroundColor: '#991b1b' } : undefined}>
+            <div className="mb-3 text-white justify-content-center d-flex align-items-center">
+              {isExpired && !isOnTrial ? (
+                <>
+                  <div 
+                    className="text-center me-2 d-flex align-items-center justify-content-center"
+                    style={{ 
+                      width: '32px', 
+                      height: '32px', 
+                      borderRadius: '50%', 
+                      backgroundColor: 'rgba(255,255,255,0.2)',
+                      border: '2px solid #fca5a5'
+                    }}
+                  >
+                    <i className="ri-close-line" style={{ fontSize: '18px', color: '#fca5a5' }}></i>
+                  </div>
+                  <div className="fs-xs">Période d&apos;essai expirée</div>
+                </>
+              ) : (
+                <>
+                  <div className="days-left text-center me-2">{apiTrialDays > 0 ? apiTrialDays : (trialDaysRemaining ?? 0)}</div>
+                  <div className="fs-xs">Jours d&apos;essai restants</div>
+                </>
+              )}
+            </div>
+            <Link 
+              href="/dashboard/plans" 
+              className="btn btn-upgrade w-100 d-flex align-items-center justify-content-center"
+              onClick={onNavigate}
+            >
+              <img className="me-1" src="/img/navbar-icons/lightning-icon.svg" alt="" style={{ width: '11px', height: '15px' }} />
+              <span>Mettre à niveau</span>
+            </Link>
           </div>
-          <Link 
-            href="/dashboard/plans" 
-            className="btn btn-upgrade w-100 d-flex align-items-center justify-content-center"
-            onClick={onNavigate}
-          >
-            <img className="me-1" src="/img/navbar-icons/lightning-icon.svg" alt="" style={{ width: '11px', height: '15px' }} />
-            <span>Mettre à niveau</span>
-          </Link>
-        </div>
+        )}
       </div>
     </div>
   );

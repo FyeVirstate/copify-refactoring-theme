@@ -87,25 +87,28 @@ export async function GET(request: NextRequest) {
     const isOnTrial = user?.trialEndsAt && new Date(user.trialEndsAt) > new Date()
     
     // Get plan limit
-    let planLimit = 1 // Default for trial users
+    const DEFAULT_FREE_LIMIT = 3 // Default for trial/free users (consistent with stats API)
+    let planLimit = DEFAULT_FREE_LIMIT
     if (subscription?.name) {
       const plan = await prisma.plan.findFirst({
         where: { identifier: subscription.name },
         select: { limitProductExporter: true, identifier: true }
       })
-      planLimit = plan?.limitProductExporter || 1
+      planLimit = plan?.limitProductExporter || DEFAULT_FREE_LIMIT
     }
     
     const isUnlimited = planLimit === -1 || (subscription?.name && ['pro', 'pro-year', 'pro-quarterly', 'basic', 'basic-year', 'basic-quarterly'].includes(subscription.name))
     
-    // For free/trial users, give them 1 credit if they haven't used any
+    // For free/trial users, give them credits if they haven't used any
     let balance = user?.balanceProductExporter || 0
     const isFreeUser = !subscription // No active subscription = free user
     
-    // If free/trial user has 0 balance and hasn't made any exports, give them 1 free credit
+    // Count actual exports to calculate used credits
     const totalExports = await prisma.productExport.count({ where: { userId } })
+    
+    // If free/trial user has 0 balance and hasn't made any exports, give them the default free credits
     if ((isOnTrial || isFreeUser) && balance === 0 && totalExports === 0) {
-      balance = 1
+      balance = DEFAULT_FREE_LIMIT
     }
 
     const [exports, total] = await Promise.all([
