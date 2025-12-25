@@ -1,0 +1,1069 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+// ADAPTED TO MATCH LARAVEL PREPROD DATABASE
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// USERS & AUTH
+// ============================================
+
+model User {
+  id                        BigInt    @id @default(autoincrement())
+  name                      String
+  email                     String    @unique
+  password                  String
+  type                      String    @default("email")
+  emailVerifiedAt           DateTime? @map("email_verified_at")
+  
+  // Profile
+  lang                      String    @default("fr")
+  utmSource                 String?   @map("utm_source")
+  lastLogin                 DateTime? @map("last_login")
+  isAdmin                   Int       @default(0) @map("isAdmin")
+  isBanned                  Int       @default(0) @map("isBanned")
+  alreadySeenVideo          Int       @default(0) @map("already_seen_video")
+  viewedCompetitorAds       Boolean   @default(false) @map("viewed_competitor_ads")
+  
+  // Tokens & Security
+  rememberToken             String?   @map("remember_token")
+  verifyToken               String?   @map("verify_token")
+  backupCode                String    @map("backup_code")
+  cancelToken               String    @map("cancel_token")
+  magicLinkToken            String?   @map("magic_link_token")
+  magicLinkExpiresAt        DateTime? @map("magic_link_expires_at")
+  
+  // Shopify Integration
+  shopifyDomain             String?   @map("shopify_domain")
+  shopifyAccessToken        String?   @map("shopify_access_token")
+  shopifySetupCompleted     Boolean   @default(false) @map("shopify_setup_completed")
+  shopifyDomainLinkedAt     DateTime? @map("shopify_domain_linked_at")
+  mainThemeId               String?   @map("main_theme_id")
+  
+  // Credits & Balances
+  balanceGenerateProduct    Int       @default(0) @map("balance_generate_product")
+  balanceVideoGeneration    Int       @default(0) @map("balance_video_generation")
+  balanceImageGeneration    Int       @default(0) @map("balance_image_generation")
+  balanceProductExporter    Int       @default(0) @map("balance_product_exporter")
+  balanceShopExporter       Int       @default(0) @map("balance_shop_exporter")
+  balanceImportTheme        Int       @default(0) @map("balance_import_theme")
+  
+  // Subscription / Stripe
+  stripeId                  String?   @map("stripe_id")
+  cardBrand                 String?   @map("card_brand")
+  cardLastFour              String?   @map("card_last_four")
+  cardHolder                String?   @map("card_holder")
+  trialEndsAt               DateTime? @map("trial_ends_at")
+  startOfferDate            DateTime? @map("start_offer_date")
+  nextCreditRenewalAt       DateTime? @map("next_credit_renewal_at")
+  lastYearlyCreditAt        DateTime? @map("last_yearly_credit_at")
+  
+  // Challenge/Banners
+  challengeRegisteredAt     DateTime? @map("challenge_registered_at")
+  q4BannerDismissed         Boolean   @default(false) @map("q4_banner_dismissed")
+  bfBannerDismissed         Boolean   @default(false) @map("bf_banner_dismissed")
+  
+  // Timestamps
+  createdAt                 DateTime? @map("created_at")
+  updatedAt                 DateTime? @map("updated_at")
+  deletedAt                 DateTime? @map("deleted_at")
+  
+  // Relations
+  subscriptions             Subscription[]
+  invoices                  Invoice[]
+  savedSearches             SavedSearch[]
+  favorites                 Favorite[]
+  productExports            ProductExport[]
+  themeExports              ThemeExport[]
+  generateProducts          GenerateProduct[]
+  generateStores            GenerateStore[]
+  shopifyShops              ShopifyShop[]
+  shopifyAdditionalStores   ShopifyAdditionalStore[]
+  shopifyAppIntegrations    ShopifyAppIntegration[]
+  licenseKeys               LicenseKey[]
+  userDomains               UserDomain[]
+  userShare                 UserShare?
+  userResponse              UserResponse?
+  funnelDiagnostics         FunnelDiagnostic[]
+  userShops                 UserShop[]
+  userSearches              UserSearch[]
+  todos                     Todo[]
+  imageGenerations          ImageGeneration[]
+  hooxVideos                HooxVideo[]
+  uploadedImages            UserUploadedImage[]
+  
+  @@index([email])
+  @@index([stripeId], map: "users_stripe_id_idx")
+  @@index([createdAt], map: "idx_users_created_at")
+  @@index([nextCreditRenewalAt], map: "users_next_credit_renewal_at_index")
+  @@map("users")
+}
+
+// ============================================
+// SUBSCRIPTIONS & BILLING
+// ============================================
+
+model Plan {
+  id                      BigInt    @id @default(autoincrement())
+  identifier              String    @unique
+  title                   String
+  price                   Float
+  dayFreeTrial            Int       @default(0) @map("day_free_trial")
+  info                    String?
+  
+  // Stripe IDs
+  stripeId                String    @map("stripe_id")
+  stripeIdEn              String    @map("stripe_id_en")
+  
+  // Limits
+  leaderboardShop         Int       @map("leaderboard_shop")
+  limitShopTracker        Int       @map("limit_shop_tracker")
+  limitShopExporter       Int       @map("limit_shop_exporter")
+  limitProductExporter    Int       @map("limit_product_exporter")
+  limitGenerateProduct    Int       @default(0) @map("limit_generate_product")
+  limitImportTheme        Int       @default(0) @map("limit_import_theme")
+  limitVideoGeneration    Int       @default(0) @map("limit_video_generation")
+  limitImageGeneration    Int       @default(0) @map("limit_image_generation")
+  topShopsCount           Int?      @map("top_shops_count")
+  topProductsCount        Int?      @map("top_products_count")
+  topAdsCount             Int?      @map("top_ads_count")
+  maxLicenses             Int       @default(1) @map("max_licenses")
+  
+  createdAt               DateTime? @map("created_at")
+  updatedAt               DateTime? @map("updated_at")
+  
+  @@map("plans")
+}
+
+model Subscription {
+  id                      BigInt    @id @default(autoincrement())
+  userId                  BigInt    @map("user_id")
+  name                    String
+  stripeId                String    @unique @map("stripe_id")
+  stripeStatus            String    @map("stripe_status")
+  stripePlan              String?   @map("stripe_plan")
+  quantity                Int?
+  discount                String?
+  trialEndsAt             DateTime? @map("trial_ends_at")
+  endsAt                  DateTime? @map("ends_at")
+  createdAt               DateTime? @map("created_at")
+  updatedAt               DateTime? @map("updated_at")
+  
+  user                    User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId, stripeStatus], map: "subscriptions_user_id_stripe_status_idx")
+  @@map("subscriptions")
+}
+
+model Invoice {
+  id                      BigInt    @id @default(autoincrement())
+  userId                  BigInt    @map("user_id")
+  stripeId                String    @unique @map("stripe_id")
+  stripeCustomerId        String?   @map("stripe_customer_id")
+  subscriptionId          String?   @map("subscription_id")
+  amountPaid              BigInt    @default(0) @map("amount_paid")
+  amountDue               BigInt    @default(0) @map("amount_due")
+  subtotal                BigInt    @default(0)
+  total                   BigInt    @default(0)
+  tax                     BigInt?
+  currency                String    @default("usd")
+  status                  String    @default("draft")
+  invoicePdf              String?   @map("invoice_pdf")
+  hostedInvoiceUrl        String?   @map("hosted_invoice_url")
+  number                  String?
+  periodStart             DateTime? @map("period_start")
+  periodEnd               DateTime? @map("period_end")
+  stripeCreated           DateTime? @map("stripe_created")
+  metadata                String?   @db.Text
+  lines                   String?   @db.Text
+  createdAt               DateTime? @map("created_at")
+  updatedAt               DateTime? @map("updated_at")
+  
+  user                    User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId], map: "invoices_user_id_index")
+  @@index([status], map: "invoices_status_index")
+  @@index([stripeCustomerId], map: "invoices_stripe_customer_id_index")
+  @@index([stripeCreated], map: "invoices_stripe_created_index")
+  @@map("invoices")
+}
+
+// ============================================
+// SHOPS & PRODUCTS
+// ============================================
+
+model Shop {
+  id                      BigInt    @id @default(autoincrement())
+  url                     String    @unique
+  shopifyUrl              String    @map("shopify_url")
+  screenshot              String?
+  
+  // Location
+  locale                  String
+  country                 String
+  currency                String
+  
+  // Tech Stack
+  theme                   String
+  schemaName              String?   @map("schema_name")
+  schemaVersion           String?   @map("schema_version")
+  merchantName            String?   @map("merchant_name")
+  pixels                  String?   @db.Text
+  apps                    String?   @db.Text
+  fonts                   String?   @db.Text
+  colors                  String?   @db.Text
+  
+  // Meta
+  metaTitle               String?   @map("meta_title") @db.Text
+  metaDescription         String?   @map("meta_description") @db.Text
+  
+  // Stats
+  productsCount           Int?      @map("products_count")
+  activeAds               Int       @default(0) @map("active_ads")
+  allAds                  Int       @default(0) @map("all_ads")
+  
+  // Facebook
+  fbPageId                String?   @map("fb_page_id")
+  
+  // Metadata
+  disabled                Int       @default(0)
+  shopScannedAt           DateTime? @default(now()) @map("shop_scanned_at")
+  adsUpdatedAt            DateTime? @map("ads_updated_at")
+  themeStyleUpdatedAt     DateTime? @map("theme_style_updated_at")
+  whoisAt                 DateTime? @map("whois_at")
+  appsLastSyncedAt        DateTime? @map("apps_last_synced_at")
+  
+  // WhoisXML data
+  whMd5                   String?   @map("wh_md5")
+  whUpdatedAt             DateTime? @map("wh_updated_at")
+  whStats                 Json?     @map("wh_stats")
+  
+  token                   String?   @map("_token")
+  
+  createdAt               DateTime? @map("created_at")
+  updatedAt               DateTime? @map("updated_at")
+  deletedAt               DateTime? @map("deleted_at")
+  
+  // Relations
+  products                Product[]
+  traffic                 Traffic[]
+  ads                     Ad[]
+  userShops               UserShop[]
+  categories              ShopCategory[]
+  
+  @@index([url], map: "idx_shops_url")
+  @@index([disabled], map: "shops_disabled_idx")
+  @@index([currency], map: "shops_currency_idx")
+  @@index([fbPageId], map: "shops_fb_page_id_idx")
+  @@index([productsCount], map: "shops_products_count_idx")
+  @@index([shopScannedAt], map: "shops_shop_scanned_at_idx")
+  @@index([createdAt], map: "idx_shops_created_at")
+  @@map("shops")
+}
+
+model UserShop {
+  id                      BigInt    @id @default(autoincrement())
+  userId                  BigInt    @map("user_id")
+  shopId                  BigInt    @map("shop_id")
+  createdAt               DateTime? @map("created_at")
+  updatedAt               DateTime? @map("updated_at")
+  deletedAt               DateTime? @map("deleted_at")
+  
+  user                    User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  shop                    Shop      @relation(fields: [shopId], references: [id])
+  
+  @@unique([userId, shopId], map: "user_shops_user_id_shop_id_idx")
+  @@index([userId])
+  @@index([shopId])
+  @@map("user_shops")
+}
+
+model Product {
+  id                      BigInt    @id @default(autoincrement())
+  shopId                  BigInt    @map("shop_id")
+  productId               BigInt    @map("product_id")
+  
+  title                   String
+  handle                  String
+  bodyHtml                String?   @map("body_html") @db.Text
+  vendor                  String?
+  productType             String?   @map("product_type")
+  tags                    Json?
+  bestProduct             Boolean   @default(false) @map("best_product")
+  sort                    Int?
+  
+  publishedAt             DateTime? @map("published_at")
+  createdAt               DateTime? @map("created_at")
+  updatedAt               DateTime? @map("updated_at")
+  
+  // Relations
+  shop                    Shop      @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  images                  ProductImage[]
+  variants                ProductVariant[]
+  options                 ProductOption[]
+  
+  @@unique([shopId, productId], map: "products_unique_shop_id_product_id")
+  @@index([shopId])
+  @@index([productId], map: "products_product_id_index")
+  @@index([bestProduct], map: "products_best_product_index")
+  @@index([createdAt], map: "idx_products_created_at")
+  @@map("products")
+}
+
+model ProductImage {
+  id                      BigInt    @id @default(autoincrement())
+  productId               BigInt    @map("product_id")
+  src                     String    @db.Text
+  position                Int
+  width                   Int
+  height                  Int
+  createdAt               DateTime? @map("created_at")
+  updatedAt               DateTime? @map("updated_at")
+  
+  product                 Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  
+  @@index([productId], map: "product_images_product_id_index")
+  @@map("product_images")
+}
+
+model ProductVariant {
+  id                      BigInt    @id @default(autoincrement())
+  productId               BigInt    @map("product_id")
+  variantId               BigInt    @map("variant_id")
+  
+  title                   String
+  price                   Decimal   @db.Decimal
+  sku                     String?   @db.Text
+  grams                   BigInt    @default(0)
+  requiresShipping        Boolean   @default(true) @map("requires_shipping")
+  taxable                 Boolean   @default(false)
+  
+  option1                 String?   @db.Text
+  option2                 String?   @db.Text
+  option3                 String?   @db.Text
+  
+  createdAt               DateTime? @map("created_at")
+  updatedAt               DateTime? @map("updated_at")
+  
+  product                 Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  
+  @@index([productId], map: "product_variants_product_id_index")
+  @@index([variantId], map: "product_variants_variant_id_index")
+  @@index([price], map: "product_variants_price_index")
+  @@map("product_variants")
+}
+
+model ProductOption {
+  id                      BigInt    @id @default(autoincrement())
+  productId               BigInt    @map("product_id")
+  
+  name                    String
+  position                Int
+  values                  Json
+  
+  createdAt               DateTime? @map("created_at")
+  updatedAt               DateTime? @map("updated_at")
+  
+  product                 Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  
+  @@index([productId], map: "product_options_product_id_index")
+  @@map("product_options")
+}
+
+// ============================================
+// ADS (Main table for favorites)
+// ============================================
+
+model Ad {
+  id                      BigInt    @id @default(autoincrement())
+  adArchiveId             BigInt    @unique @map("ad_archive_id")
+  adCreativeId            BigInt?   @map("ad_creative_id")
+  
+  title                   String
+  description             String?   @db.Text
+  targetUrl               String?   @map("target_url") @db.Text
+  ctaText                 String?   @map("cta_text")
+  type                    String
+  
+  // Media
+  imageLink               String?   @map("image_link") @db.Text
+  videoLink               String?   @map("video_link") @db.Text
+  videoPreviewLink        String?   @map("video_preview_link") @db.Text
+  
+  // Page Info
+  pageId                  BigInt    @map("page_id")
+  pageName                String    @map("page_name")
+  
+  // Status
+  isActive                Int       @default(0) @map("is_active")
+  isAaa                   Int       @default(0) @map("is_aaa")
+  
+  // Dates
+  startDate               DateTime? @map("start_date")
+  endDate                 DateTime? @map("end_date")
+  platform                String?
+  
+  // Shop Association
+  shopId                  BigInt?   @map("shop_id")
+  randomToken             Float?    @map("random_token")
+  
+  createdAt               DateTime? @map("created_at")
+  updatedAt               DateTime? @map("updated_at")
+  
+  // Relations
+  shop                    Shop?     @relation(fields: [shopId], references: [id])
+  favorites               Favorite[]
+  
+  @@index([shopId], map: "ads_shop_id_idx")
+  @@index([createdAt], map: "ads_created_at_index")
+  @@index([pageId], map: "ads_page_id_index")
+  @@index([isActive, createdAt], map: "ads_active_created_at_index")
+  @@index([startDate, id], map: "idx_ads_start_date_id_perf")
+  @@map("ads")
+}
+
+model Favorite {
+  id                      BigInt    @id @default(autoincrement())
+  userId                  BigInt    @map("user_id")
+  adId                    BigInt    @map("ad_id")
+  createdAt               DateTime? @map("created_at")
+  updatedAt               DateTime? @map("updated_at")
+  
+  user                    User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ad                      Ad        @relation(fields: [adId], references: [id], onDelete: Cascade)
+  
+  @@index([userId], map: "favorites_user_id_idx")
+  @@index([adId], map: "favorites_ad_id_idx")
+  @@map("favorites")
+}
+
+// ============================================
+// TRAFFIC DATA
+// ============================================
+
+model Traffic {
+  id                      Int       @id @default(autoincrement())
+  shopId                  BigInt?   @map("shop_id")
+  shopUrl                 String    @map("shop_url")
+  
+  visits                  String    @db.Text
+  dates                   String    @db.Text
+  
+  lastLastMonthVisits     Int?      @map("last_last_month_visits")
+  lastMonthVisits         Int       @map("last_month_visits")
+  growthRate              Int?      @map("growth_rate")
+  scale                   Int?
+  percentage              Int?
+  trend                   Int?
+  
+  estimatedOrder          Int       @map("estimated_order")
+  estimatedMonthly        Int       @map("estimated_monthly")
+  
+  // Sources
+  countries               Json?
+  sources                 Json?
+  social                  Json?
+  mainSource              String?   @map("main_source")
+  visitsShare             Decimal?  @map("visits_share") @db.Decimal
+  avgPrice                Decimal?  @map("avg_price") @db.Decimal
+  
+  createdAt               DateTime  @map("created_at")
+  updatedAt               DateTime  @map("updated_at")
+  
+  shop                    Shop?     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  
+  @@index([shopId], map: "traffic_shop_id_idx")
+  @@index([shopUrl], map: "traffic_shop_url_idx")
+  @@index([createdAt], map: "traffic_created_at_idx")
+  @@index([estimatedMonthly], map: "traffic_estimated_monthly_index")
+  @@index([estimatedOrder], map: "idx_traffic_estimated_order")
+  @@map("traffic")
+}
+
+// ============================================
+// CATEGORIES
+// ============================================
+
+model Category {
+  id                      BigInt    @id @default(autoincrement())
+  parentId                BigInt?   @map("parent_id")
+  
+  name                    Json
+  
+  createdAt               DateTime? @map("created_at")
+  updatedAt               DateTime? @map("updated_at")
+  
+  parent                  Category? @relation("CategoryToCategory", fields: [parentId], references: [id])
+  children                Category[] @relation("CategoryToCategory")
+  shops                   ShopCategory[]
+  
+  @@map("categories")
+}
+
+model ShopCategory {
+  id                      BigInt    @id @default(autoincrement())
+  shopId                  BigInt    @map("shop_id")
+  categoryId              BigInt    @map("category_id")
+  createdAt               DateTime? @map("created_at")
+  updatedAt               DateTime? @map("updated_at")
+  
+  shop                    Shop      @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  category                Category  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  
+  @@index([shopId], map: "shops_categories_shop_id_index")
+  @@index([categoryId], map: "shops_categories_category_id_index")
+  @@map("shops_categories")
+}
+
+// ============================================
+// SHOPIFY INTEGRATION
+// ============================================
+
+model ShopifyShop {
+  id                      BigInt    @id @default(autoincrement())
+  userId                  BigInt?   @map("user_id")
+  
+  url                     String
+  shopifyUrl              String    @map("shopify_url")
+  screenshot              String?
+  locale                  String
+  country                 String
+  theme                   String
+  merchantName            String?   @map("merchant_name")
+  currency                String
+  pixels                  String?   @db.Text
+  apps                    String?   @db.Text
+  metaAds                 String?   @map("meta_ads") @db.Text
+  products                String?   @db.Text
+  bestProducts            String?   @map("best_products") @db.Text
+  productsCount           Int?      @map("products_count")
+  disabled                Int       @default(0)
+  whoisAt                 DateTime? @map("whois_at")
+  token                   String?   @map("_token")
+  migrated                Int       @default(0)
+  
+  createdAt               DateTime? @map("created_at")
+  updatedAt               DateTime? @map("updated_at")
+  deletedAt               DateTime? @map("deleted_at")
+  
+  user                    User?     @relation(fields: [userId], references: [id])
+  
+  @@index([userId], map: "shopify_shops_user_id_idx")
+  @@index([url], map: "shopify_shops_url_idx")
+  @@index([migrated], map: "shopify_shops_migrated_idx")
+  @@map("shopify_shops")
+}
+
+model ShopifyAdditionalStore {
+  id                      BigInt    @id @default(autoincrement())
+  userId                  BigInt    @map("user_id")
+  
+  shopifyDomain           String    @map("shopify_domain")
+  shopifyAccessToken      String    @map("shopify_access_token")
+  isPrimary               Boolean   @default(false) @map("is_primary")
+  
+  createdAt               DateTime? @map("created_at")
+  updatedAt               DateTime? @map("updated_at")
+  deletedAt               DateTime? @map("deleted_at")
+  
+  user                    User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("shopify_additional_stores")
+}
+
+model ShopifyAppIntegration {
+  id                      BigInt    @id @default(autoincrement())
+  userId                  BigInt?   @map("user_id")
+  
+  shopDomain              String    @unique @map("shop_domain")
+  accessToken             String    @map("access_token") @db.Text
+  scopes                  String    @db.Text
+  
+  installedAt             DateTime  @map("installed_at")
+  lastAccessedAt          DateTime? @map("last_accessed_at")
+  active                  Boolean   @default(true)
+  appMetadata             Json?     @map("app_metadata")
+  
+  createdAt               DateTime? @map("created_at")
+  updatedAt               DateTime? @map("updated_at")
+  
+  user                    User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId], map: "shopify_app_integrations_user_id_index")
+  @@index([active], map: "shopify_app_integrations_active_index")
+  @@map("shopify_app_integrations")
+}
+
+// ============================================
+// AI GENERATION
+// ============================================
+
+model GenerateProduct {
+  id                      BigInt    @id @default(autoincrement())
+  userId                  BigInt    @map("user_id")
+  
+  shopUrl                 String    @map("shop_url")
+  productName             String    @map("product_name")
+  productDescription      String?   @map("product_description") @db.Text
+  category                String?
+  language                String?
+  productId               String?   @map("product_id")
+  
+  aicontent               Json?
+  productContent          Json?     @map("product_content")
+  aiGeneratedImages       Json?     @map("ai_generated_images")
+  
+  source                  String    @default("aliexpress")
+  type                    String    @default("store")
+  feedbackReceived        Boolean   @default(false) @map("feedback_received")
+  
+  createdAt               DateTime? @map("created_at")
+  updatedAt               DateTime? @map("updated_at")
+  
+  user                    User      @relation(fields: [userId], references: [id])
+  generateStores          GenerateStore[]
+  
+  @@index([userId, createdAt], map: "idx_generate_products_user_created")
+  @@index([category, createdAt], map: "idx_generate_products_category_created")
+  @@map("generate_products")
+}
+
+model GenerateStore {
+  id                      BigInt    @id @default(autoincrement())
+  userId                  BigInt    @map("user_id")
+  
+  storeName               String    @map("store_name")
+  niche                   String?
+  storeDescription        String?   @map("store_description") @db.Text
+  
+  generatedProductId      BigInt?   @map("generated_product_id")
+  themeId                 String?   @map("theme_id")
+  importType              String?   @map("import_type")
+  licenseId               BigInt?   @map("license_id")
+  licenseKey              String?   @map("license_key")
+  
+  createdAt               DateTime? @map("created_at")
+  updatedAt               DateTime? @map("updated_at")
+  
+  user                    User      @relation(fields: [userId], references: [id])
+  generatedProduct        GenerateProduct? @relation(fields: [generatedProductId], references: [id], onDelete: SetNull)
+  license                 LicenseKey? @relation(fields: [licenseId], references: [id], onDelete: SetNull)
+  
+  @@index([userId, createdAt], map: "idx_generate_stores_user_created")
+  @@index([niche, createdAt], map: "idx_generate_stores_niche_created")
+  @@map("generate_stores")
+}
+
+// ============================================
+// EXPORTS
+// ============================================
+
+model ProductExport {
+  id                      BigInt    @id @default(autoincrement())
+  userId                  BigInt    @map("user_id")
+  
+  shopUrl                 String    @map("shop_url")
+  merchantName            String?   @map("merchant_name")
+  screenshot              String?
+  nbProduct               Int       @map("nb_product")
+  translation             String
+  file                    String
+  zipFile                 String?   @map("zip_file")
+  productUrl              String?   @map("product_url")
+  
+  createdAt               DateTime? @map("created_at")
+  updatedAt               DateTime? @map("updated_at")
+  
+  user                    User      @relation(fields: [userId], references: [id])
+  
+  @@index([userId], map: "product_exports_user_id_idx")
+  @@index([shopUrl], map: "product_exports_shop_url_index")
+  @@index([createdAt], map: "product_exports_created_at_index")
+  @@map("product_exports")
+}
+
+model ThemeExport {
+  id                      BigInt    @id @default(autoincrement())
+  userId                  BigInt    @map("user_id")
+  
+  shopUrl                 String    @map("shop_url")
+  merchantName            String?   @map("merchant_name")
+  screenshot              String?
+  shopTheme               String    @map("shop_theme")
+  fonts                   String    @db.Text
+  colors                  String    @db.Text
+  file                    String
+  
+  createdAt               DateTime? @map("created_at")
+  updatedAt               DateTime? @map("updated_at")
+  
+  user                    User      @relation(fields: [userId], references: [id])
+  
+  @@index([userId], map: "theme_exports_user_id_idx")
+  @@index([shopUrl], map: "theme_exports_shop_url_index")
+  @@index([shopTheme], map: "theme_exports_shop_theme_index")
+  @@index([createdAt], map: "theme_exports_created_at_index")
+  @@map("theme_exports")
+}
+
+// ============================================
+// SAVED SEARCHES & FILTERS
+// ============================================
+
+model SavedSearch {
+  id                      BigInt    @id @default(autoincrement())
+  userId                  BigInt    @map("user_id")
+  
+  name                    String
+  modelName               String    @map("model_name")
+  searchParameters        Json      @map("search_parameters")
+  
+  createdAt               DateTime? @map("created_at")
+  updatedAt               DateTime? @map("updated_at")
+  
+  user                    User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId], map: "saved_searches_user_id_idx")
+  @@map("saved_searches")
+}
+
+model UserSearch {
+  id                      BigInt    @id @default(autoincrement())
+  userId                  BigInt    @map("user_id")
+  
+  modelName               String    @map("model_name")
+  
+  createdAt               DateTime? @map("created_at")
+  updatedAt               DateTime? @map("updated_at")
+  deletedAt               DateTime? @map("deleted_at")
+  
+  user                    User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([modelName], map: "user_searches_model_name_index")
+  @@map("user_searches")
+}
+
+// ============================================
+// LICENSE KEYS
+// ============================================
+
+model LicenseKey {
+  id                      BigInt    @id @default(autoincrement())
+  userId                  BigInt    @map("user_id")
+  
+  licenseKey              String    @unique @map("license_key")
+  domain                  String?
+  shopifyDomain           String?   @map("shopify_domain")
+  status                  String    @default("active")
+  expiresAt               DateTime? @map("expires_at")
+  
+  createdAt               DateTime? @map("created_at")
+  updatedAt               DateTime? @map("updated_at")
+  
+  user                    User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  generateStores          GenerateStore[]
+  
+  @@index([licenseKey, domain], map: "license_keys_license_key_domain_index")
+  @@index([shopifyDomain], map: "license_keys_shopify_domain_index")
+  @@index([userId, status], map: "license_keys_user_id_status_index")
+  @@map("license_keys")
+}
+
+// ============================================
+// USER DOMAINS
+// ============================================
+
+model UserDomain {
+  id                      BigInt    @id @default(autoincrement())
+  userId                  BigInt    @map("user_id")
+  
+  domain                  String
+  verifiedAt              DateTime? @map("verified_at")
+  isActive                Boolean   @default(true) @map("is_active")
+  
+  createdAt               DateTime? @map("created_at")
+  updatedAt               DateTime? @map("updated_at")
+  
+  user                    User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, domain], map: "user_domains_user_id_domain_unique")
+  @@index([userId, isActive], map: "user_domains_user_id_is_active_index")
+  @@map("user_domains")
+}
+
+// ============================================
+// MISC
+// ============================================
+
+model UserShare {
+  id                      BigInt    @id @default(autoincrement())
+  userId                  BigInt    @unique @map("user_id")
+  
+  shareUuid               String    @unique @map("share_uuid")
+  
+  createdAt               DateTime? @map("created_at")
+  updatedAt               DateTime? @map("updated_at")
+  
+  user                    User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("user_shares")
+}
+
+model UserResponse {
+  id                      BigInt    @id @default(autoincrement())
+  userId                  BigInt?   @unique @map("user_id")
+  
+  triedDropshipping       String    @map("tried_dropshipping") @db.Text
+  goals                   String?   @db.Text
+  discoveryMethod         String?   @map("discovery_method") @db.Text
+  
+  createdAt               DateTime? @map("created_at")
+  updatedAt               DateTime? @map("updated_at")
+  
+  user                    User?     @relation(fields: [userId], references: [id])
+  
+  @@map("user_responses")
+}
+
+model FunnelDiagnostic {
+  id                      BigInt    @id @default(autoincrement())
+  userId                  BigInt    @map("user_id")
+  
+  startDate               DateTime  @map("start_date") @db.Date
+  endDate                 DateTime  @map("end_date") @db.Date
+  adSpend                 Decimal   @map("ad_spend") @db.Decimal
+  platform                String
+  
+  hookRate                Decimal   @map("hook_rate") @db.Decimal
+  hookRateStatus          String    @map("hook_rate_status")
+  holdRate                Decimal   @map("hold_rate") @db.Decimal
+  holdRateStatus          String    @map("hold_rate_status")
+  ctr                     Decimal   @db.Decimal
+  ctrStatus               String    @map("ctr_status")
+  cpc                     Decimal   @db.Decimal
+  cpcStatus               String    @map("cpc_status")
+  traffic                 Int
+  atcRate                 Decimal   @map("atc_rate") @db.Decimal
+  atcRateStatus           String    @map("atc_rate_status")
+  checkoutRate            Decimal   @map("checkout_rate") @db.Decimal
+  checkoutRateStatus      String    @map("checkout_rate_status")
+  conversionRate          Decimal   @map("conversion_rate") @db.Decimal
+  conversionRateStatus    String    @map("conversion_rate_status")
+  
+  adDurationHours         Int       @map("ad_duration_hours")
+  isTestValid             Boolean   @map("is_test_valid")
+  diagnosis               String
+  explanation             String    @db.Text
+  action                  String    @db.Text
+  score                   String?
+  decision                String?
+  
+  createdAt               DateTime? @map("created_at")
+  updatedAt               DateTime? @map("updated_at")
+  
+  user                    User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("funnel_diagnostics")
+}
+
+model Todo {
+  id                      BigInt    @id @default(autoincrement())
+  userId                  BigInt    @map("user_id")
+  
+  details                 String    @db.Text
+  defaultTask             Int?      @map("default_task")
+  checked                 Int?
+  
+  deletedAt               DateTime? @map("deleted_at")
+  createdAt               DateTime? @map("created_at")
+  updatedAt               DateTime? @map("updated_at")
+  
+  user                    User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId], map: "todos_user_id_idx")
+  @@map("todos")
+}
+
+// ============================================
+// TOP RANKS (Daily top shops/products)
+// ============================================
+
+model DailyTopShop {
+  id                      Int       @id @default(autoincrement())
+  shopId                  Int?      @map("shop_id")
+  type                    Int
+  uuid                    String
+  
+  shopUrl                 String    @map("shop_url")
+  merchantName            String?   @map("merchant_name")
+  currency                String
+  country                 String?
+  locale                  String?
+  imgSrc                  String    @map("img_src")
+  
+  estimatedOrder          Int       @map("estimated_order")
+  estimatedMonthly        Int       @map("estimated_monthly")
+  lastMonthVisits         Int?      @map("last_month_visits")
+  productsCount           Int?      @map("products_count")
+  growthRate              Int?      @map("growth_rate")
+  activeAdsCount          Int?      @map("active_ads_count")
+  mainSource              String?   @map("main_source")
+  whoisAt                 DateTime? @map("whois_at")
+  
+  createdAt               DateTime  @map("created_at")
+  updatedAt               DateTime  @map("updated_at")
+  
+  @@index([type], map: "daily_top_shops_type_idx")
+  @@index([uuid], map: "daily_top_shops_uuid_idx")
+  @@index([createdAt], map: "daily_top_shops_created_at_idx")
+  @@index([updatedAt], map: "daily_top_shops_updated_at_idx")
+  @@map("daily_top_shops")
+}
+
+model DailyTopProduct {
+  id                      Int       @id @default(autoincrement())
+  shopId                  Int?      @map("shop_id")
+  type                    Int
+  uuid                    String
+  
+  shopUrl                 String    @map("shop_url")
+  currency                String
+  country                 String?
+  locale                  String?
+  scale                   Int
+  imgSrc                  String    @map("img_src")
+  title                   String
+  productHandle           String    @map("product_handle")
+  price                   Int
+  
+  estimatedOrder          Int       @map("estimated_order")
+  estimatedMonthly        Int       @map("estimated_monthly")
+  lastMonthVisits         Int?      @map("last_month_visits")
+  growthRate              Int?      @map("growth_rate")
+  activeAdsCount          Int?      @map("active_ads_count")
+  whoisAt                 DateTime? @map("whois_at")
+  
+  createdAt               DateTime  @map("created_at")
+  updatedAt               DateTime  @map("updated_at")
+  
+  @@index([type], map: "daily_top_products_type_idx")
+  @@index([uuid], map: "daily_top_products_uuid_idx")
+  @@index([createdAt], map: "daily_top_products_created_at_idx")
+  @@index([updatedAt], map: "daily_top_products_updated_at_idx")
+  @@map("daily_top_products")
+}
+
+// ============================================
+// AI IMAGE GENERATION
+// ============================================
+
+model ImageGeneration {
+  id                      BigInt    @id @default(autoincrement())
+  userId                  BigInt    @map("user_id")
+  
+  predictionId            String?   @map("prediction_id")
+  inputImage              String    @map("input_image") @db.Text
+  parameters              Json?
+  outputImages            Json?     @map("output_images")
+  
+  status                  String    @default("processing")
+  error                   String?   @db.Text
+  
+  completedAt             DateTime? @map("completed_at")
+  createdAt               DateTime? @map("created_at")
+  updatedAt               DateTime? @map("updated_at")
+  
+  user                    User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId], map: "image_generations_user_id_index")
+  @@index([status], map: "image_generations_status_index")
+  @@index([predictionId], map: "image_generations_prediction_id_index")
+  @@index([createdAt], map: "image_generations_created_at_index")
+  @@map("image_generations")
+}
+
+// ============================================
+// AI VIDEO GENERATION (Hoox Videos)
+// ============================================
+
+model HooxVideo {
+  id                      BigInt    @id @default(autoincrement())
+  userId                  BigInt    @map("user_id")
+  
+  jobId                   String    @unique @map("job_id")
+  videoId                 String?   @map("video_id")
+  exportJobId             String?   @map("export_job_id")
+  
+  title                   String
+  script                  String    @db.Text
+  format                  String
+  language                String?
+  voice                   String
+  avatar                  String?
+  style                   String?
+  duration                Int       @default(60)
+  
+  enableSubtitles         Boolean   @default(true) @map("enable_subtitles")
+  enableTransitions       Boolean   @default(true) @map("enable_transitions")
+  mediaSearch             Boolean   @default(true) @map("media_search")
+  animationStyle          String?   @map("animation_style")
+  
+  status                  String    @default("pending")
+  progress                Int       @default(0)
+  
+  previewUrl              String?   @map("preview_url")
+  downloadUrl             String?   @map("download_url")
+  exportQuality           String?   @map("export_quality")
+  exportFormat            String?   @map("export_format")
+  metadata                Json?
+  cost                    Decimal?  @db.Decimal
+  
+  startedAt               DateTime? @map("started_at")
+  completedAt             DateTime? @map("completed_at")
+  exportedAt              DateTime? @map("exported_at")
+  createdAt               DateTime? @map("created_at")
+  updatedAt               DateTime? @map("updated_at")
+  
+  user                    User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId], map: "hoox_videos_user_id_index")
+  @@index([status], map: "hoox_videos_status_index")
+  @@index([videoId], map: "hoox_videos_video_id_index")
+  @@index([createdAt], map: "hoox_videos_created_at_index")
+  @@map("hoox_videos")
+}
+
+// ============================================
+// USER UPLOADED IMAGES (for AI Creative)
+// ============================================
+
+model UserUploadedImage {
+  id                      BigInt    @id @default(autoincrement())
+  userId                  BigInt    @map("user_id")
+  
+  filename                String
+  path                    String
+  url                     String
+  mimeType                String    @map("mime_type")
+  size                    Int
+  
+  usedInVideo             Boolean   @default(false) @map("used_in_video")
+  lastUsedAt              DateTime? @map("last_used_at")
+  
+  createdAt               DateTime? @map("created_at")
+  updatedAt               DateTime? @map("updated_at")
+  
+  user                    User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId], map: "user_uploaded_images_user_id_index")
+  @@index([createdAt], map: "user_uploaded_images_created_at_index")
+  @@index([userId, usedInVideo], map: "user_uploaded_images_user_id_used_in_video_index")
+  @@map("user_uploaded_images")
+}
