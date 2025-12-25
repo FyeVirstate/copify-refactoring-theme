@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import Link from "next/link";
@@ -89,7 +89,7 @@ function AlertBox({ type, message, onClose }: {
 }
 
 
-export default function AnalyzeShopPage() {
+function AnalyzeShopContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [shopUrl, setShopUrl] = useState(searchParams.get('url') || "");
@@ -769,5 +769,20 @@ export default function AnalyzeShopPage() {
         }
       `}</style>
     </>
+  );
+}
+
+// Wrap with Suspense for useSearchParams
+export default function AnalyzeShopPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="spinner-border animate-spin inline-block w-8 h-8 border-4 rounded-full text-blue-500" role="status">
+          <span className="visually-hidden">Loading...</span>
+        </div>
+      </div>
+    }>
+      <AnalyzeShopContent />
+    </Suspense>
   );
 }
