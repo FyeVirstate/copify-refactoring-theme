@@ -70,8 +70,21 @@ export async function GET(request: NextRequest) {
   const maxTrafficGrowth = searchParams.get('maxTrafficGrowth')
   const minActiveAds = searchParams.get('minActiveAds')
   const maxActiveAds = searchParams.get('maxActiveAds')
-  const dateFilter = searchParams.get('dateFilter')
   const sortBy = searchParams.get('sortBy') || 'recommended'
+  
+  // New filters from shops page
+  const minCatalogSize = searchParams.get('minCatalogSize')
+  const maxCatalogSize = searchParams.get('maxCatalogSize')
+  const origins = searchParams.get('origins')?.split(',').filter(Boolean) || []
+  const languages = searchParams.get('languages')?.split(',').filter(Boolean) || []
+  const domains = searchParams.get('domains')?.split(',').filter(Boolean) || []
+  const themes = searchParams.get('themes')?.split(',').filter(Boolean) || []
+  const applications = searchParams.get('applications')?.split(',').filter(Boolean) || []
+  const shopCreationDate = searchParams.get('shopCreationDate') || ''
+  const minTrustpilotRating = searchParams.get('minTrustpilotRating')
+  const maxTrustpilotRating = searchParams.get('maxTrustpilotRating')
+  const minTrustpilotReviews = searchParams.get('minTrustpilotReviews')
+  const maxTrustpilotReviews = searchParams.get('maxTrustpilotReviews')
 
   try {
     // Split conditions into: base (products/shops only) and traffic-based
@@ -119,6 +132,14 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // Origins filter - shop location country (uses same 'country' column)
+    if (origins.length > 0) {
+      const originPlaceholders = origins.map((_, i) => `$${paramIndex + i}`).join(', ')
+      baseConditions.push(`s.country IN (${originPlaceholders})`)
+      params.push(...origins)
+      paramIndex += origins.length
+    }
+
     // Search filter
     if (search) {
       const searchLower = `%${search.toLowerCase()}%`
@@ -132,9 +153,9 @@ export async function GET(request: NextRequest) {
       paramIndex++
     }
 
-    // Date filter
-    if (dateFilter && dateFilter.includes(' - ')) {
-      const [startDate, endDate] = dateFilter.split(' - ')
+    // Shop creation date filter
+    if (shopCreationDate && shopCreationDate.includes(' - ')) {
+      const [startDate, endDate] = shopCreationDate.split(' - ')
       baseConditions.push(`s.created_at >= $${paramIndex}`)
       params.push(new Date(startDate))
       paramIndex++
@@ -152,6 +173,77 @@ export async function GET(request: NextRequest) {
         params.push(...pixelList.map(p => `%${p}%`))
         paramIndex += pixelList.length
       }
+    }
+
+    // Languages filter - uses 'locale' column in database
+    if (languages.length > 0) {
+      const languageMap: Record<string, string[]> = {
+        'English': ['en', 'en-US', 'en-GB', 'en-AU', 'en-CA'],
+        'French': ['fr', 'fr-FR', 'fr-CA'],
+        'Spanish': ['es', 'es-ES', 'es-MX'],
+        'German': ['de', 'de-DE', 'de-AT'],
+        'Portuguese': ['pt', 'pt-BR', 'pt-PT'],
+        'Italian': ['it', 'it-IT'],
+        'Dutch': ['nl', 'nl-NL'],
+        'Polish': ['pl', 'pl-PL'],
+        'Norwegian': ['no', 'nb', 'nn'],
+        'Swedish': ['sv', 'sv-SE'],
+        'Danish': ['da', 'da-DK'],
+        'Japanese': ['ja', 'ja-JP'],
+        'Chinese': ['zh', 'zh-CN', 'zh-TW'],
+        'Arabic': ['ar', 'ar-SA'],
+        'Russian': ['ru', 'ru-RU'],
+        'Korean': ['ko', 'ko-KR'],
+      }
+      
+      const localeCodes: string[] = []
+      for (const lang of languages) {
+        const codes = languageMap[lang] || [lang.toLowerCase().substring(0, 2)]
+        localeCodes.push(...codes)
+      }
+      
+      if (localeCodes.length > 0) {
+        const langConditions = localeCodes.map((_, i) => `s.locale ILIKE $${paramIndex + i}`).join(' OR ')
+        baseConditions.push(`(${langConditions})`)
+        params.push(...localeCodes.map(l => `${l}%`))
+        paramIndex += localeCodes.length
+      }
+    }
+
+    // Domains filter - search in 'url' column
+    if (domains.length > 0) {
+      const domainConditions = domains.map((_, i) => `s.url ILIKE $${paramIndex + i}`).join(' OR ')
+      baseConditions.push(`(${domainConditions})`)
+      params.push(...domains.map(d => `%${d}`))
+      paramIndex += domains.length
+    }
+
+    // Themes filter - search in 'theme' column
+    if (themes.length > 0) {
+      const themeConditions = themes.map((_, i) => `s.theme ILIKE $${paramIndex + i}`).join(' OR ')
+      baseConditions.push(`(${themeConditions})`)
+      params.push(...themes.map(t => `%${t}%`))
+      paramIndex += themes.length
+    }
+
+    // Applications filter - search in 'apps' text column
+    if (applications.length > 0) {
+      const appConditions = applications.map((_, i) => `s.apps ILIKE $${paramIndex + i}`).join(' OR ')
+      baseConditions.push(`(${appConditions})`)
+      params.push(...applications.map(a => `%${a}%`))
+      paramIndex += applications.length
+    }
+
+    // Catalog size filter (products_count)
+    if (minCatalogSize) {
+      baseConditions.push(`s.products_count >= $${paramIndex}`)
+      params.push(parseInt(minCatalogSize))
+      paramIndex++
+    }
+    if (maxCatalogSize) {
+      baseConditions.push(`s.products_count <= $${paramIndex}`)
+      params.push(parseInt(maxCatalogSize))
+      paramIndex++
     }
 
     // Sort-specific filters on shops table
@@ -393,8 +485,8 @@ export async function GET(request: NextRequest) {
       // If first page has fewer results than perPage, total is just the count
       total = productsResult.length
     } else {
-      // Generate cache key for count
-      const cacheKey = JSON.stringify({ baseConditions, trafficConditions, categoryCondition, sortBy })
+      // Generate cache key for count - include params values for accurate caching
+      const cacheKey = JSON.stringify({ baseConditions, trafficConditions, categoryCondition, sortBy, params })
       const cached = countCache.get(cacheKey)
       
       // Get count - use cache if available

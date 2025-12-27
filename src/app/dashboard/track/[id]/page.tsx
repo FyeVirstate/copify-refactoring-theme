@@ -3,7 +3,214 @@
 import React, { useState, useEffect, useRef, use } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { ComposableMap, Geographies, Geography, ZoomableGroup } from "react-simple-maps";
+
+const geoUrl = "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json";
+
+// Country code mapping for react-simple-maps (ISO 3166-1 alpha-2 to numeric)
+// world-atlas uses ISO 3166-1 numeric codes (without leading zeros)
+const countryCodeToNumeric: Record<string, string> = {
+  // North America
+  'US': '840', 'CA': '124', 'MX': '484', 'GT': '320', 'CU': '192', 'HT': '332', 'DO': '214', 'JM': '388',
+  'HN': '340', 'SV': '222', 'NI': '558', 'CR': '188', 'PA': '591',
+  // South America
+  'BR': '76', 'AR': '32', 'CL': '152', 'CO': '170', 'PE': '604', 'VE': '862', 'EC': '218', 
+  'BO': '68', 'PY': '600', 'UY': '858', 'GY': '328', 'SR': '740',
+  // Western Europe
+  'GB': '826', 'FR': '250', 'DE': '276', 'ES': '724', 'IT': '380', 'NL': '528', 'BE': '56', 'PT': '620',
+  'CH': '756', 'AT': '40', 'IE': '372', 'LU': '442', 'MC': '492', 'AD': '20',
+  // Northern Europe
+  'SE': '752', 'NO': '578', 'DK': '208', 'FI': '246', 'IS': '352', 'EE': '233', 'LV': '428', 'LT': '440',
+  // Eastern Europe
+  'PL': '616', 'CZ': '203', 'SK': '703', 'HU': '348', 'RO': '642', 'BG': '100', 'UA': '804', 'BY': '112',
+  'MD': '498', 'RU': '643',
+  // Southern Europe & Balkans
+  'GR': '300', 'HR': '191', 'RS': '688', 'SI': '705', 'BA': '70', 'ME': '499', 'MK': '807', 'AL': '8',
+  'CY': '196', 'MT': '470',
+  // Middle East
+  'TR': '792', 'IL': '376', 'AE': '784', 'SA': '682', 'QA': '634', 'KW': '414', 'BH': '48', 'OM': '512',
+  'JO': '400', 'LB': '422', 'SY': '760', 'IQ': '368', 'IR': '364', 'YE': '887',
+  // South Asia
+  'IN': '356', 'PK': '586', 'BD': '50', 'LK': '144', 'NP': '524', 'AF': '4',
+  // Southeast Asia
+  'CN': '156', 'JP': '392', 'KR': '410', 'KP': '408', 'VN': '704', 'TH': '764', 'MY': '458', 'SG': '702',
+  'ID': '360', 'PH': '608', 'TW': '158', 'HK': '344', 'MM': '104', 'KH': '116', 'LA': '418', 'MN': '496',
+  // Central Asia
+  'KZ': '398', 'UZ': '860', 'TM': '795', 'KG': '417', 'TJ': '762',
+  // Oceania
+  'AU': '36', 'NZ': '554', 'PG': '598', 'FJ': '242',
+  // Africa
+  'ZA': '710', 'EG': '818', 'NG': '566', 'KE': '404', 'MA': '504', 'DZ': '12', 'TN': '788', 'LY': '434',
+  'ET': '231', 'GH': '288', 'CI': '384', 'CM': '120', 'AO': '24', 'MZ': '508', 'MG': '450', 'TZ': '834',
+  'UG': '800', 'SD': '729', 'SN': '686', 'ZW': '716', 'ZM': '894', 'BW': '72', 'NA': '516', 'CD': '180',
+  'CG': '178', 'GA': '266', 'ML': '466', 'NE': '562', 'TD': '148', 'CF': '140', 'SS': '728', 'ER': '232',
+  'DJ': '262', 'SO': '706', 'RW': '646', 'BI': '108', 'MW': '454', 'LS': '426', 'SZ': '748',
+};
+
+// Helper to get numeric code with fallback (handles both with and without leading zeros)
+const getNumericCode = (alpha2: string): string | undefined => {
+  const code = countryCodeToNumeric[alpha2];
+  return code;
+};
+
+// Reverse mapping: numeric code to alpha-2
+const numericToAlpha2: Record<string, string> = Object.entries(countryCodeToNumeric).reduce((acc, [alpha2, numeric]) => {
+  acc[numeric] = alpha2;
+  acc[numeric.padStart(3, '0')] = alpha2;
+  return acc;
+}, {} as Record<string, string>);
+
+// Map View Component with hover tooltip
+interface MapViewProps {
+  countries: Array<{ name: string; code: string; value: number }>;
+  defaultCountry: string | null;
+  getCountryName: (code: string) => string;
+  FlagImage: React.FC<{ code: string; size?: number }>;
+}
+
+const MapViewComponent: React.FC<MapViewProps> = ({ countries, defaultCountry, getCountryName, FlagImage }) => {
+  const [hoveredCountry, setHoveredCountry] = useState<{ code: string; name: string; value: number | null; hasData: boolean } | null>(null);
+  const [zoom, setZoom] = useState(1);
+  const [center, setCenter] = useState<[number, number]>([0, 30]);
+  
+  const handleZoomIn = () => {
+    if (zoom < 4) setZoom(zoom * 1.5);
+  };
+  
+  const handleZoomOut = () => {
+    if (zoom > 0.5) setZoom(zoom / 1.5);
+  };
+  
+  // Pre-compute highlighted country data
+  const countryDataMap = new Map<string, { code: string; name: string; value: number }>();
+  const highlightedIds = new Set<string>();
+  
+  const countriesData = countries.length > 0 
+    ? countries 
+    : [{ name: getCountryName(defaultCountry || ''), code: defaultCountry || 'xx', value: 100 }];
+  
+  countriesData.forEach(c => {
+    const numericCode = getNumericCode(c.code?.toUpperCase());
+    if (numericCode) {
+      highlightedIds.add(numericCode);
+      highlightedIds.add(numericCode.padStart(3, '0'));
+      countryDataMap.set(numericCode, c);
+      countryDataMap.set(numericCode.padStart(3, '0'), c);
+    }
+  });
+  
+  return (
+    <div style={{ position: 'relative' }}>
+      {/* Hover Tooltip */}
+      {hoveredCountry && (
+        <div style={{
+          position: 'absolute',
+          top: 10,
+          left: 10,
+          background: '#fff',
+          border: '1px solid #E5E7EB',
+          borderRadius: 8,
+          padding: '8px 12px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8,
+          zIndex: 10,
+          boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+          pointerEvents: 'none'
+        }}>
+          <FlagImage code={hoveredCountry.code} size={24} />
+          <span style={{ fontSize: 14, fontWeight: 500, color: '#111827' }}>
+            {hoveredCountry.name}
+          </span>
+          {hoveredCountry.hasData ? (
+            <span style={{ fontSize: 14, color: '#6B7280' }}>{hoveredCountry.value}%</span>
+          ) : (
+            <span style={{ fontSize: 12, color: '#9CA3AF', fontStyle: 'italic' }}>No data</span>
+          )}
+        </div>
+      )}
+      
+      {/* World Map */}
+      <ComposableMap
+        projection="geoMercator"
+        projectionConfig={{
+          scale: 120,
+          center: [0, 30]
+        }}
+        style={{ width: '100%', height: '280px' }}
+      >
+        <ZoomableGroup zoom={zoom} center={center} onMoveEnd={({ coordinates, zoom: z }) => { setCenter(coordinates as [number, number]); setZoom(z); }}>
+          <Geographies geography={geoUrl}>
+            {({ geographies }) =>
+              geographies.map((geo) => {
+                const geoId = String(geo.id);
+                const isHighlighted = highlightedIds.has(geoId) || highlightedIds.has(geoId.replace(/^0+/, ''));
+                const countryData = countryDataMap.get(geoId) || countryDataMap.get(geoId.replace(/^0+/, ''));
+                
+                // Get alpha-2 code from numeric ID for countries without data
+                const alpha2Code = numericToAlpha2[geoId] || numericToAlpha2[geoId.replace(/^0+/, '')] || '';
+                
+                return (
+                  <Geography
+                    key={geo.rsmKey}
+                    geography={geo}
+                    fill={isHighlighted ? "#3B82F6" : "#E5E7EB"}
+                    stroke="#FFFFFF"
+                    strokeWidth={0.5}
+                    onMouseEnter={() => {
+                      if (isHighlighted && countryData) {
+                        // Country with data
+                        setHoveredCountry({
+                          code: countryData.code,
+                          name: getCountryName(countryData.code) || countryData.name,
+                          value: countryData.value,
+                          hasData: true
+                        });
+                      } else if (alpha2Code) {
+                        // Country without data but we know the code
+                        setHoveredCountry({
+                          code: alpha2Code,
+                          name: getCountryName(alpha2Code) || alpha2Code,
+                          value: null,
+                          hasData: false
+                        });
+                      }
+                    }}
+                    onMouseLeave={() => {
+                      setHoveredCountry(null);
+                    }}
+                    style={{
+                      default: { outline: "none", cursor: "pointer" },
+                      hover: { fill: isHighlighted ? "#2563EB" : "#D1D5DB", outline: "none" },
+                      pressed: { outline: "none" }
+                    }}
+                  />
+                );
+              })
+            }
+          </Geographies>
+        </ZoomableGroup>
+      </ComposableMap>
+      
+      {/* Zoom controls */}
+      <div style={{
+        position: 'absolute',
+        bottom: 10,
+        left: 10,
+        display: 'flex',
+        gap: 0,
+        background: '#fff',
+        borderRadius: 6,
+        border: '1px solid #E5E7EB',
+        overflow: 'hidden'
+      }}>
+        <button onClick={handleZoomIn} style={{ width: 28, height: 28, border: 'none', background: '#fff', cursor: 'pointer', fontSize: 16, color: '#6B7280', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</button>
+        <button onClick={handleZoomOut} style={{ width: 28, height: 28, border: 'none', background: '#fff', cursor: 'pointer', fontSize: 16, color: '#6B7280', borderLeft: '1px solid #E5E7EB', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>−</button>
+      </div>
+    </div>
+  );
+};
 
 interface SuggestedShop {
   id: number;
@@ -54,12 +261,21 @@ country: string | null;
     activeAdsCount: number;
     inactiveAdsCount: number;
     trend?: number; // 1 = up, 0 = down
+    // Ads-specific growth (separate from traffic)
+    adsLastMonthGrowth?: string;
+    adsThreeMonthGrowth?: string;
+  };
+  // Ads evolution chart data
+  adsChart?: {
+    labels: string[];
+    allAds: number[];
+    activeAds: number[];
   };
   traffic: {
     chartData: Array<{ date: string; visits: number; }>;
     sources: Array<{ name: string; value: number; icon: string | null; }>;
     countries: Array<{ name: string; code: string; value: number; }>;
-    social: unknown[];
+    social: Array<{ name: string; value: number; icon: string | null; }>;
     mainSource: string | null;
     growthRate: number;
   };
@@ -85,6 +301,9 @@ export default function TrackDetailsPage({ params }: { params: Promise<{ id: str
   const [error, setError] = useState<string | null>(null);
   const [activeChartTab, setActiveChartTab] = useState<'sales' | 'traffic'>('sales');
   const [activeProductTab, setActiveProductTab] = useState<'bestsellers' | 'latest'>('bestsellers');
+  const [activeTrafficSourceTab, setActiveTrafficSourceTab] = useState<'sources' | 'social'>('sources');
+  const [hoveredTrafficSource, setHoveredTrafficSource] = useState<{ name: string; value: number; color: string } | null>(null);
+  const [showMapView, setShowMapView] = useState(false);
   const [showAllProducts, setShowAllProducts] = useState(false);
   
   // Ads filter state
@@ -102,6 +321,8 @@ export default function TrackDetailsPage({ params }: { params: Promise<{ id: str
   const [isDragging, setIsDragging] = useState(false);
   const [startX, setStartX] = useState(0);
   const [scrollLeft, setScrollLeft] = useState(0);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(true);
   
   // Suggested shops tracking state
   const [analyzingShopIds, setAnalyzingShopIds] = useState<Set<number>>(new Set());
@@ -147,8 +368,34 @@ export default function TrackDetailsPage({ params }: { params: Promise<{ id: str
     setAdsSliderIndex(0);
     if (sliderRef.current) {
       sliderRef.current.scrollLeft = 0;
+      // At position 0, can't scroll left
+      setCanScrollLeft(false);
+      // Check if can scroll right
+      const { scrollWidth, clientWidth } = sliderRef.current;
+      setCanScrollRight(scrollWidth > clientWidth + 5);
     }
   }, [formatFilter, statusFilter, sortOrder]);
+
+  // Listen to scroll events on slider
+  useEffect(() => {
+    const slider = sliderRef.current;
+    if (slider) {
+      const handleScroll = () => {
+        const { scrollLeft, scrollWidth, clientWidth } = slider;
+        setCanScrollLeft(scrollLeft > 5);
+        setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 5);
+      };
+      
+      slider.addEventListener('scroll', handleScroll);
+      // Initial check with delay
+      const timeoutId = setTimeout(handleScroll, 300);
+      
+      return () => {
+        slider.removeEventListener('scroll', handleScroll);
+        clearTimeout(timeoutId);
+      };
+    }
+  }, [shopDetails]); // Re-run when shopDetails changes
 
   useEffect(() => {
     const loadDetails = async () => {
@@ -259,18 +506,50 @@ export default function TrackDetailsPage({ params }: { params: Promise<{ id: str
   // Country code to name mapping
   const getCountryName = (code: string): string => {
     const names: Record<string, string> = {
-      'US': 'États-Unis', 'FR': 'France', 'GB': 'Royaume-Uni', 'DE': 'Allemagne', 
-      'ES': 'Espagne', 'IT': 'Italie', 'NL': 'Pays-Bas', 'BE': 'Belgique',
-      'CA': 'Canada', 'AU': 'Australie', 'VN': 'Vietnam', 'JP': 'Japon',
-      'CN': 'Chine', 'KR': 'Corée du Sud', 'IN': 'Inde', 'BR': 'Brésil',
-      'MX': 'Mexique', 'PT': 'Portugal', 'CH': 'Suisse', 'AT': 'Autriche',
-      'PL': 'Pologne', 'SE': 'Suède', 'NO': 'Norvège', 'DK': 'Danemark',
-      'FI': 'Finlande', 'IE': 'Irlande', 'NZ': 'Nouvelle-Zélande', 'SG': 'Singapour',
-      'HK': 'Hong Kong', 'TW': 'Taiwan', 'TH': 'Thaïlande', 'MY': 'Malaisie',
-      'PH': 'Philippines', 'ID': 'Indonésie', 'AE': 'Émirats arabes unis',
-      'SA': 'Arabie Saoudite', 'IL': 'Israël', 'ZA': 'Afrique du Sud',
-      'RU': 'Russie', 'UA': 'Ukraine', 'TR': 'Turquie', 'GR': 'Grèce',
-      'CZ': 'République tchèque', 'RO': 'Roumanie', 'HU': 'Hongrie',
+      // North America
+      'US': 'États-Unis', 'CA': 'Canada', 'MX': 'Mexique', 'GT': 'Guatemala', 'CU': 'Cuba',
+      'HT': 'Haïti', 'DO': 'Rép. Dominicaine', 'JM': 'Jamaïque', 'HN': 'Honduras',
+      'SV': 'Salvador', 'NI': 'Nicaragua', 'CR': 'Costa Rica', 'PA': 'Panama',
+      // South America
+      'BR': 'Brésil', 'AR': 'Argentine', 'CL': 'Chili', 'CO': 'Colombie', 'PE': 'Pérou',
+      'VE': 'Venezuela', 'EC': 'Équateur', 'BO': 'Bolivie', 'PY': 'Paraguay', 'UY': 'Uruguay',
+      'GY': 'Guyana', 'SR': 'Suriname',
+      // Western Europe
+      'GB': 'Royaume-Uni', 'FR': 'France', 'DE': 'Allemagne', 'ES': 'Espagne', 'IT': 'Italie',
+      'NL': 'Pays-Bas', 'BE': 'Belgique', 'PT': 'Portugal', 'CH': 'Suisse', 'AT': 'Autriche',
+      'IE': 'Irlande', 'LU': 'Luxembourg', 'MC': 'Monaco', 'AD': 'Andorre',
+      // Northern Europe
+      'SE': 'Suède', 'NO': 'Norvège', 'DK': 'Danemark', 'FI': 'Finlande', 'IS': 'Islande',
+      'EE': 'Estonie', 'LV': 'Lettonie', 'LT': 'Lituanie',
+      // Eastern Europe
+      'PL': 'Pologne', 'CZ': 'Tchéquie', 'SK': 'Slovaquie', 'HU': 'Hongrie', 'RO': 'Roumanie',
+      'BG': 'Bulgarie', 'UA': 'Ukraine', 'BY': 'Biélorussie', 'MD': 'Moldavie', 'RU': 'Russie',
+      // Southern Europe & Balkans
+      'GR': 'Grèce', 'HR': 'Croatie', 'RS': 'Serbie', 'SI': 'Slovénie', 'BA': 'Bosnie',
+      'ME': 'Monténégro', 'MK': 'Macédoine du Nord', 'AL': 'Albanie', 'CY': 'Chypre', 'MT': 'Malte',
+      // Middle East
+      'TR': 'Turquie', 'IL': 'Israël', 'AE': 'Émirats arabes unis', 'SA': 'Arabie Saoudite',
+      'QA': 'Qatar', 'KW': 'Koweït', 'BH': 'Bahreïn', 'OM': 'Oman', 'JO': 'Jordanie',
+      'LB': 'Liban', 'SY': 'Syrie', 'IQ': 'Irak', 'IR': 'Iran', 'YE': 'Yémen',
+      // South Asia
+      'IN': 'Inde', 'PK': 'Pakistan', 'BD': 'Bangladesh', 'LK': 'Sri Lanka', 'NP': 'Népal', 'AF': 'Afghanistan',
+      // East & Southeast Asia
+      'CN': 'Chine', 'JP': 'Japon', 'KR': 'Corée du Sud', 'KP': 'Corée du Nord', 'VN': 'Vietnam',
+      'TH': 'Thaïlande', 'MY': 'Malaisie', 'SG': 'Singapour', 'ID': 'Indonésie', 'PH': 'Philippines',
+      'TW': 'Taiwan', 'HK': 'Hong Kong', 'MM': 'Myanmar', 'KH': 'Cambodge', 'LA': 'Laos', 'MN': 'Mongolie',
+      // Central Asia
+      'KZ': 'Kazakhstan', 'UZ': 'Ouzbékistan', 'TM': 'Turkménistan', 'KG': 'Kirghizistan', 'TJ': 'Tadjikistan',
+      // Oceania
+      'AU': 'Australie', 'NZ': 'Nouvelle-Zélande', 'PG': 'Papouasie-N.-Guinée', 'FJ': 'Fidji',
+      // Africa
+      'ZA': 'Afrique du Sud', 'EG': 'Égypte', 'NG': 'Nigeria', 'KE': 'Kenya', 'MA': 'Maroc',
+      'DZ': 'Algérie', 'TN': 'Tunisie', 'LY': 'Libye', 'ET': 'Éthiopie', 'GH': 'Ghana',
+      'CI': 'Côte d\'Ivoire', 'CM': 'Cameroun', 'AO': 'Angola', 'MZ': 'Mozambique', 'MG': 'Madagascar',
+      'TZ': 'Tanzanie', 'UG': 'Ouganda', 'SD': 'Soudan', 'SN': 'Sénégal', 'ZW': 'Zimbabwe',
+      'ZM': 'Zambie', 'BW': 'Botswana', 'NA': 'Namibie', 'CD': 'RD Congo', 'CG': 'Congo',
+      'GA': 'Gabon', 'ML': 'Mali', 'NE': 'Niger', 'TD': 'Tchad', 'CF': 'Centrafrique',
+      'SS': 'Soudan du Sud', 'ER': 'Érythrée', 'DJ': 'Djibouti', 'SO': 'Somalie',
+      'RW': 'Rwanda', 'BI': 'Burundi', 'MW': 'Malawi', 'LS': 'Lesotho', 'SZ': 'Eswatini',
     };
     return names[code?.toUpperCase()] || code || 'Inconnu';
   };
@@ -380,10 +659,19 @@ export default function TrackDetailsPage({ params }: { params: Promise<{ id: str
   // Active chart data based on tab
   const chartData = activeChartTab === 'sales' ? salesChartData : trafficChartData;
 
-  // Theme colors from API
-  const themeColors = shopDetails.shop.colors || [];
-  const themeColorsRow1 = themeColors.slice(0, 6).map(hex => ({ hex: hex.startsWith('#') ? hex : `#${hex}` }));
-  const themeColorsRow2 = themeColors.slice(6, 11).map(hex => ({ hex: hex.startsWith('#') ? hex : `#${hex}` }));
+  // Theme colors from API - filter out pure black and white
+  const themeColors = (shopDetails.shop.colors || [])
+    .map(hex => hex.startsWith('#') ? hex : `#${hex}`)
+    .filter(hex => {
+      const cleanColor = hex.replace('#', '').toUpperCase();
+      return cleanColor !== 'FFFFFF' && cleanColor !== '000000';
+    })
+    .slice(0, 12);
+  const themeColorsRow1 = themeColors.slice(0, 6).map(hex => ({ hex }));
+  const themeColorsRow2 = themeColors.slice(6, 12).map(hex => ({ hex }));
+  
+  // Theme fonts from API
+  const themeFonts = shopDetails.shop.fonts || [];
 
   // Traffic sources from API - Colors matching Laravel exactly (trafficColors)
   // Generic traffic sources colors (matching Laravel order: Direct, Referral, Search, Social, Mail, Ads)
@@ -426,6 +714,33 @@ export default function TrackDetailsPage({ params }: { params: Promise<{ id: str
         value: s.value,
       }))
     : [{ name: "Direct", color: "#0C6CFB", value: 100 }];
+
+  // Social media sources from API with their brand colors
+  const socialColors: Record<string, string> = {
+    "Facebook": "#1877F2",
+    "Youtube": "#FF0000",
+    "Instagram": "#E4405F",
+    "Pinterest": "#BD081C",
+    "Twitter": "#1DA1F2",
+    "Tiktok": "#000000",
+    "TikTok": "#000000",
+    "LinkedIn": "#0A66C2",
+    "WhatsApp": "#25D366",
+    "Snapchat": "#FFFC00",
+    "Reddit": "#FF4500",
+    "Tumblr": "#35465C",
+  };
+  const defaultSocialColors = ["#1877F2", "#FF0000", "#E4405F", "#BD081C", "#1DA1F2", "#000000"];
+  
+  const socialSources = shopDetails.traffic.social.length > 0 
+    ? shopDetails.traffic.social.map((s, index) => ({
+        name: s.name,
+        color: socialColors[s.name] || defaultSocialColors[index % defaultSocialColors.length],
+        value: s.value,
+      }))
+    : [];
+  
+  const hasSocialData = socialSources.length > 0;
 
   // Products from API (sorted by creation date for "latest" tab)
   const latestProducts = [...shopDetails.products]
@@ -724,15 +1039,9 @@ export default function TrackDetailsPage({ params }: { params: Promise<{ id: str
               />
             </div>
             <div>
-              <span style={{ fontWeight: 600, fontSize: 18, color: '#111827', display: 'block' }}>
+              <span style={{ fontWeight: 600, fontSize: 18, color: '#111827' }}>
                 {shopDetails.shop.name || shopDetails.shop.url?.replace('www.', '')}
               </span>
-              {/* Category breadcrumb */}
-              {shopDetails.shop.category && (
-                <span style={{ fontSize: 12, color: '#6B7280', fontWeight: 500 }}>
-                  {shopDetails.shop.category}
-                </span>
-              )}
             </div>
           </div>
           
@@ -799,18 +1108,27 @@ export default function TrackDetailsPage({ params }: { params: Promise<{ id: str
             >
               Site web <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M7 17L17 7M17 7H7M17 7V17"/></svg>
             </a>
-            <button style={{ 
-              border: 'none', 
-              background: '#F3F4F6', 
-              cursor: 'pointer', 
-              fontSize: 16,
-              color: '#6B7280',
-              padding: '6px 10px',
-              borderRadius: 8,
-              display: 'flex',
-              alignItems: 'center'
-            }}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+            <button 
+              onClick={() => window.location.reload()}
+              title="Actualiser les données"
+              style={{ 
+                border: 'none', 
+                background: '#F3F4F6', 
+                cursor: 'pointer', 
+                fontSize: 16,
+                color: '#6B7280',
+                padding: '6px 10px',
+                borderRadius: 8,
+                display: 'flex',
+                alignItems: 'center'
+              }}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+                <path d="M3 3v5h5"/>
+                <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/>
+                <path d="M16 21h5v-5"/>
+              </svg>
             </button>
           </div>
         </div>
@@ -1003,38 +1321,235 @@ export default function TrackDetailsPage({ params }: { params: Promise<{ id: str
 
               {/* Traffic Sources Card */}
               <div style={{ ...cardStyle, padding: 20 }}>
-                <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 16, color: '#111827' }}>Sources de Trafics</div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 40 }}>
-                  {/* Pie Chart */}
-                  <div style={{ width: 180, height: 180 }}>
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie
-                          data={trafficSources}
-                          cx="50%"
-                          cy="50%"
-                          innerRadius={50}
-                          outerRadius={80}
-                          paddingAngle={2}
-                          dataKey="value"
-                        >
-                          {trafficSources.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.color} />
-                          ))}
-                        </Pie>
-                      </PieChart>
-                    </ResponsiveContainer>
+                {/* Header with tabs if social data exists */}
+                {hasSocialData ? (
+                  <div style={{ display: 'flex', gap: 0, marginBottom: 16, borderBottom: '1px solid #E5E7EB' }}>
+                    <button 
+                      onClick={() => setActiveTrafficSourceTab('sources')}
+                      style={{ 
+                        padding: '8px 16px', 
+                        border: 'none', 
+                        background: 'none', 
+                        borderBottom: activeTrafficSourceTab === 'sources' ? '2px solid #0EA5E9' : '2px solid transparent',
+                        fontWeight: 500, 
+                        fontSize: 14, 
+                        cursor: 'pointer', 
+                        color: activeTrafficSourceTab === 'sources' ? '#111827' : '#6B7280',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 6
+                      }}
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <circle cx="12" cy="12" r="10"/>
+                        <line x1="2" y1="12" x2="22" y2="12"/>
+                        <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+                      </svg>
+                      Sources de Trafics
+                    </button>
+                    <button 
+                      onClick={() => setActiveTrafficSourceTab('social')}
+                      style={{ 
+                        padding: '8px 16px', 
+                        border: 'none', 
+                        background: 'none', 
+                        borderBottom: activeTrafficSourceTab === 'social' ? '2px solid #0EA5E9' : '2px solid transparent',
+                        fontWeight: 500, 
+                        fontSize: 14, 
+                        cursor: 'pointer', 
+                        color: activeTrafficSourceTab === 'social' ? '#111827' : '#6B7280',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 6
+                      }}
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <circle cx="18" cy="5" r="3"/>
+                        <circle cx="6" cy="12" r="3"/>
+                        <circle cx="18" cy="19" r="3"/>
+                        <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/>
+                        <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+                      </svg>
+                      Réseaux Sociaux
+                    </button>
                   </div>
-                  
-                  {/* Legend */}
+                ) : (
+                  <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 16, color: '#111827' }}>Sources de Trafics</div>
+                )}
+                
+                {/* Traffic Sources View */}
+                {activeTrafficSourceTab === 'sources' && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 40 }}>
+                    {/* Interactive SVG Donut Chart with Hover */}
+                    <div style={{ position: 'relative', width: 160, height: 160, flexShrink: 0 }}>
+                      {(() => {
+                        const total = trafficSources.reduce((sum, s) => sum + s.value, 0);
+                        const size = 160;
+                        const radius = 70;
+                        const innerRadius = 42;
+                        const center = size / 2;
+                        
+                        // Convert percentage to radians and create SVG arc paths
+                        const createArcPath = (startPercent: number, endPercent: number, r: number, inner: number) => {
+                          const startAngle = (startPercent / 100) * 2 * Math.PI - Math.PI / 2;
+                          const endAngle = (endPercent / 100) * 2 * Math.PI - Math.PI / 2;
+                          
+                          const x1 = center + r * Math.cos(startAngle);
+                          const y1 = center + r * Math.sin(startAngle);
+                          const x2 = center + r * Math.cos(endAngle);
+                          const y2 = center + r * Math.sin(endAngle);
+                          const x3 = center + inner * Math.cos(endAngle);
+                          const y3 = center + inner * Math.sin(endAngle);
+                          const x4 = center + inner * Math.cos(startAngle);
+                          const y4 = center + inner * Math.sin(startAngle);
+                          
+                          const largeArc = endPercent - startPercent > 50 ? 1 : 0;
+                          
+                          return `M ${x1} ${y1} A ${r} ${r} 0 ${largeArc} 1 ${x2} ${y2} L ${x3} ${y3} A ${inner} ${inner} 0 ${largeArc} 0 ${x4} ${y4} Z`;
+                        };
+                        
+                        let currentPercent = 0;
+                        const segments = trafficSources.map((s) => {
+                          const startPercent = currentPercent;
+                          const percentage = total > 0 ? (s.value / total) * 100 : 0;
+                          currentPercent += percentage;
+                          return {
+                            ...s,
+                            startPercent,
+                            endPercent: currentPercent,
+                            percentage
+                          };
+                        });
+                        
+                        return (
+                          <>
+                            <svg width={size} height={size} style={{ display: 'block' }}>
+                              {segments.map((seg, i) => (
+                                seg.percentage > 0 && (
+                                  <path
+                                    key={i}
+                                    d={createArcPath(seg.startPercent, seg.endPercent, radius, innerRadius)}
+                                    fill={seg.color}
+                                    style={{ 
+                                      cursor: 'pointer',
+                                      transition: 'opacity 0.15s ease',
+                                      opacity: hoveredTrafficSource && hoveredTrafficSource.name !== seg.name ? 0.5 : 1
+                                    }}
+                                    onMouseEnter={() => setHoveredTrafficSource({ name: seg.name, value: seg.value, color: seg.color })}
+                                    onMouseLeave={() => setHoveredTrafficSource(null)}
+                                  />
+                                )
+                              ))}
+                              {/* Center text showing hovered value */}
+                              {hoveredTrafficSource && (
+                                <>
+                                  <text
+                                    x={center}
+                                    y={center - 5}
+                                    textAnchor="middle"
+                                    fill="#111827"
+                                    fontSize="18"
+                                    fontWeight="600"
+                                  >
+                                    {hoveredTrafficSource.value.toFixed(1)}%
+                                  </text>
+                                  <text
+                                    x={center}
+                                    y={center + 14}
+                                    textAnchor="middle"
+                                    fill="#6B7280"
+                                    fontSize="11"
+                                  >
+                                    {hoveredTrafficSource.name}
+                                  </text>
+                                </>
+                              )}
+                            </svg>
+                            {/* Tooltip on hover */}
+                            {hoveredTrafficSource && (
+                              <div
+                                style={{
+                                  position: 'absolute',
+                                  top: -45,
+                                  left: '50%',
+                                  transform: 'translateX(-50%)',
+                                  background: '#1F2937',
+                                  color: '#fff',
+                                  padding: '8px 12px',
+                                  borderRadius: 6,
+                                  fontSize: 12,
+                                  fontWeight: 500,
+                                  whiteSpace: 'nowrap',
+                                  boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                                  zIndex: 10,
+                                  pointerEvents: 'none'
+                                }}
+                              >
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                  <span style={{ 
+                                    width: 8, 
+                                    height: 8, 
+                                    borderRadius: '50%', 
+                                    background: hoveredTrafficSource.color 
+                                  }} />
+                                  <span>{hoveredTrafficSource.name}: {hoveredTrafficSource.value.toFixed(1)}%</span>
+                                </div>
+                              </div>
+                            )}
+                          </>
+                        );
+                      })()}
+                    </div>
+                    
+                    {/* Legend - Interactive */}
+                    <div style={{ flex: 1 }}>
+                      {trafficSources.map((s, i) => (
+                        <div 
+                          key={i} 
+                          style={{ 
+                            display: 'flex', 
+                            justifyContent: 'space-between', 
+                            alignItems: 'center',
+                            padding: '10px 0', 
+                            borderBottom: i < trafficSources.length - 1 ? '1px solid #F3F4F6' : 'none',
+                            cursor: 'pointer',
+                            borderRadius: 4,
+                            transition: 'background 0.15s ease',
+                            background: hoveredTrafficSource?.name === s.name ? '#F9FAFB' : 'transparent',
+                            marginLeft: -8,
+                            marginRight: -8,
+                            paddingLeft: 8,
+                            paddingRight: 8,
+                          }}
+                          onMouseEnter={() => setHoveredTrafficSource({ name: s.name, value: s.value, color: s.color })}
+                          onMouseLeave={() => setHoveredTrafficSource(null)}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                            <span style={{ 
+                              width: 10, 
+                              height: 10, 
+                              borderRadius: '50%', 
+                              background: s.color 
+                            }} />
+                            <span style={{ fontSize: 13, color: '#374151' }}>{s.name}</span>
+                          </div>
+                          <span style={{ fontSize: 13, fontWeight: 500, color: '#111827' }}>{s.value.toFixed(1)}%</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
+                {/* Social Media View */}
+                {activeTrafficSourceTab === 'social' && hasSocialData && (
                   <div style={{ flex: 1 }}>
-                    {trafficSources.map((s, i) => (
+                    {socialSources.map((s, i) => (
                       <div key={i} style={{ 
                         display: 'flex', 
                         justifyContent: 'space-between', 
                         alignItems: 'center',
                         padding: '10px 0', 
-                        borderBottom: i < trafficSources.length - 1 ? '1px solid #F3F4F6' : 'none' 
+                        borderBottom: i < socialSources.length - 1 ? '1px solid #F3F4F6' : 'none' 
                       }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                           <span style={{ 
@@ -1049,7 +1564,7 @@ export default function TrackDetailsPage({ params }: { params: Promise<{ id: str
                       </div>
                     ))}
                   </div>
-                </div>
+                )}
               </div>
             </div>
 
@@ -1060,48 +1575,77 @@ export default function TrackDetailsPage({ params }: { params: Promise<{ id: str
               <div style={{ ...cardStyle, padding: 20 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
                   <span style={{ fontWeight: 600, fontSize: 15, color: '#111827' }}>Marchés exploités par la boutique</span>
-                  <button style={{ 
-                    width: 32,
-                    height: 32,
-                    border: '1px solid #E5E7EB', 
-                    background: '#fff', 
-                    borderRadius: 6,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    cursor: 'pointer'
-                  }}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6B7280" strokeWidth="2">
-                      <rect x="3" y="3" width="7" height="7" rx="1" />
-                      <rect x="14" y="3" width="7" height="7" rx="1" />
-                      <rect x="3" y="14" width="7" height="7" rx="1" />
-                      <rect x="14" y="14" width="7" height="7" rx="1" />
-                    </svg>
+                  <button 
+                    onClick={() => setShowMapView(!showMapView)}
+                    style={{ 
+                      width: 32,
+                      height: 32,
+                      border: '1px solid #E5E7EB', 
+                      background: showMapView ? '#F3F4F6' : '#fff', 
+                      borderRadius: 6,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: 'pointer'
+                    }}
+                    title={showMapView ? 'Voir la liste' : 'Voir la carte'}
+                  >
+                    {showMapView ? (
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6B7280" strokeWidth="2">
+                        <line x1="8" y1="6" x2="21" y2="6" />
+                        <line x1="8" y1="12" x2="21" y2="12" />
+                        <line x1="8" y1="18" x2="21" y2="18" />
+                        <line x1="3" y1="6" x2="3.01" y2="6" />
+                        <line x1="3" y1="12" x2="3.01" y2="12" />
+                        <line x1="3" y1="18" x2="3.01" y2="18" />
+                      </svg>
+                    ) : (
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6B7280" strokeWidth="2">
+                        <circle cx="12" cy="12" r="10"/>
+                        <line x1="2" y1="12" x2="22" y2="12"/>
+                        <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+                      </svg>
+                    )}
                   </button>
                 </div>
-                {(shopDetails.traffic.countries.length > 0 
-                  ? shopDetails.traffic.countries.slice(0, 5).map(c => ({
-                      country: c.name || getCountryName(c.code),
-                      code: c.code,
-                      pct: c.value
-                    }))
-                  : [{ country: getCountryName(shopDetails.shop.country || ''), code: shopDetails.shop.country || 'xx', pct: 100 }]
-                ).map((c, i) => (
-                  <div key={i} style={{ 
-                    display: 'flex', 
-                    justifyContent: 'space-between', 
-                    alignItems: 'center',
-                    padding: '14px 0', 
-                    borderBottom: i < 4 ? '1px solid #F3F4F6' : 'none' 
-                  }}>
-                    <span style={{ fontSize: 14, color: '#374151', display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <FlagImage code={c.code} size={24} />
-                      <span>{c.code?.toUpperCase()}</span>
-                      <span style={{ color: '#6B7280' }}>{c.country}</span>
-                    </span>
-                    <span style={{ fontSize: 14, color: '#6B7280', fontWeight: 500 }}>{c.pct} %</span>
-                  </div>
-                ))}
+                
+                {/* List View */}
+                {!showMapView && (
+                  <>
+                    {(shopDetails.traffic.countries.length > 0 
+                      ? shopDetails.traffic.countries.slice(0, 5).map(c => ({
+                          country: getCountryName(c.code) || c.name,
+                          code: c.code,
+                          pct: c.value
+                        }))
+                      : [{ country: getCountryName(shopDetails.shop.country || ''), code: shopDetails.shop.country || 'xx', pct: 100 }]
+                    ).map((c, i, arr) => (
+                      <div key={i} style={{ 
+                        display: 'flex', 
+                        justifyContent: 'space-between', 
+                        alignItems: 'center',
+                        padding: '14px 0', 
+                        borderBottom: i < arr.length - 1 ? '1px solid #F3F4F6' : 'none' 
+                      }}>
+                        <span style={{ fontSize: 14, color: '#374151', display: 'flex', alignItems: 'center', gap: 10 }}>
+                          <FlagImage code={c.code} size={24} />
+                          <span>{c.country}</span>
+                        </span>
+                        <span style={{ fontSize: 14, color: '#6B7280', fontWeight: 500 }}>{c.pct} %</span>
+                      </div>
+                    ))}
+                  </>
+                )}
+                
+                {/* Map View */}
+                {showMapView && (
+                  <MapViewComponent 
+                    countries={shopDetails.traffic.countries}
+                    defaultCountry={shopDetails.shop.country}
+                    getCountryName={getCountryName}
+                    FlagImage={FlagImage}
+                  />
+                )}
               </div>
 
               {/* Theme Card */}
@@ -1109,61 +1653,79 @@ export default function TrackDetailsPage({ params }: { params: Promise<{ id: str
                 <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 16, color: '#111827' }}>Thème</div>
                 
                 {/* Theme Name */}
-                <div style={{ marginBottom: 16 }}>
+                <div style={{ marginBottom: themeFonts.length > 0 || themeColors.length > 0 ? 16 : 0 }}>
                   <div style={{ fontSize: 13, color: '#374151', marginBottom: 8 }}>Nom</div>
                   <div style={{ background: '#F9FAFB', padding: '12px 16px', borderRadius: 8, border: '1px solid #E5E7EB' }}>
-                    <a href="#" style={{ color: '#0EA5E9', textDecoration: 'none', fontSize: 13, fontWeight: 500 }}>
-                      {shopDetails.shop.theme || 'Unknown'} {shopDetails.shop.schemaVersion ? shopDetails.shop.schemaVersion : ''}
+                    <a 
+                      href={`https://www.google.com/search?q=${encodeURIComponent((shopDetails.shop.schemaName || shopDetails.shop.theme || '') + ' ' + (shopDetails.shop.schemaVersion || '') + ' shopify theme')}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ color: '#0EA5E9', textDecoration: 'none', fontSize: 13, fontWeight: 500 }}
+                    >
+                      {shopDetails.shop.schemaName || shopDetails.shop.theme || 'Unknown'} {shopDetails.shop.schemaVersion || ''}
                     </a>
                   </div>
                 </div>
                 
-                {/* Fonts */}
-                <div style={{ marginBottom: 16 }}>
-                  <div style={{ fontSize: 13, color: '#374151', marginBottom: 8 }}>Polices</div>
-                  <div style={{ background: '#F9FAFB', padding: '12px 16px', borderRadius: 8, border: '1px solid #E5E7EB' }}>
-                    <span style={{ color: '#0EA5E9', fontSize: 13, fontWeight: 500 }}>
-                      {shopDetails.shop.fonts.length > 0 ? shopDetails.shop.fonts.join(', ') : 'Non détecté'}
-                    </span>
+                {/* Fonts - Only show if fonts exist */}
+                {themeFonts.length > 0 && (
+                  <div style={{ marginBottom: themeColors.length > 0 ? 16 : 0 }}>
+                    <div style={{ fontSize: 13, color: '#374151', marginBottom: 8 }}>Polices</div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      {themeFonts.map((font, i) => (
+                        <div key={i} style={{ background: '#F9FAFB', padding: '12px 16px', borderRadius: 8, border: '1px solid #E5E7EB' }}>
+                          <a 
+                            href={`https://www.google.com/search?q=${encodeURIComponent(font + ' font')}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{ color: '#0EA5E9', textDecoration: 'none', fontSize: 13, fontWeight: 500 }}
+                          >
+                            {font}
+                          </a>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                </div>
+                )}
                 
-                {/* Colors */}
-                <div>
-                  <div style={{ fontSize: 13, color: '#374151', marginBottom: 8 }}>Couleurs</div>
-                  {/* Row 1 */}
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 6, marginBottom: 8 }}>
-                    {themeColorsRow1.map((c, i) => (
-                      <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                        <div style={{ 
-                          width: '100%', 
-                          aspectRatio: '1', 
-                          background: c.hex, 
-                          borderRadius: 6,
-                          border: c.hex === '#f5f5f5' ? '1px solid #E5E7EB' : 'none'
-                        }} />
-                        <span style={{ fontSize: 8, color: '#9CA3AF', marginTop: 4 }}>{c.hex}</span>
+                {/* Colors - Only show if colors exist */}
+                {themeColors.length > 0 && (
+                  <div>
+                    <div style={{ fontSize: 13, color: '#374151', marginBottom: 8 }}>Couleurs</div>
+                    {/* Row 1 */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 6, marginBottom: themeColorsRow2.length > 0 ? 8 : 0 }}>
+                      {themeColorsRow1.map((c, i) => (
+                        <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                          <div style={{ 
+                            width: '100%', 
+                            aspectRatio: '1', 
+                            background: c.hex, 
+                            borderRadius: 6,
+                            border: ['#f5f5f5', '#F5F5F5', '#dfdfdf', '#DFDFDF', '#f7f5f4', '#F7F5F4', '#fff6f6', '#FFF6F6', '#cccccc', '#CCCCCC'].includes(c.hex) ? '1px solid #E5E7EB' : 'none'
+                          }} />
+                          <span style={{ fontSize: 8, color: '#9CA3AF', marginTop: 4 }}>{c.hex}</span>
+                        </div>
+                      ))}
+                    </div>
+                    {/* Row 2 */}
+                    {themeColorsRow2.length > 0 && (
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 6 }}>
+                        {themeColorsRow2.map((c, i) => (
+                          <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                            <div style={{ 
+                              width: '100%', 
+                              aspectRatio: '1', 
+                              background: c.hex, 
+                              borderRadius: 6,
+                              border: ['#f5f5f5', '#F5F5F5', '#dfdfdf', '#DFDFDF', '#f7f5f4', '#F7F5F4', '#fff6f6', '#FFF6F6', '#cccccc', '#CCCCCC'].includes(c.hex) ? '1px solid #E5E7EB' : 'none'
+                            }} />
+                            <span style={{ fontSize: 8, color: '#9CA3AF', marginTop: 4 }}>{c.hex}</span>
+                          </div>
+                        ))}
                       </div>
-                    ))}
+                    )}
                   </div>
-                  {/* Row 2 */}
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 6 }}>
-                    {themeColorsRow2.map((c, i) => (
-                      <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                        <div style={{ 
-                          width: '100%', 
-                          aspectRatio: '1', 
-                          background: c.hex, 
-                          borderRadius: 6,
-                          border: c.hex === '#f5f5f5' ? '1px solid #E5E7EB' : 'none'
-                        }} />
-                        <span style={{ fontSize: 8, color: '#9CA3AF', marginTop: 4 }}>{c.hex}</span>
-                      </div>
-                    ))}
-                    {/* Empty cell to complete the grid */}
-                    <div />
-                  </div>
-                </div>
+                )}
               </div>
             </div>
           </div>
@@ -1665,40 +2227,42 @@ export default function TrackDetailsPage({ params }: { params: Promise<{ id: str
                 </div>
               ) : (
                 <>
-                  {/* Left Arrow */}
-                  <button 
-                    onClick={() => {
-                      if (sliderRef.current) {
-                        sliderRef.current.scrollBy({ left: -386, behavior: 'smooth' });
-                      }
-                    }}
-                    style={{
-                      position: 'absolute',
-                      left: 16,
-                      top: 350,
-                      transform: 'translateY(-50%)',
-                      width: 40,
-                      height: 40,
-                      borderRadius: '50%',
-                      border: 'none',
-                      background: 'rgba(0, 0, 0, 0.6)',
-                      boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: 18,
-                      color: '#fff',
-                      zIndex: 10,
-                      transition: 'background 0.15s'
-                    }}
-                    onMouseEnter={(e) => (e.target as HTMLButtonElement).style.background = 'rgba(0, 0, 0, 0.9)'}
-                    onMouseLeave={(e) => (e.target as HTMLButtonElement).style.background = 'rgba(0, 0, 0, 0.6)'}
-                  >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                      <path d="M15 18l-6-6 6-6"/>
-                    </svg>
-                  </button>
+                  {/* Left Arrow - only show when can scroll left */}
+                  {canScrollLeft && (
+                    <button 
+                      onClick={() => {
+                        if (sliderRef.current) {
+                          sliderRef.current.scrollBy({ left: -386, behavior: 'smooth' });
+                        }
+                      }}
+                      style={{
+                        position: 'absolute',
+                        left: 16,
+                        top: 350,
+                        transform: 'translateY(-50%)',
+                        width: 40,
+                        height: 40,
+                        borderRadius: '50%',
+                        border: 'none',
+                        background: 'rgba(0, 0, 0, 0.6)',
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: 18,
+                        color: '#fff',
+                        zIndex: 10,
+                        transition: 'background 0.15s'
+                      }}
+                      onMouseEnter={(e) => (e.target as HTMLButtonElement).style.background = 'rgba(0, 0, 0, 0.9)'}
+                      onMouseLeave={(e) => (e.target as HTMLButtonElement).style.background = 'rgba(0, 0, 0, 0.6)'}
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                        <path d="M15 18l-6-6 6-6"/>
+                      </svg>
+                    </button>
+                  )}
                   
                   {/* Slider Container - Draggable */}
                   <div 
@@ -1769,23 +2333,19 @@ export default function TrackDetailsPage({ params }: { params: Promise<{ id: str
                           style={{ 
                             width: 32, 
                             height: 32, 
-                          border: '1px solid #E5E7EB', 
-                          borderRadius: 6, 
-                          background: '#fff',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          fontSize: 14,
-                            color: '#1877F2',
+                            borderRadius: 6, 
+                            background: '#f5f7fa',
+                            border: 'none',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
                             textDecoration: 'none',
                             flexShrink: 0
                           }}
                           title="Voir dans Meta Ad Library"
                         >
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M12 2C6.477 2 2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.879V14.89h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.989C18.343 21.129 22 16.99 22 12c0-5.523-4.477-10-10-10z"/>
-                          </svg>
+                          <i className="ri-meta-line" style={{ fontSize: '14px', color: '#525866' }}></i>
                         </a>
                       </div>
                       
@@ -1953,40 +2513,42 @@ export default function TrackDetailsPage({ params }: { params: Promise<{ id: str
                   ))}
                 </div>
               
-              {/* Right Arrow */}
-                  <button 
-                    onClick={() => {
-                      if (sliderRef.current) {
-                        sliderRef.current.scrollBy({ left: 386, behavior: 'smooth' });
-                      }
-                    }}
-                    style={{
-                      position: 'absolute',
-                      right: 16,
-                      top: 350,
-                      transform: 'translateY(-50%)',
-                      width: 40,
-                      height: 40,
-                      borderRadius: '50%',
-                      border: 'none',
-                      background: 'rgba(0, 0, 0, 0.6)',
-                      boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: 18,
-                      color: '#fff',
-                      zIndex: 10,
-                      transition: 'background 0.15s'
-                    }}
-                    onMouseEnter={(e) => (e.target as HTMLButtonElement).style.background = 'rgba(0, 0, 0, 0.9)'}
-                    onMouseLeave={(e) => (e.target as HTMLButtonElement).style.background = 'rgba(0, 0, 0, 0.6)'}
-                  >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                      <path d="M9 18l6-6-6-6"/>
-                    </svg>
-                  </button>
+              {/* Right Arrow - only show when can scroll right */}
+                  {canScrollRight && (
+                    <button 
+                      onClick={() => {
+                        if (sliderRef.current) {
+                          sliderRef.current.scrollBy({ left: 386, behavior: 'smooth' });
+                        }
+                      }}
+                      style={{
+                        position: 'absolute',
+                        right: 16,
+                        top: 350,
+                        transform: 'translateY(-50%)',
+                        width: 40,
+                        height: 40,
+                        borderRadius: '50%',
+                        border: 'none',
+                        background: 'rgba(0, 0, 0, 0.6)',
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: 18,
+                        color: '#fff',
+                        zIndex: 10,
+                        transition: 'background 0.15s'
+                      }}
+                      onMouseEnter={(e) => (e.target as HTMLButtonElement).style.background = 'rgba(0, 0, 0, 0.9)'}
+                      onMouseLeave={(e) => (e.target as HTMLButtonElement).style.background = 'rgba(0, 0, 0, 0.6)'}
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                        <path d="M9 18l6-6-6-6"/>
+                      </svg>
+                    </button>
+                  )}
                 </>
               )}
             </div>
@@ -2000,56 +2562,83 @@ export default function TrackDetailsPage({ params }: { params: Promise<{ id: str
                 <span style={{ fontSize: 11, color: '#6B7280' }}>
                   LE 3 DERNIERS MOIS 
                   <span style={{ 
-                    background: Number(shopDetails.metrics.threeMonthGrowth) >= 0 ? '#DCFCE7' : '#FEE2E2', 
-                    color: Number(shopDetails.metrics.threeMonthGrowth) >= 0 ? '#16A34A' : '#DC2626', 
+                    background: Number(shopDetails.metrics.adsThreeMonthGrowth || 0) >= 0 ? '#DCFCE7' : '#FEE2E2', 
+                    color: Number(shopDetails.metrics.adsThreeMonthGrowth || 0) >= 0 ? '#16A34A' : '#DC2626', 
                     padding: '3px 8px', 
                     borderRadius: 10, 
                     fontSize: 11, 
                     marginLeft: 6 
                   }}>
-                    {Number(shopDetails.metrics.threeMonthGrowth) >= 0 ? '+' : ''}{shopDetails.metrics.threeMonthGrowth}%
+                    {Number(shopDetails.metrics.adsThreeMonthGrowth || 0) >= 0 ? '+' : ''}{shopDetails.metrics.adsThreeMonthGrowth || 0}%
                   </span>
                 </span>
                 <span style={{ fontSize: 11, color: '#6B7280' }}>
                   LE MOIS DERNIER 
                   <span style={{ 
-                    background: Number(shopDetails.metrics.visitsGrowth) >= 0 ? '#DCFCE7' : '#FEE2E2', 
-                    color: Number(shopDetails.metrics.visitsGrowth) >= 0 ? '#16A34A' : '#DC2626', 
+                    background: Number(shopDetails.metrics.adsLastMonthGrowth || 0) >= 0 ? '#DCFCE7' : '#FEE2E2', 
+                    color: Number(shopDetails.metrics.adsLastMonthGrowth || 0) >= 0 ? '#16A34A' : '#DC2626', 
                     padding: '3px 8px', 
                     borderRadius: 10, 
                     fontSize: 11, 
                     marginLeft: 6 
                   }}>
-                    {Number(shopDetails.metrics.visitsGrowth) >= 0 ? '+' : ''}{shopDetails.metrics.visitsGrowth}%
+                    {Number(shopDetails.metrics.adsLastMonthGrowth || 0) >= 0 ? '+' : ''}{shopDetails.metrics.adsLastMonthGrowth || 0}%
                   </span>
                 </span>
               </div>
               <div style={{ flex: 1, minHeight: 200 }}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={trafficChartData.length > 0 ? trafficChartData : [{ month: 'Jan', value: 0 }, { month: 'Feb', value: 0 }, { month: 'Mar', value: 0 }]} margin={{ top: 5, right: 5, left: 10, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" vertical={false} />
-                    <XAxis dataKey="month" tick={{ fontSize: 10, fill: '#9CA3AF' }} axisLine={false} tickLine={false} />
-                    <YAxis tick={{ fontSize: 10, fill: '#9CA3AF' }} axisLine={false} tickLine={false} width={60} tickFormatter={(v) => new Intl.NumberFormat('fr-FR').format(v)} />
-                    <Tooltip 
-                      formatter={(value) => [`${new Intl.NumberFormat('fr-FR').format(Number(value) || 0)}`, 'Visites']}
-                      contentStyle={{ fontSize: 12, borderRadius: 8 }}
-                    />
-                    <Area type="monotone" dataKey="value" stroke="#22C55E" strokeWidth={2} fill="#22C55E20" />
-                  </AreaChart>
-                </ResponsiveContainer>
+                {(() => {
+                  // Determine chart color based on growth trend (green = positive, red = negative)
+                  const isPositiveTrend = Number(shopDetails.metrics.adsThreeMonthGrowth || 0) >= 0;
+                  const chartStrokeColor = isPositiveTrend ? '#22C55E' : '#EF4444';
+                  const chartFillColor = isPositiveTrend ? '#22C55E20' : '#EF444420';
+                  
+                  return (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart 
+                        data={shopDetails.adsChart?.labels?.length 
+                          ? shopDetails.adsChart.labels.map((label, i) => ({ 
+                              month: label, 
+                              allAds: shopDetails.adsChart?.allAds[i] || 0,
+                              activeAds: shopDetails.adsChart?.activeAds[i] || 0 
+                            }))
+                          : [{ month: 'Jan', allAds: 0, activeAds: 0 }]
+                        } 
+                        margin={{ top: 5, right: 5, left: 10, bottom: 0 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" vertical={false} />
+                        <XAxis dataKey="month" tick={{ fontSize: 10, fill: '#9CA3AF' }} axisLine={false} tickLine={false} />
+                        <YAxis tick={{ fontSize: 10, fill: '#9CA3AF' }} axisLine={false} tickLine={false} width={60} tickFormatter={(v) => new Intl.NumberFormat('fr-FR').format(v)} />
+                        <Tooltip 
+                          formatter={(value, name) => [
+                            new Intl.NumberFormat('fr-FR').format(Number(value) || 0), 
+                            name === 'allAds' ? 'Total Ads' : 'Active Ads'
+                          ]}
+                          contentStyle={{ fontSize: 12, borderRadius: 8 }}
+                        />
+                        {/* Show gray line for all ads if different from active */}
+                        {shopDetails.adsChart?.allAds?.some((v, i) => v !== shopDetails.adsChart?.activeAds[i]) && (
+                          <Area type="monotone" dataKey="allAds" stroke="#CACFD8" strokeWidth={2} fill="#F5F7FA00" />
+                        )}
+                        <Area type="monotone" dataKey="activeAds" stroke={chartStrokeColor} strokeWidth={2} fill={chartFillColor} />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  );
+                })()}
               </div>
             </div>
-            <div style={{ ...cardStyle, padding: 24 }}>
-              <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 24, color: '#111827' }}>Type de Publicités</div>
+            <div style={{ ...cardStyle, padding: 20 }}>
+              <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 16, color: '#111827' }}>Type de Publicités</div>
               
               {/* Gauge Chart - Centered */}
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                <div style={{ position: 'relative', width: 200, height: 120 }}>
+                <div style={{ position: 'relative', width: 180, height: 100 }}>
                   {(() => {
                     // Calculate arc positions correctly
-                    const centerX = 100;
-                    const centerY = 100;
-                    const radius = 80;
+                    const centerX = 90;
+                    const centerY = 85;
+                    const radius = 70;
+                    const strokeWidth = 14;
                     const videoAngle = (shopDetails.adStats.videoPercent / 100) * Math.PI; // 0 to PI (180 degrees)
                     
                     // Start point (left of arc)
@@ -2065,70 +2654,70 @@ export default function TrackDetailsPage({ params }: { params: Promise<{ id: str
                     const endY = centerY;
                     
                     return (
-                  <svg viewBox="0 0 200 110" width="200" height="110" style={{ overflow: 'visible' }}>
+                      <svg viewBox="0 0 180 100" width="180" height="100" style={{ overflow: 'visible' }}>
                         {/* Background arc (gray) */}
-                    <path 
+                        <path 
                           d={`M ${startX} ${startY} A ${radius} ${radius} 0 0 1 ${endX} ${endY}`}
-                      fill="none" 
-                      stroke="#E5E7EB" 
-                      strokeWidth="16" 
-                      strokeLinecap="round" 
-                    />
+                          fill="none" 
+                          stroke="#E5E7EB" 
+                          strokeWidth={strokeWidth} 
+                          strokeLinecap="round" 
+                        />
                         {/* Video portion (green) */}
                         {shopDetails.adStats.videoPercent > 0 && (
-                    <path 
+                          <path 
                             d={`M ${startX} ${startY} A ${radius} ${radius} 0 0 1 ${videoEndX} ${videoEndY}`}
-                      fill="none" 
-                      stroke="#22C55E" 
-                      strokeWidth="16" 
-                      strokeLinecap="round" 
-                    />
+                            fill="none" 
+                            stroke="#22C55E" 
+                            strokeWidth={strokeWidth} 
+                            strokeLinecap="round" 
+                          />
                         )}
                         {/* Image portion (blue) - rest of the arc */}
                         {shopDetails.adStats.imagePercent > 0 && (
-                    <path 
+                          <path 
                             d={`M ${videoEndX} ${videoEndY} A ${radius} ${radius} 0 0 1 ${endX} ${endY}`}
-                      fill="none" 
-                      stroke="#3B82F6" 
-                      strokeWidth="16" 
-                      strokeLinecap="round" 
-                    />
+                            fill="none" 
+                            stroke="#3B82F6" 
+                            strokeWidth={strokeWidth} 
+                            strokeLinecap="round" 
+                          />
                         )}
-                  </svg>
+                      </svg>
                     );
                   })()}
                   {/* Center text */}
                   <div style={{ 
                     position: 'absolute', 
-                    bottom: 15, 
+                    bottom: 0, 
                     left: '50%', 
                     transform: 'translateX(-50%)',
                     textAlign: 'center' 
                   }}>
-                    <div style={{ fontSize: 36, fontWeight: 700, color: '#111827', lineHeight: 1 }}>{shopDetails.metrics.allAds || shopDetails.ads.length}</div>
-                    <div style={{ fontSize: 13, color: '#6B7280', marginTop: 4 }}>Publicités</div>
+                    <div style={{ fontSize: 22, fontWeight: 600, color: '#111827', lineHeight: 1 }}>{shopDetails.metrics.allAds || shopDetails.ads.length}</div>
+                    <div style={{ fontSize: 11, color: '#6B7280', marginTop: 2 }}>Publicités</div>
                   </div>
                 </div>
               </div>
 
               {/* Separator line */}
-              <div style={{ borderTop: '1px solid #E5E7EB', margin: '24px 0 16px 0' }} />
+              <div style={{ borderTop: '1px solid #E5E7EB', margin: '16px 0 12px 0' }} />
 
               {/* Legend - Below */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <span style={{ display: 'inline-block', width: 12, height: 12, background: '#22C55E', borderRadius: 3 }} />
-                    <span style={{ fontSize: 14, color: '#374151' }}>Vidéos</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ display: 'inline-block', width: 10, height: 10, background: '#22C55E', borderRadius: 2 }} />
+                    <span style={{ fontSize: 13, color: '#374151' }}>Vidéos</span>
                   </div>
-                  <span style={{ fontSize: 14, color: '#9CA3AF' }}>({shopDetails.adStats.videoPercent}%)</span>
+                  <span style={{ fontSize: 13, color: '#9CA3AF' }}>({shopDetails.adStats.videoPercent}%)</span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <span style={{ display: 'inline-block', width: 12, height: 12, background: '#3B82F6', borderRadius: 3 }} />
-                    <span style={{ fontSize: 14, color: '#374151' }}>Images</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ display: 'inline-block', width: 10, height: 10, background: '#3B82F6', borderRadius: 2 }} />
+                    <span style={{ fontSize: 13, color: '#374151' }}>Images</span>
                   </div>
-                  <span style={{ fontSize: 14, color: '#9CA3AF' }}>({shopDetails.adStats.imagePercent}%)</span>
+                  <span style={{ fontSize: 13, color: '#9CA3AF' }}>({shopDetails.adStats.imagePercent}%)</span>
                 </div>
               </div>
             </div>
@@ -2179,7 +2768,8 @@ export default function TrackDetailsPage({ params }: { params: Promise<{ id: str
                         </span>
                       </td>
                       <td style={{ padding: '12px 0', textAlign: 'right' }}>
-                        {p.status && p.adLibraryUrl !== '#' && (
+                        {/* Snapchat never shows action - their ad library doesn't support direct search */}
+                        {p.status && p.adLibraryUrl !== '#' && p.name.toLowerCase() !== 'snapchat' && (
                           <a 
                             href={p.adLibraryUrl}
                             target="_blank"

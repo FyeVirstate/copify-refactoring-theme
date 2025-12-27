@@ -159,13 +159,13 @@ export default function Sidebar({ onNavigate }: SidebarProps) {
                     <div>
                       <img 
                         className="profile-image-lg" 
-                        src={`https://eu.ui-avatars.com/api/?name=Zakaria LAABID&background=091C43&color=fff&bold=true&length=1&size=300`} 
+                        src={session?.user?.image || `https://eu.ui-avatars.com/api/?name=${encodeURIComponent(session?.user?.name || 'User')}&background=091C43&color=fff&bold=true&length=1&size=300`} 
                         alt="Profile" 
                       />
                     </div>
                     <div>
-                      <p className="mb-0 fs-small fw-500 text-nowrap">Zakaria LAABID</p>
-                      <p className="mb-0 fs-xs text-sub text-nowrap">zakaria@virstate.io</p>
+                      <p className="mb-0 fs-small fw-500 text-nowrap">{session?.user?.name || 'Utilisateur'}</p>
+                      <p className="mb-0 fs-xs text-sub text-nowrap">{session?.user?.email || ''}</p>
                     </div>
                   </div>
                 </li>

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef } from 'react'
 
 export interface Shop {
   id: number
@@ -89,6 +89,11 @@ export function useShops() {
     total: 0,
     totalPages: 0,
   })
+  
+  // AbortController ref to cancel previous requests
+  const abortControllerRef = useRef<AbortController | null>(null)
+  // Request counter to track the latest request
+  const requestIdRef = useRef(0)
 
   // Fetch shops with filters
   const fetchShops = useCallback(async (
@@ -96,6 +101,22 @@ export function useShops() {
     page = 1,
     perPage = 20
   ) => {
+    // Only cancel previous request if this is a fresh search (page 1)
+    if (page === 1) {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort()
+      }
+    }
+    
+    // Create new AbortController for this request
+    const controller = new AbortController()
+    if (page === 1) {
+      abortControllerRef.current = controller
+    }
+    
+    // Increment request ID to track this request
+    const currentRequestId = ++requestIdRef.current
+    
     if (page === 1) {
       setIsLoading(true)
     } else {
@@ -115,7 +136,15 @@ export function useShops() {
         }
       })
 
-      const res = await fetch(`/api/shops?${params}`)
+      const res = await fetch(`/api/shops?${params}`, {
+        signal: controller.signal
+      })
+      
+      // If this is not the latest request (page 1 only), ignore the response
+      if (page === 1 && currentRequestId !== requestIdRef.current) {
+        return null
+      }
+      
       const data = await res.json()
 
       if (data.success) {
@@ -131,11 +160,18 @@ export function useShops() {
         throw new Error(data.error || 'Failed to fetch shops')
       }
     } catch (err) {
+      // Ignore abort errors
+      if (err instanceof Error && err.name === 'AbortError') {
+        return null
+      }
       setError(err instanceof Error ? err.message : 'Failed to fetch shops')
       throw err
     } finally {
-      setIsLoading(false)
-      setIsLoadingMore(false)
+      // Only set loading to false if this is still the latest request
+      if (currentRequestId === requestIdRef.current) {
+        setIsLoading(false)
+        setIsLoadingMore(false)
+      }
     }
   }, [])
 

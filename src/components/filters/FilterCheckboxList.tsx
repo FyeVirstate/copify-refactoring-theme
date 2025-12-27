@@ -57,12 +57,25 @@ export default function FilterCheckboxList({
     <div>
       <div className="d-flex align-items-center gap-2 mb-3">
         <div className="position-relative flex-grow-1">
-          <i className="ri-search-line position-absolute" style={{ left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#99A0AE' }}></i>
-          <Input
-            type="text"
-            className="form-control"
-            placeholder={searchPlaceholder}
-            style={{ paddingLeft: '36px' }}
+          <i 
+            className="ri-search-line position-absolute" 
+            style={{ 
+              left: '12px', 
+              top: '50%', 
+              transform: 'translateY(-50%)', 
+              color: '#99A0AE',
+              zIndex: 1,
+              pointerEvents: 'none'
+            }}
+          ></i>
+        <Input
+          type="text"
+          className="form-control"
+          placeholder={searchPlaceholder}
+            style={{ 
+              paddingLeft: '40px',
+              textIndent: '0px'
+            }}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -107,13 +120,13 @@ export default function FilterCheckboxList({
             </div>
             <div className="d-flex">
               <div className="form-check me-3">
-                <input
+            <input
                   className={`form-check-input small-check ${groupName ? `group-${groupName}` : ''}`}
-                  type="checkbox"
+              type="checkbox"
                   id={`${groupName || 'checkbox'}-${item.id}`}
-                  checked={selectedItems.includes(item.id)}
-                  onChange={() => handleToggle(item.id)}
-                />
+              checked={selectedItems.includes(item.id)}
+              onChange={() => handleToggle(item.id)}
+            />
               </div>
             </div>
           </div>

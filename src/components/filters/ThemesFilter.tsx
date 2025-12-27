@@ -100,6 +100,7 @@ export default function ThemesFilter({
       onOpenChange={onOpenChange}
       isActive={isActive || selectedThemes.length > 0}
       badge={selectedThemes.length > 0 ? selectedThemes.length : undefined}
+      alignEndAtWidth={1200}
     >
       <p className="fw-500 mb-2">Thèmes</p>
       <p className="fs-small fw-500 mb-2 text-muted">Préréglages</p>
@@ -110,9 +111,9 @@ export default function ThemesFilter({
         activePreset={activePreset}
         columns={2}
       />
-
+      
       <div className="border-t border-gray-200 dark:border-gray-700 my-3" />
-
+      
       <FilterCheckboxList
         items={allThemes}
         selectedItems={selectedThemes}
@@ -124,7 +125,7 @@ export default function ThemesFilter({
         showIncludeExclude={true}
         groupName="themeCheckboxes"
       />
-
+      
       <Button 
         className="w-100 mt-3" 
         onClick={() => onApply?.()}

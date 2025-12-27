@@ -56,6 +56,7 @@ export default function SocialNetworksFilter({
       onOpenChange={onOpenChange}
       isActive={isActive || selectedSocialNetworks.length > 0}
       badge={selectedSocialNetworks.length > 0 ? selectedSocialNetworks.length : undefined}
+      forceAlignEnd={true}
     >
       <p className="fw-500 mb-2">Réseaux sociaux</p>
 

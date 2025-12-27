@@ -81,9 +81,10 @@ export default function CurrencyFilter({
       onOpenChange={onOpenChange}
       isActive={isActive || selectedCurrencies.length > 0}
       badge={selectedCurrencies.length > 0 ? selectedCurrencies.length : undefined}
+      alignEndAtWidth={1394}
     >
       <p className="fw-500 mb-2">Devise</p>
-
+      
       <FilterCheckboxList
         items={currenciesWithFlags}
         selectedItems={selectedCurrencies}
@@ -92,7 +93,7 @@ export default function CurrencyFilter({
         showIncludeExclude={true}
         groupName="currencyCheckboxes"
       />
-
+      
       <Button 
         className="w-100 mt-3" 
         onClick={() => onApply?.()}

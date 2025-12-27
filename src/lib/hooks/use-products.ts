@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef } from 'react'
 
 interface Product {
   id: number
@@ -30,7 +30,7 @@ interface Product {
   createdAt: string
 }
 
-interface ProductsFilters {
+export interface ProductsFilters {
   search?: string
   category?: string
   currency?: string
@@ -51,6 +51,19 @@ interface ProductsFilters {
   dateFilter?: string
   sortBy?: string
   sortOrder?: 'asc' | 'desc'
+  // New filters from shops page
+  minCatalogSize?: number
+  maxCatalogSize?: number
+  minTrustpilotRating?: number
+  maxTrustpilotRating?: number
+  minTrustpilotReviews?: number
+  maxTrustpilotReviews?: number
+  origins?: string
+  languages?: string
+  domains?: string
+  themes?: string
+  applications?: string
+  shopCreationDate?: string
 }
 
 export function useProducts() {
@@ -65,6 +78,11 @@ export function useProducts() {
     total: 0,
     totalPages: 0,
   })
+  
+  // AbortController ref to cancel previous requests
+  const abortControllerRef = useRef<AbortController | null>(null)
+  // Request counter to track the latest request
+  const requestIdRef = useRef(0)
 
   // Fetch products with filters (replace mode)
   const fetchProducts = useCallback(async (
@@ -72,6 +90,18 @@ export function useProducts() {
     page = 1,
     perPage = 20
   ) => {
+    // Cancel any pending request
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort()
+    }
+    
+    // Create new AbortController for this request
+    const controller = new AbortController()
+    abortControllerRef.current = controller
+    
+    // Increment request ID to track this request
+    const currentRequestId = ++requestIdRef.current
+    
     setIsLoading(true)
     setError(null)
 
@@ -86,7 +116,15 @@ export function useProducts() {
         }
       })
 
-      const res = await fetch(`/api/products?${params}`)
+      const res = await fetch(`/api/products?${params}`, {
+        signal: controller.signal
+      })
+      
+      // If this is not the latest request, ignore the response
+      if (currentRequestId !== requestIdRef.current) {
+        return null
+      }
+      
       const data = await res.json()
 
       if (data.success) {
@@ -98,10 +136,17 @@ export function useProducts() {
         throw new Error(data.error)
       }
     } catch (err) {
+      // Ignore abort errors
+      if (err instanceof Error && err.name === 'AbortError') {
+        return null
+      }
       setError(err instanceof Error ? err.message : 'Failed to fetch products')
       throw err
     } finally {
-      setIsLoading(false)
+      // Only set loading to false if this is still the latest request
+      if (currentRequestId === requestIdRef.current) {
+        setIsLoading(false)
+      }
     }
   }, [])
 

@@ -43,7 +43,8 @@ interface DashboardHeaderProps {
   onShareClick?: () => void;
   icon?: string; // Icon path or RemixIcon class
   iconType?: 'image' | 'icon'; // 'image' for SVG path, 'icon' for RemixIcon class
-  showStats?: boolean; // Show progress circles (only on main dashboard)
+  showStats?: boolean; // Show all progress circles (only on main dashboard)
+  showLimitedStats?: boolean; // Show only trial days + shop analyses (for product/shop/ads pages)
   showSearch?: boolean; // Show search bar in the middle (for shops page)
   searchValue?: string;
   onSearchChange?: (value: string) => void;
@@ -83,6 +84,7 @@ export default function DashboardHeader({
   icon = "/img/navbar-icons/home-icon.svg",
   iconType = 'image',
   showStats = true,
+  showLimitedStats = false,
   showSearch = false,
   searchValue = "",
   onSearchChange,
@@ -92,11 +94,14 @@ export default function DashboardHeader({
   const [stats, setStats] = useState<UserStats | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // Fetch stats if either showStats or showLimitedStats is true
+  const shouldFetchStats = showStats || showLimitedStats;
+
   useEffect(() => {
-    if (showStats) {
+    if (shouldFetchStats) {
       fetchUserStats();
     }
-  }, [showStats]);
+  }, [shouldFetchStats]);
 
   const fetchUserStats = async () => {
     try {
@@ -173,38 +178,6 @@ export default function DashboardHeader({
 
         {/* Right side - Actions */}
         <div className="flex items-center gap-2 gap-md-3 flex-shrink-0">
-          {/* Custom Children (e.g., saved ads button) - shown first */}
-          {children && (
-            <div className="d-flex flex-shrink-0">
-              {children}
-            </div>
-          )}
-          
-          {/* Tutorial Button (for specific pages) */}
-          {showTutorialButton && onTutorialClick && (
-            <div className="d-flex align-items-center justify-content-start justify-content-xxl-end">
-              <button 
-                className="btn btn-secondary w-icon" 
-                onClick={onTutorialClick}
-              >
-                <i className="ri-play-circle-line btn-icon-sm" style={{ fontSize: '16px', color: '#99a0ae' }}></i>
-                <span className="text-gray">Tutoriel</span>
-              </button>
-            </div>
-          )}
-          
-          {/* Share Button (for specific pages) */}
-          {showShareButton && onShareClick && (
-            <div className="d-flex align-items-center justify-content-start justify-content-xxl-end">
-              <button 
-                className="btn btn-primary w-icon" 
-                onClick={onShareClick}
-              >
-                <i className="ri-share-line btn-icon-sm" style={{ fontSize: '16px' }}></i>
-                <span>Partager</span>
-              </button>
-            </div>
-          )}
           
           {/* Stats - Show usage for all users */}
           {showStats && !loading && stats && (
@@ -396,8 +369,98 @@ export default function DashboardHeader({
           </div>
           )}
 
+          {/* Limited Stats - Only show trial days + shop analyses (for products/shops/ads pages) */}
+          {showLimitedStats && !loading && stats && (
+          <div className="d-none d-md-flex gap-3 gap-xl-4 align-items-center">
+            {/* Plan Status Indicator - Show trial days or expired status */}
+            {(stats.plan.isOnTrial || stats.plan.isExpired) && (
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.4, delay: 0.1, ease: "easeOut" }}
+                className="d-flex gap-2 align-items-center"
+                style={{ 
+                  padding: '6px 12px',
+                  borderRadius: '20px',
+                  backgroundColor: stats.plan.isExpired ? '#fef2f2' : '#fef3c7',
+                  border: `1px solid ${stats.plan.isExpired ? '#fecaca' : '#fde68a'}`,
+                }}
+              >
+                <div 
+                  style={{ 
+                    width: '28px',
+                    height: '28px',
+                    borderRadius: '50%',
+                    backgroundColor: stats.plan.isExpired ? '#fee2e2' : '#fef9c3',
+                    border: `2px solid ${stats.plan.isExpired ? '#ef4444' : '#f59e0b'}`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontWeight: 700,
+                    fontSize: '12px',
+                    color: stats.plan.isExpired ? '#ef4444' : '#d97706',
+                  }}
+                >
+                  {stats.plan.isExpired ? (
+                    <i className="ri-close-line" style={{ fontSize: '16px' }}></i>
+                  ) : (
+                    stats.plan.trialDaysRemaining
+                  )}
+                </div>
+                <div className="d-flex flex-column" style={{ lineHeight: 1.2 }}>
+                  <span 
+                    style={{ 
+                      fontSize: '12px', 
+                      fontWeight: 600,
+                      color: stats.plan.isExpired ? '#ef4444' : '#d97706',
+                    }}
+                  >
+                    {stats.plan.isExpired ? 'Expiré' : `${stats.plan.trialDaysRemaining}J`}
+                  </span>
+                  <span style={{ fontSize: '10px', color: stats.plan.isExpired ? '#f87171' : '#fbbf24' }}>
+                    {stats.plan.isExpired ? "Période d'essai" : "d'essai"}
+                  </span>
+                </div>
+              </motion.div>
+            )}
+
+            {/* Boutiques analysées - Progress Circle */}
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.4, delay: 0.2, ease: "easeOut" }}
+              className="progress-circle d-flex gap-2 flex-column flex-md-row" 
+              data-progress={stats.trackedShops.used} 
+              data-total={stats.trackedShops.limit}
+            >
+              <div className="progress-circle-wrapper">
+                <svg width="32px" height="32px">
+                  <circle className="progress-background circle-2" cx="16" cy="16" r="12"></circle>
+                  <circle 
+                    className="progress-bar-circle circle-2" 
+                    cx="16" 
+                    cy="16" 
+                    r="12" 
+                    stroke={shopProgress?.color || '#0c6cfb'} 
+                    strokeDasharray={shopProgress?.dasharray} 
+                    strokeDashoffset={shopProgress?.dashoffset}
+                    style={{
+                      transform: 'rotate(-90deg)',
+                      transformOrigin: 'center',
+                    }}
+                  ></circle>
+                </svg>
+              </div>
+              <div className="progress-details">
+                <div className="progress-text" style={{ color: shopProgress?.isLimitReached ? '#ef4444' : undefined }}>{shopProgress?.text}</div>
+                <div className="progress-label">Analyses de boutique</div>
+              </div>
+            </motion.div>
+          </div>
+          )}
+
           {/* Loading state for stats */}
-          {showStats && loading && (
+          {(showStats || showLimitedStats) && loading && (
             <div className="d-none d-md-flex gap-3 gap-xl-4">
               <div className="progress-circle d-flex gap-2 flex-column flex-md-row" style={{ opacity: 0.5 }}>
                 <div className="progress-circle-wrapper">
@@ -410,6 +473,39 @@ export default function DashboardHeader({
                   <div className="progress-label">Chargement</div>
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* Custom Children (e.g., saved ads button) */}
+          {children && (
+            <div className="d-flex flex-shrink-0">
+              {children}
+            </div>
+          )}
+
+          {/* Tutorial Button (for specific pages) - shown last on right */}
+          {showTutorialButton && onTutorialClick && (
+            <div className="d-flex align-items-center justify-content-start justify-content-xxl-end">
+              <button 
+                className="btn btn-secondary w-icon" 
+                onClick={onTutorialClick}
+              >
+                <i className="ri-play-circle-line btn-icon-sm" style={{ fontSize: '16px', color: '#99a0ae' }}></i>
+                <span className="text-gray">Tutoriel</span>
+              </button>
+            </div>
+          )}
+          
+          {/* Share Button (for specific pages) */}
+          {showShareButton && onShareClick && (
+            <div className="d-flex align-items-center justify-content-start justify-content-xxl-end">
+              <button 
+                className="btn btn-primary w-icon" 
+                onClick={onShareClick}
+              >
+                <i className="ri-share-line btn-icon-sm" style={{ fontSize: '16px' }}></i>
+                <span>Partager</span>
+              </button>
             </div>
           )}
         </div>

@@ -136,6 +136,7 @@ export default function TrustpilotFilter({
       onOpenChange={onOpenChange}
       isActive={isActive || hasValue}
       badge={hasValue ? 1 : undefined}
+      alignEndAtWidth={1394}
     >
       <p className="fw-500 mb-2">Trustpilot</p>
       <p className="fs-small fw-500 mb-2 text-muted">Préréglages</p>
@@ -146,9 +147,9 @@ export default function TrustpilotFilter({
         activePreset={activePreset}
         columns={2}
       />
-
+      
       <div className="border-t border-gray-200 dark:border-gray-700 my-3" />
-
+      
       <div className="row g-2">
         <div className="col-6">
           <FilterInputGroup
@@ -189,7 +190,7 @@ export default function TrustpilotFilter({
           />
         </div>
       </div>
-
+      
       <Button 
         className="w-100 mt-3" 
         onClick={() => onApply?.()}

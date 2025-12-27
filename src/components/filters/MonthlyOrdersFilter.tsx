@@ -6,6 +6,17 @@ import FilterPresetGrid from "./FilterPresetGrid";
 import FilterInputGroup from "./FilterInputGroup";
 import { Button } from "@/components/ui/button";
 
+const useIsMobile = () => {
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth <= 768);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
+  return isMobile;
+};
+
 interface MonthlyOrdersFilterProps {
   minOrders?: number;
   maxOrders?: number;
@@ -25,6 +36,7 @@ export default function MonthlyOrdersFilter({
   onApply, 
   isActive 
 }: MonthlyOrdersFilterProps) {
+  const isMobile = useIsMobile();
   const [minOrdersStr, setMinOrdersStr] = useState(externalMin?.toString() || "");
   const [maxOrdersStr, setMaxOrdersStr] = useState(externalMax?.toString() || "");
   const [activePreset, setActivePreset] = useState<string | null>(null);
@@ -129,11 +141,12 @@ export default function MonthlyOrdersFilter({
 
   return (
     <FilterDropdown
-      label="Commandes mensuelles"
+      label={isMobile ? "Commandes" : "Commandes mensuelles"}
       icon="ri-shopping-cart-line"
       onOpenChange={onOpenChange}
       isActive={isActive || hasValue}
       badge={hasValue ? 1 : undefined}
+      alignEndAtWidth={1200}
     >
       <p className="fw-500 mb-2">Commandes mensuelles</p>
       <p className="fs-small fw-500 mb-2 text-muted">Préréglages</p>
@@ -144,9 +157,9 @@ export default function MonthlyOrdersFilter({
         activePreset={activePreset}
         columns={2}
       />
-
+      
       <div className="border-t border-gray-200 dark:border-gray-700 my-3" />
-
+      
       <FilterInputGroup
         label="Nombre de commandes par mois"
         minValue={minOrdersStr}
@@ -156,7 +169,7 @@ export default function MonthlyOrdersFilter({
         minPlaceholder="Min"
         maxPlaceholder="∞"
       />
-
+      
       <Button 
         className="w-100 mt-3" 
         onClick={() => onApply?.()}

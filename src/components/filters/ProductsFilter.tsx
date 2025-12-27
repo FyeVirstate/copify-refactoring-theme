@@ -158,9 +158,9 @@ export default function ProductsFilter({
         activePreset={activePreset}
         columns={2}
       />
-
+      
       <div className="border-t border-gray-200 dark:border-gray-700 my-3" />
-
+      
       <div className="row g-2">
         <div className="col-6">
           <FilterInputGroup
@@ -202,7 +202,7 @@ export default function ProductsFilter({
           />
         </div>
       </div>
-
+      
       <Button 
         className="w-100 mt-3" 
         onClick={() => onApply?.()}

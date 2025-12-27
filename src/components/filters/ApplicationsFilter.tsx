@@ -201,9 +201,9 @@ export default function ApplicationsFilter({
           <span className="ml-2 text-sm text-muted-foreground">Chargement...</span>
         </div>
       ) : (
-        <FilterCheckboxList
-          items={applications}
-          selectedItems={selectedApplications}
+      <FilterCheckboxList
+        items={applications}
+        selectedItems={selectedApplications}
           onItemsChange={(items) => {
             setActivePreset(null);
             onApplicationsChange(items);
@@ -211,9 +211,9 @@ export default function ApplicationsFilter({
           searchPlaceholder="Rechercher des applications..."
           showIncludeExclude={true}
           groupName="appsCheckboxes"
-        />
+      />
       )}
-
+      
       <Button 
         className="w-100 mt-3" 
         onClick={() => onApply?.()}

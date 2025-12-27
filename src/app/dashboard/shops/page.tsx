@@ -40,6 +40,17 @@ import {
 import { useShops, ShopsFilters } from "@/lib/hooks/use-shops";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 
+// Interface for user stats
+interface UserStats {
+  plan: {
+    identifier: string;
+    title: string;
+    isOnTrial: boolean;
+    isExpired: boolean;
+    trialDaysRemaining: number;
+  };
+}
+
 // Toast Alert Component
 interface ToastAlert {
   id: string;
@@ -193,6 +204,7 @@ export default function ShopsPage() {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [videoData, setVideoData] = useState<{ url: string; preview: string } | null>(null);
   const [toastAlerts, setToastAlerts] = useState<ToastAlert[]>([]);
+  const [userStats, setUserStats] = useState<UserStats | null>(null);
   
   const { 
     shops, 
@@ -330,6 +342,24 @@ export default function ShopsPage() {
       }
     };
     fetchTrackedShops();
+  }, []);
+
+  // Fetch user stats to get trial days remaining
+  useEffect(() => {
+    const fetchUserStats = async () => {
+      try {
+        const res = await fetch('/api/user/stats');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success && data.stats) {
+            setUserStats(data.stats);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to fetch user stats:', err);
+      }
+    };
+    fetchUserStats();
   }, []);
 
   // Infinite scroll observer
@@ -749,47 +779,50 @@ export default function ShopsPage() {
         icon="ri-store-2-line"
         iconType="icon"
         showStats={false}
+        showLimitedStats={true}
       />
 
       <div className="bg-white home-content-wrapper">
         <div className="p-3 w-max-width-xl mx-auto">
           
-          {/* Trial Alert Banner - Matching Laravel style */}
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="info-alert-box mb-3"
-            style={{
-              background: 'linear-gradient(90deg, #fef9e7 0%, #fef9e7 100%)',
-              border: '1px solid #f9e79f',
-              borderRadius: '8px',
-              padding: '14px 20px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: '16px',
-              flexWrap: 'wrap'
-            }}
-          >
-            <div className="d-flex align-items-center gap-2">
-              <i className="ri-information-line" style={{ color: '#f1c40f', fontSize: '20px' }}></i>
-              <span style={{ color: '#7d6608', fontSize: '14px' }}>
-                Il vous reste <strong style={{ color: '#d4ac0d' }}>5</strong> recherches avec filtres sur votre essai gratuit (4 jours).
-              </span>
-            </div>
-            <div className="d-flex align-items-center gap-3">
-              <span className="d-none d-md-inline" style={{ color: '#9a9a9a', fontSize: '13px' }}>
-                Pour effectuer plus de recherches, passez à la version complète.
-              </span>
-              <Link 
-                href="/dashboard/plans" 
-                className="btn btn-primary btn-sm fw-500"
-                style={{ whiteSpace: 'nowrap', padding: '8px 16px' }}
-              >
-                Débloquer l'accès complet
-              </Link>
-            </div>
-          </motion.div>
+          {/* Trial Alert Banner - Only show for trial users */}
+          {userStats?.plan?.isOnTrial && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="info-alert-box mb-3"
+              style={{
+                background: 'linear-gradient(90deg, #fef9e7 0%, #fef9e7 100%)',
+                border: '1px solid #f9e79f',
+                borderRadius: '8px',
+                padding: '14px 20px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '16px',
+                flexWrap: 'wrap'
+              }}
+            >
+              <div className="d-flex align-items-center gap-2">
+                <i className="ri-information-line" style={{ color: '#f1c40f', fontSize: '20px' }}></i>
+                <span style={{ color: '#7d6608', fontSize: '14px' }}>
+                  Il vous reste <strong style={{ color: '#d4ac0d' }}>5</strong> recherches avec filtres sur votre essai gratuit (<strong style={{ color: '#d4ac0d' }}>{userStats.plan.trialDaysRemaining} jours</strong>).
+                </span>
+              </div>
+              <div className="d-flex align-items-center gap-3">
+                <span className="d-none d-md-inline" style={{ color: '#9a9a9a', fontSize: '13px' }}>
+                  Pour effectuer plus de recherches, passez à la version complète.
+                </span>
+                <Link 
+                  href="/dashboard/plans" 
+                  className="btn btn-primary btn-sm fw-500"
+                  style={{ whiteSpace: 'nowrap', padding: '8px 16px' }}
+                >
+                  Débloquer l&apos;accès complet
+                </Link>
+              </div>
+            </motion.div>
+          )}
           
           {/* Search Bar */}
           <motion.div
@@ -808,7 +841,7 @@ export default function ShopsPage() {
                 placeholder="Rechercher par nom, ville, boutique, catégorie, niche..."
                 value={searchText}
                 onChange={(e) => setSearchText(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
               />
             </div>
             <Button 
@@ -984,7 +1017,7 @@ export default function ShopsPage() {
                 onApply={handleApplyFilters}
                 isActive={minActiveAds !== undefined || maxActiveAds !== undefined}
               />
-
+              
               <ShopCreationFilter
                 value={shopCreationDate}
                 onChange={setShopCreationDate}
@@ -998,7 +1031,7 @@ export default function ShopsPage() {
                 onApply={handleApplyFilters}
                 isActive={selectedCountries.length > 0}
               />
-
+              
               {/* Row 2: Niche, Commandes mensuelles, Revenu quotidien, Devise, Pixels, Origine */}
               <NicheDropdown
                 selectedNiches={selectedNiches}
@@ -1118,7 +1151,7 @@ export default function ShopsPage() {
                   >
                     {filter.icon && <i className={filter.icon} style={{ fontSize: '14px' }}></i>}
                     <span>{filter.value}</span>
-                    <button
+                    <button 
                       type="button"
                       onClick={() => removeFilter(filter.id, filter.type)}
                       style={{ 
@@ -1138,7 +1171,7 @@ export default function ShopsPage() {
                   </div>
                 ))}
                 {/* Reset Filters Button */}
-                <button
+                <button 
                   type="button"
                   onClick={resetFilters}
                   style={{
@@ -1176,7 +1209,7 @@ export default function ShopsPage() {
                 >
                   <i className="ri-save-line"></i> Enregistrer les filtres
                 </button>
-              </div>
+            </div>
             )}
 
             <div className="horizontal-solid-divider mb-4 mt-2"></div>
@@ -1244,7 +1277,7 @@ export default function ShopsPage() {
                       <TableHead className="border-0 text-uppercase text-sub fs-xs fw-500">Publicités actives (90j)</TableHead>
                       <TableHead className="border-0 text-uppercase text-sub fs-xs fw-500" style={{ minWidth: '134px' }}>Meilleures pubs</TableHead>
                       <TableHead className="border-0 text-uppercase text-sub fs-xs fw-500">Part du marché</TableHead>
-                      <TableHead className="border-0 text-uppercase text-sub fs-xs fw-500">Traffic (tendance 90j)</TableHead>
+                      <TableHead className="border-0 text-uppercase text-sub fs-xs fw-500">Traffic (3 derniers mois)</TableHead>
                       <TableHead className="border-0 text-uppercase text-sub fs-xs fw-500">Plateformes</TableHead>
                       <TableHead className="sticky_col action_col border-0 text-center text-uppercase text-sub fs-xs fw-500" style={{ backgroundColor: '#f5f7fa', minWidth: '200px' }}>Action</TableHead>
                     </TableRow>
@@ -1272,7 +1305,7 @@ export default function ShopsPage() {
                       <TableHead className="border-0 text-uppercase text-sub fs-xs fw-500">Publicités actives (90j)</TableHead>
                       <TableHead className="border-0 text-uppercase text-sub fs-xs fw-500" style={{ minWidth: '134px' }}>Meilleures pubs</TableHead>
                       <TableHead className="border-0 text-uppercase text-sub fs-xs fw-500">Part du marché</TableHead>
-                      <TableHead className="border-0 text-uppercase text-sub fs-xs fw-500">Traffic (tendance 90j)</TableHead>
+                      <TableHead className="border-0 text-uppercase text-sub fs-xs fw-500">Traffic (3 derniers mois)</TableHead>
                       <TableHead className="border-0 text-uppercase text-sub fs-xs fw-500">Plateformes</TableHead>
                       <TableHead className="sticky_col action_col border-0 text-center text-uppercase text-sub fs-xs fw-500" style={{ backgroundColor: '#f5f7fa', minWidth: '200px' }}>Action</TableHead>
                     </TableRow>
@@ -1481,9 +1514,9 @@ export default function ShopsPage() {
                           <div style={{ width: '120px' }}>
                             <p className="mb-0 fw-500 text-end w-100">
                               <span className="fs-small">{formatNumber(shop.monthlyVisits)}</span>
-                              {shop.trafficChange !== 0 && (
-                                <span className={`fs-xs ${shop.trafficChange >= 0 ? 'text-success' : 'text-danger'}`}>
-                                  {' '}({shop.trafficChange >= 0 ? '+' : ''}{formatNumber(shop.trafficChange)})
+                              {shop.trafficGrowth !== undefined && shop.trafficGrowth !== 0 && (
+                                <span className={`fs-xs ${shop.trafficGrowth >= 0 ? 'text-success' : 'text-danger'}`}>
+                                  {' '}({shop.trafficGrowth >= 0 ? '+' : ''}{shop.trafficGrowth.toFixed(0)}%)
                                   </span>
                                 )}
                             </p>
@@ -1492,7 +1525,7 @@ export default function ShopsPage() {
                             {shop.trafficData && shop.trafficData.length > 1 ? (
                               <MiniChart 
                                 data={shop.trafficData} 
-                                trend={shop.trafficChange >= 0 ? 'up' : 'down'}
+                                trend={shop.trafficGrowth >= 0 ? 'up' : 'down'}
                                 width={120}
                                 height={40}
                               />

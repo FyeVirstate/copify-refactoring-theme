@@ -290,14 +290,14 @@ export default function NicheDropdown({ selectedNiches, onNichesChange, onOpenCh
         
         {/* Search and Toggle */}
         <div className="d-flex align-items-center gap-2 mb-3">
-          <Input
-            type="text"
+        <Input
+          type="text"
             className="form-control"
-            placeholder="Rechercher une niche..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+          placeholder="Rechercher une niche..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
             style={{ flex: 1 }}
-          />
+        />
           <div className="d-flex gap-2">
             <Button 
               variant="link" 

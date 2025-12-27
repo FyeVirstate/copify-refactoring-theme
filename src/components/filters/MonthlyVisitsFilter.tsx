@@ -134,6 +134,7 @@ export default function MonthlyVisitsFilter({
       onOpenChange={onOpenChange}
       isActive={isActive || hasValue}
       badge={hasValue ? 1 : undefined}
+      alignEndAtWidth={992}
     >
       <p className="fw-500 mb-2">Visites mensuelles</p>
       <p className="fs-small fw-500 mb-2 text-muted">Préréglages</p>
@@ -144,9 +145,9 @@ export default function MonthlyVisitsFilter({
         activePreset={activePreset}
         columns={2}
       />
-
+      
       <div className="border-t border-gray-200 dark:border-gray-700 my-3" />
-
+      
       <FilterInputGroup
         label="Nombre de visiteurs par mois"
         minValue={minVisitsStr}
@@ -156,7 +157,7 @@ export default function MonthlyVisitsFilter({
         minPlaceholder="Min"
         maxPlaceholder="∞"
       />
-
+      
       <Button 
         className="w-100 mt-3" 
         onClick={() => onApply?.()}

@@ -147,7 +147,7 @@ export default function TrafficGrowthFilter({
         maxPlaceholder="∞"
         suffix="%"
       />
-
+      
       <Button 
         className="w-100 mt-3" 
         onClick={() => onApply?.()}

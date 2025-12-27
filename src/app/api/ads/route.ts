@@ -75,6 +75,27 @@ export async function GET(request: NextRequest) {
 
   // EU Transparency filter
   const euTransparency = searchParams.get('euTransparency') === 'true'
+  
+  // New filters from Top Boutiques/Produits
+  const minOrders = searchParams.get('minOrders') ? parseInt(searchParams.get('minOrders')!) : null
+  const maxOrders = searchParams.get('maxOrders') ? parseInt(searchParams.get('maxOrders')!) : null
+  const shopCreationDate = searchParams.get('shopCreationDate') || ''
+  const currencies = searchParams.get('currencies')?.split(',').filter(Boolean) || []
+  const pixels = searchParams.get('pixels')?.split(',').filter(Boolean) || []
+  const origins = searchParams.get('origins')?.split(',').filter(Boolean) || []
+  const languages = searchParams.get('languages')?.split(',').filter(Boolean) || []
+  const domains = searchParams.get('domains')?.split(',').filter(Boolean) || []
+  const minTrustpilotRating = searchParams.get('minTrustpilotRating') ? parseFloat(searchParams.get('minTrustpilotRating')!) : null
+  const maxTrustpilotRating = searchParams.get('maxTrustpilotRating') ? parseFloat(searchParams.get('maxTrustpilotRating')!) : null
+  const minTrustpilotReviews = searchParams.get('minTrustpilotReviews') ? parseInt(searchParams.get('minTrustpilotReviews')!) : null
+  const maxTrustpilotReviews = searchParams.get('maxTrustpilotReviews') ? parseInt(searchParams.get('maxTrustpilotReviews')!) : null
+  const themes = searchParams.get('themes')?.split(',').filter(Boolean) || []
+  const apps = searchParams.get('apps')?.split(',').filter(Boolean) || []
+  const socialNetworks = searchParams.get('socialNetworks')?.split(',').filter(Boolean) || []
+  const minPrice = searchParams.get('minPrice') ? parseFloat(searchParams.get('minPrice')!) : null
+  const maxPrice = searchParams.get('maxPrice') ? parseFloat(searchParams.get('maxPrice')!) : null
+  const minCatalogSize = searchParams.get('minCatalogSize') ? parseInt(searchParams.get('minCatalogSize')!) : null
+  const maxCatalogSize = searchParams.get('maxCatalogSize') ? parseInt(searchParams.get('maxCatalogSize')!) : null
 
   try {
     // Build WHERE conditions
@@ -196,6 +217,122 @@ export async function GET(request: NextRequest) {
       params.push(maxGrowth)
       paramIndex++
     }
+    
+    // Orders filters (estimated_order from traffic)
+    if (minOrders !== null) {
+      trafficConditions.push(`COALESCE(t.estimated_order, 0) >= $${paramIndex}`)
+      params.push(minOrders)
+      paramIndex++
+    }
+    if (maxOrders !== null) {
+      trafficConditions.push(`COALESCE(t.estimated_order, 0) <= $${paramIndex}`)
+      params.push(maxOrders)
+      paramIndex++
+    }
+    
+    // Price filters - Note: avg_price may not exist in production, skip for now
+    // Products filter price is not applicable to ads (ads don't have avg_price directly)
+    
+    // Shop creation date filter
+    if (shopCreationDate) {
+      // Parse date range format: "YYYY-MM-DD - YYYY-MM-DD"
+      if (shopCreationDate.includes(' - ')) {
+        const [startDate, endDate] = shopCreationDate.split(' - ')
+        try {
+          const parsedStart = new Date(startDate.trim())
+          const parsedEnd = new Date(endDate.trim())
+          if (!isNaN(parsedStart.getTime()) && !isNaN(parsedEnd.getTime())) {
+            shopsConditions.push(`s.created_at >= $${paramIndex}`)
+            params.push(parsedStart)
+            paramIndex++
+            shopsConditions.push(`s.created_at <= $${paramIndex}`)
+            params.push(parsedEnd)
+            paramIndex++
+          }
+        } catch (e) {
+          // Invalid date format - skip
+        }
+      }
+    }
+    
+    // Currency filter
+    if (currencies.length > 0) {
+      const currencyPlaceholders = currencies.map((_, i) => `$${paramIndex + i}`).join(', ')
+      shopsConditions.push(`s.currency IN (${currencyPlaceholders})`)
+      params.push(...currencies)
+      paramIndex += currencies.length
+    }
+    
+    // Pixels filter (pixels column in shops)
+    if (pixels.length > 0) {
+      const pixelConditions = pixels.map((_, i) => `s.pixels ILIKE $${paramIndex + i}`).join(' OR ')
+      shopsConditions.push(`(${pixelConditions})`)
+      params.push(...pixels.map(p => `%${p}%`))
+      paramIndex += pixels.length
+    }
+    
+    // Origins filter (country column in shops)
+    if (origins.length > 0) {
+      const originPlaceholders = origins.map((_, i) => `$${paramIndex + i}`).join(', ')
+      shopsConditions.push(`s.country IN (${originPlaceholders})`)
+      params.push(...origins)
+      paramIndex += origins.length
+    }
+    
+    // Languages filter (locale column in shops)
+    if (languages.length > 0) {
+      // Map language names to locale codes
+      const localeMap: { [key: string]: string } = {
+        'Français': 'fr', 'English': 'en', 'Deutsch': 'de', 'Español': 'es',
+        'Italiano': 'it', 'Português': 'pt', 'Nederlands': 'nl', 'Polski': 'pl',
+        'Svenska': 'sv', 'Dansk': 'da', 'Norsk': 'no', 'Suomi': 'fi',
+        'Čeština': 'cs', 'Magyar': 'hu', 'Română': 'ro', 'Ελληνικά': 'el',
+        'Türkçe': 'tr', 'Русский': 'ru', '日本語': 'ja', '中文': 'zh',
+        '한국어': 'ko', 'العربية': 'ar', 'עברית': 'he', 'ไทย': 'th',
+        'Tiếng Việt': 'vi', 'Bahasa Indonesia': 'id', 'Bahasa Melayu': 'ms'
+      }
+      const localeCodes = languages.map(l => localeMap[l] || l.toLowerCase().substring(0, 2))
+      const languagePlaceholders = localeCodes.map((_, i) => `$${paramIndex + i}`).join(', ')
+      shopsConditions.push(`s.locale IN (${languagePlaceholders})`)
+      params.push(...localeCodes)
+      paramIndex += localeCodes.length
+    }
+    
+    // Domains filter (url column in shops)
+    if (domains.length > 0) {
+      const domainConditions = domains.map((_, i) => `s.url ILIKE $${paramIndex + i}`).join(' OR ')
+      shopsConditions.push(`(${domainConditions})`)
+      params.push(...domains.map(d => `%${d}%`))
+      paramIndex += domains.length
+    }
+    
+    // Themes filter
+    if (themes.length > 0) {
+      const themeConditions = themes.map((_, i) => `s.theme ILIKE $${paramIndex + i}`).join(' OR ')
+      shopsConditions.push(`(${themeConditions})`)
+      params.push(...themes.map(t => `%${t}%`))
+      paramIndex += themes.length
+    }
+    
+    // Apps filter
+    if (apps.length > 0) {
+      const appConditions = apps.map((_, i) => `s.apps ILIKE $${paramIndex + i}`).join(' OR ')
+      shopsConditions.push(`(${appConditions})`)
+      params.push(...apps.map(a => `%${a}%`))
+      paramIndex += apps.length
+    }
+    
+    // Catalog size filter (products_count from shops)
+    if (minCatalogSize !== null) {
+      shopsConditions.push(`COALESCE(s.products_count, 0) >= $${paramIndex}`)
+      params.push(minCatalogSize)
+      paramIndex++
+    }
+    if (maxCatalogSize !== null) {
+      shopsConditions.push(`COALESCE(s.products_count, 0) <= $${paramIndex}`)
+      params.push(maxCatalogSize)
+      paramIndex++
+    }
 
     // Build WHERE clauses
     const adsWhereClause = adsConditions.length > 0 ? `WHERE ${adsConditions.join(' AND ')}` : ''
@@ -272,7 +409,8 @@ export async function GET(request: NextRequest) {
           shop_id,
           last_month_visits,
           estimated_monthly,
-          growth_rate
+          growth_rate,
+          estimated_order
         FROM traffic
         ORDER BY shop_id, created_at DESC
       ),
@@ -329,32 +467,52 @@ export async function GET(request: NextRequest) {
     // Execute main query
     const adsResult = await prisma.$queryRawUnsafe<any[]>(mainQuery, ...params)
 
-    // Get count - use cache if available
-    const cacheKey = JSON.stringify({ adsConditions, shopsConditions, trafficConditions })
+    // Get count - use cache for performance
+    const countParams = params.slice(0, -3)
+    const cacheKey = JSON.stringify({ adsConditions, shopsConditions, trafficConditions, countParams })
     const cached = countCache.get(cacheKey)
     let total: number
     
     if (cached && Date.now() - cached.timestamp < COUNT_CACHE_TTL) {
       total = cached.count
     } else {
-      // Optimized count query
-      const countQuery = `
-        WITH latest_traffic AS (
-          SELECT DISTINCT ON (shop_id) shop_id, last_month_visits, estimated_monthly, growth_rate
-          FROM traffic
-          ORDER BY shop_id, created_at DESC
-        )
-        SELECT COUNT(*) as total
-        FROM ads a
-        LEFT JOIN shops s ON a.shop_id = s.id AND s.deleted_at IS NULL
-        LEFT JOIN latest_traffic t ON t.shop_id = s.id
-        ${adsWhereClause}
-        ${shopsWhereClause}
-        ${trafficWhereClause}
-      `
-      const countResult = await prisma.$queryRawUnsafe<[{ total: bigint }]>(countQuery, ...params.slice(0, -3))
-      total = Number(countResult[0]?.total || 0)
-      countCache.set(cacheKey, { count: total, timestamp: Date.now() })
+      // Use a simpler count for performance when no complex filters
+      const hasComplexFilters = shopsConditions.length > 0 || trafficConditions.length > 0
+      
+      let countQuery: string
+      if (hasComplexFilters) {
+        countQuery = `
+          WITH latest_traffic AS (
+            SELECT DISTINCT ON (shop_id) shop_id, last_month_visits, estimated_monthly, growth_rate
+            FROM traffic
+            ORDER BY shop_id, created_at DESC
+          )
+          SELECT COUNT(*) as total
+          FROM ads a
+          LEFT JOIN shops s ON a.shop_id = s.id AND s.deleted_at IS NULL
+          LEFT JOIN latest_traffic t ON t.shop_id = s.id
+          ${adsWhereClause}
+          ${shopsWhereClause}
+          ${trafficWhereClause}
+        `
+      } else {
+        // Simple count when only ads conditions
+        countQuery = `
+          SELECT COUNT(*) as total
+          FROM ads a
+          ${adsWhereClause}
+        `
+      }
+      
+      try {
+        const countResult = await prisma.$queryRawUnsafe<[{ total: bigint }]>(countQuery, ...countParams)
+        total = Number(countResult[0]?.total || 0)
+        countCache.set(cacheKey, { count: total, timestamp: Date.now() })
+      } catch (countError) {
+        console.error('Count query error:', countError)
+        // Fallback: estimate from results
+        total = adsResult.length < perPage ? adsResult.length : adsResult.length * 10
+      }
     }
 
     // Transform results

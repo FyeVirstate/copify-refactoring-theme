@@ -82,10 +82,6 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
             images: { take: 1 },
           }
         },
-        ads: {
-          take: 50,
-          orderBy: { createdAt: 'desc' },
-        },
         categories: {
           include: {
             category: true
@@ -100,6 +96,72 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         error: 'Shop not found'
       }, { status: 404 })
     }
+
+    // Fetch ALL ads - by shopId OR by pageId (Facebook page)
+    // This ensures we get all ads even if they're linked differently
+    const allAdsConditions: any[] = [{ shopId }]
+    
+    // Also fetch by Facebook page ID if available
+    if (shop.fbPageId) {
+      allAdsConditions.push({ pageId: BigInt(shop.fbPageId) })
+    }
+
+    const ads = await prisma.ad.findMany({
+      where: {
+        OR: allAdsConditions
+      },
+      orderBy: { createdAt: 'desc' },
+    })
+
+    // Fetch ads history for the evolution chart (last 12 months)
+    // Using raw query since shopAdsHistory model may not be generated yet
+    const adsHistory = await prisma.$queryRaw<Array<{
+      id: bigint;
+      shop_id: bigint;
+      active_ads_count: number;
+      all_ads_count: number;
+      created_at: Date | null;
+    }>>`
+      SELECT id, shop_id, active_ads_count, all_ads_count, created_at 
+      FROM shops_ads_active_history 
+      WHERE shop_id = ${shopId}
+      ORDER BY created_at ASC
+      LIMIT 365
+    `
+
+    // Group ads history by day and get max values per day (like Laravel)
+    const adsHistoryByDay = new Map<string, { allAds: number; activeAds: number }>()
+    for (const record of adsHistory) {
+      const dateKey = record.created_at 
+        ? new Date(record.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' })
+        : 'Unknown'
+      const existing = adsHistoryByDay.get(dateKey)
+      if (!existing || record.all_ads_count > existing.allAds) {
+        adsHistoryByDay.set(dateKey, {
+          allAds: record.all_ads_count,
+          activeAds: record.active_ads_count,
+        })
+      }
+    }
+
+    // Convert to arrays for chart
+    const adsChartLabels = Array.from(adsHistoryByDay.keys())
+    const adsChartAllAds = Array.from(adsHistoryByDay.values()).map(v => v.allAds)
+    const adsChartActiveAds = Array.from(adsHistoryByDay.values()).map(v => v.activeAds)
+
+    // Calculate ads growth percentages
+    const latestAdsCount = adsChartAllAds[adsChartAllAds.length - 1] || 0
+    const oneMonthAgoIndex = Math.max(0, adsChartAllAds.length - 30)
+    const threeMonthsAgoIndex = Math.max(0, adsChartAllAds.length - 90)
+    const oneMonthAgoAds = adsChartAllAds[oneMonthAgoIndex] || latestAdsCount
+    const threeMonthsAgoAds = adsChartAllAds[threeMonthsAgoIndex] || latestAdsCount
+
+    const adsLastMonthGrowth = oneMonthAgoAds > 0 
+      ? ((latestAdsCount - oneMonthAgoAds) / oneMonthAgoAds) * 100 
+      : 0
+    const adsThreeMonthGrowth = threeMonthsAgoAds > 0
+      ? ((latestAdsCount - threeMonthsAgoAds) / threeMonthsAgoAds) * 100
+      : 0
 
     // Get traffic data separately
     const traffic = await prisma.traffic.findFirst({
@@ -164,7 +226,23 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         const socialData = typeof traffic.social === 'string' 
           ? JSON.parse(traffic.social) 
           : traffic.social
-        social = Array.isArray(socialData) ? socialData : []
+        
+        // Handle Laravel format: { data: { Facebook: { Share: 0.726 }, ... } }
+        if (socialData && typeof socialData === 'object' && 'data' in socialData) {
+          const platformData = socialData.data as Record<string, { Share?: number; Favicon?: string }>
+          social = Object.entries(platformData)
+            .filter(([, data]) => data?.Share !== undefined && data.Share > 0)
+            .map(([platform, data]) => ({
+              name: platform,
+              Name: platform,
+              visitsShare: data.Share || 0,
+              Value: data.Share || 0,
+              icon: data.Favicon || null,
+            }))
+            .sort((a, b) => (b.visitsShare || 0) - (a.visitsShare || 0))
+        } else if (Array.isArray(socialData)) {
+          social = socialData
+        }
       }
     } catch { social = [] }
 
@@ -246,12 +324,13 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     const estimatedMonthlyOrders = traffic?.estimatedOrder || Math.round(currentMonthVisits * conversionRate)
 
     // Active vs inactive ads (isActive: 1 = active, 0 = inactive)
-    const activeAdsCount = shop.ads.filter(ad => ad.isActive === 1).length
-    const inactiveAdsCount = shop.ads.length - activeAdsCount
+    // Now using ALL ads fetched (by shopId OR pageId)
+    const activeAdsCount = ads.filter(ad => ad.isActive === 1).length
+    const inactiveAdsCount = ads.length - activeAdsCount
 
     // Calculate ad type breakdown
-    const videoAds = shop.ads.filter(ad => ad.type === 'video').length
-    const imageAds = shop.ads.filter(ad => ad.type === 'image').length
+    const videoAds = ads.filter(ad => ad.type === 'video').length
+    const imageAds = ads.filter(ad => ad.type === 'image').length
 
     // Get suggested shops - shops in same category or with similar traffic
     const categoryId = shop.categories[0]?.categoryId
@@ -352,10 +431,19 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
           visitsGrowth: lastMonthGrowth.toFixed(0),
           threeMonthGrowth: threeMonthGrowth.toFixed(0),
           activeAds: shop.activeAds || activeAdsCount,
-          allAds: shop.allAds || shop.ads.length,
+          allAds: shop.allAds || ads.length,
           activeAdsCount,
           inactiveAdsCount,
           trend: traffic?.trend ?? 1, // 1 = up, 0 = down
+          // Ads-specific growth (separate from traffic)
+          adsLastMonthGrowth: adsLastMonthGrowth.toFixed(0),
+          adsThreeMonthGrowth: adsThreeMonthGrowth.toFixed(0),
+        },
+        // Ads evolution chart data (from shops_ads_active_history)
+        adsChart: {
+          labels: adsChartLabels,
+          allAds: adsChartAllAds,
+          activeAds: adsChartActiveAds,
         },
         traffic: {
           chartData,
@@ -397,15 +485,19 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
             code: c.CountryCode || '',
             value: Math.round((c.Value || 0) * 10000) / 100, // Convert to percentage
           })),
-          social,
+          social: social.map(s => ({
+            name: s.name || s.Name || 'Unknown',
+            value: Math.round((s.visitsShare || s.Value || 0) * 10000) / 100, // Convert to percentage
+            icon: s.icon || null,
+          })),
           mainSource: traffic?.mainSource || null,
           growthRate: traffic?.growthRate || 0,
         },
         adStats: {
           videoCount: videoAds,
           imageCount: imageAds,
-          videoPercent: shop.ads.length > 0 ? Math.round((videoAds / shop.ads.length) * 100) : 0,
-          imagePercent: shop.ads.length > 0 ? Math.round((imageAds / shop.ads.length) * 100) : 0,
+          videoPercent: ads.length > 0 ? Math.round((videoAds / ads.length) * 100) : 0,
+          imagePercent: ads.length > 0 ? Math.round((imageAds / ads.length) * 100) : 0,
         },
         products: shop.products.map(p => ({
           id: Number(p.id),
@@ -419,7 +511,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
           createdAt: p.createdAt,
           bestProduct: p.bestProduct || false,
         })),
-        ads: shop.ads.map(ad => ({
+        ads: ads.map(ad => ({
           id: Number(ad.id),
           adArchiveId: String(ad.adArchiveId),
           pageName: ad.pageName,

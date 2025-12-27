@@ -148,9 +148,9 @@ export default function LanguageFilter({
         activePreset={activePreset}
         columns={2}
       />
-
+      
       <div className="border-t border-gray-200 dark:border-gray-700 my-3" />
-
+      
       <FilterCheckboxList
         items={languagesWithFlags}
         selectedItems={selectedLanguages}
@@ -162,7 +162,7 @@ export default function LanguageFilter({
         showIncludeExclude={true}
         groupName="languageCheckboxes"
       />
-
+      
       <Button 
         className="w-100 mt-3" 
         onClick={() => onApply?.()}

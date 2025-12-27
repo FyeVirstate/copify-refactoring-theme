@@ -257,6 +257,7 @@ model Shop {
   ads                     Ad[]
   userShops               UserShop[]
   categories              ShopCategory[]
+  adsHistory              ShopAdsHistory[]
   
   @@index([url], map: "idx_shops_url")
   @@index([disabled], map: "shops_disabled_idx")
@@ -266,6 +267,22 @@ model Shop {
   @@index([shopScannedAt], map: "shops_shop_scanned_at_idx")
   @@index([createdAt], map: "idx_shops_created_at")
   @@map("shops")
+}
+
+// Shops Ads History - tracks daily active/total ads counts
+model ShopAdsHistory {
+  id                      BigInt    @id @default(autoincrement())
+  shopId                  BigInt    @map("shop_id")
+  activeAdsCount          Int       @map("active_ads_count")
+  allAdsCount             Int       @map("all_ads_count")
+  createdAt               DateTime? @map("created_at")
+  updatedAt               DateTime? @map("updated_at")
+  
+  shop                    Shop      @relation(fields: [shopId], references: [id])
+  
+  @@index([shopId], map: "shops_ads_active_history_shop_id_idx")
+  @@index([createdAt], map: "shops_ads_active_history_created_at_idx")
+  @@map("shops_ads_active_history")
 }
 
 model UserShop {

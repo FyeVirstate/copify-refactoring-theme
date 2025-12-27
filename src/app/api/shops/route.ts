@@ -349,8 +349,9 @@ export async function GET(request: NextRequest) {
         break
     }
 
-    // Generate cache key for count
-    const cacheKey = JSON.stringify({ shopConditions, trafficConditions, currencies, countries, pixels })
+    // Generate cache key for count - include params values for accurate caching
+    const countParams = [...params] // Copy current params (before adding perPage, offset, userId)
+    const cacheKey = JSON.stringify({ shopConditions, trafficConditions, countParams })
     const cached = countCache.get(cacheKey)
     let total: number
     

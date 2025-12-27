@@ -134,6 +134,7 @@ export default function ActiveAdsFilter({
       onOpenChange={onOpenChange}
       isActive={isActive || hasValue}
       badge={hasValue ? 1 : undefined}
+      alignEndAtWidth={1200}
     >
       <p className="fw-500 mb-2">Publicités actives</p>
       <p className="fs-small fw-500 mb-2 text-muted">Préréglages</p>
@@ -144,10 +145,10 @@ export default function ActiveAdsFilter({
         activePreset={activePreset}
         columns={2}
       />
-
+      
       <div className="border-t border-gray-200 dark:border-gray-700 my-3" />
 
-      <FilterInputGroup
+          <FilterInputGroup
         label="Nombre de publicités actives"
         minValue={minAdsStr}
         maxValue={maxAdsStr}
@@ -157,7 +158,7 @@ export default function ActiveAdsFilter({
         maxPlaceholder="∞"
       />
 
-      <Button 
+            <Button 
         className="w-100 mt-3" 
         onClick={() => onApply?.()}
       >

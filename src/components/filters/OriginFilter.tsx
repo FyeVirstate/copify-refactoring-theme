@@ -133,6 +133,7 @@ export default function OriginFilter({
       onOpenChange={onOpenChange}
       isActive={isActive || selectedOrigins.length > 0}
       badge={selectedOrigins.length > 0 ? selectedOrigins.length : undefined}
+      forceAlignEnd={true}
     >
       <p className="fw-500 mb-2">Origine</p>
       <p className="fs-small fw-500 mb-2 text-muted">Préréglages</p>
@@ -143,9 +144,9 @@ export default function OriginFilter({
         activePreset={activePreset}
         columns={2}
       />
-
+      
       <div className="border-t border-gray-200 dark:border-gray-700 my-3" />
-
+      
       <FilterCheckboxList
         items={countriesWithFlags}
         selectedItems={selectedOrigins}
@@ -157,7 +158,7 @@ export default function OriginFilter({
         showIncludeExclude={true}
         groupName="originCheckboxes"
       />
-
+      
       <Button 
         className="w-100 mt-3" 
         onClick={() => onApply?.()}

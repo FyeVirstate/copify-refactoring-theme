@@ -136,6 +136,7 @@ export default function DailyRevenueFilter({
       onOpenChange={onOpenChange}
       isActive={isActive || hasValue}
       badge={hasValue ? 1 : undefined}
+      alignEndAtWidth={992}
     >
       <p className="fw-500 mb-2">Revenu quotidien</p>
       <p className="fs-small fw-500 mb-2 text-muted">Préréglages</p>
@@ -146,9 +147,9 @@ export default function DailyRevenueFilter({
         activePreset={activePreset}
         columns={2}
       />
-
+      
       <div className="border-t border-gray-200 dark:border-gray-700 my-3" />
-
+      
       <FilterInputGroup
         label="Revenu quotidien"
         minValue={minRevenueStr}
@@ -159,7 +160,7 @@ export default function DailyRevenueFilter({
         maxPlaceholder="∞"
         prefix="$"
       />
-
+      
       <Button 
         className="w-100 mt-3" 
         onClick={() => onApply?.()}

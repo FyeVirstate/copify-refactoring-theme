@@ -131,9 +131,9 @@ export default function PixelsFilter({
         activePreset={activePreset}
         columns={2}
       />
-
+      
       <div className="border-t border-gray-200 dark:border-gray-700 my-3" />
-
+      
       <FilterCheckboxList
         items={pixelsWithIcons}
         selectedItems={selectedPixels}
@@ -145,7 +145,7 @@ export default function PixelsFilter({
         showIncludeExclude={true}
         groupName="pixelsCheckboxes"
       />
-
+      
       <Button 
         className="w-100 mt-3" 
         onClick={() => onApply?.()}

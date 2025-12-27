@@ -300,16 +300,16 @@ function AnalyzeShopContent() {
             />
           )}
 
-          {/* Input Section - 3 columns: Search | Analyser | Boutiques suivies */}
+          {/* Input Section - Responsive */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, ease: "easeOut" }}
             className="mb-4 pb-1 pt-2"
           >
-            <div className="d-flex gap-3 align-items-center flex-wrap flex-lg-nowrap">
-              {/* Search Input */}
-              <div className="position-relative" style={{ flex: '1 1 auto', minWidth: '300px' }}>
+            <div className="d-flex gap-3 align-items-center flex-wrap">
+              {/* Search Input - Full width on mobile */}
+              <div className="position-relative flex-grow-1" style={{ minWidth: '200px' }}>
                 <i
                   className="ri-global-line position-absolute"
                   style={{
@@ -333,58 +333,59 @@ function AnalyzeShopContent() {
                 />
               </div>
 
-              {/* Analyser Button */}
-              <Button
-                onClick={handleAnalyze}
-                className="btn btn-primary apply-filters-btn"
-                style={{ whiteSpace: 'nowrap', minWidth: '120px', flexShrink: 0, height: '48px' }}
-                disabled={isAnalyzing || !shopUrl.trim() || Boolean(limits && limits.remaining === 0)}
-              >
-                {isAnalyzing ? (
-                  <>
-                    <span className="spinner-border spinner-border-sm me-2" role="status"></span>
-                    Analyse...
-                  </>
-                ) : (
-                  "Analyser"
-                )}
-              </Button>
+              {/* Analyser Button + Progress - Flex row on mobile */}
+              <div className="d-flex gap-3 align-items-center">
+                <Button
+                  onClick={handleAnalyze}
+                  className="btn btn-primary apply-filters-btn"
+                  style={{ whiteSpace: 'nowrap', minWidth: '100px', flexShrink: 0, height: '48px' }}
+                  disabled={isAnalyzing || !shopUrl.trim() || Boolean(limits && limits.remaining === 0)}
+                >
+                  {isAnalyzing ? (
+                    <>
+                      <span className="spinner-border spinner-border-sm me-2" role="status"></span>
+                      Analyse...
+                    </>
+                  ) : (
+                    "Analyser"
+                  )}
+                </Button>
 
-              {/* Boutiques suivies - Progress Circle - Laravel style */}
-              <div 
-                className="progress-circle d-flex gap-2 flex-row align-items-center" 
-                style={{ flexShrink: 0 }}
-              >
-                <div className="progress-circle-wrapper">
-                  <svg width="32px" height="32px">
-                    {/* Progress circle with CSS-based animation like Laravel */}
-                    <circle 
-                      className="progress-bar-circle circle-2"
-                      cx="16" 
-                      cy="16" 
-                      r="12"
-                      fill="none"
-                      stroke={limits && limits.remaining === 0 ? "#ef4444" : "#0c6cfb"}
-                      strokeWidth="3"
-                      strokeDasharray="75"
-                      strokeDashoffset={75 - (75 * progressPercentage / 100)}
-                      strokeLinecap="round"
-                      style={{ transform: 'rotate(-90deg)', transformOrigin: 'center' }}
-                    />
-                  </svg>
-                </div>
-                <div className="progress-details">
-                  <div 
-                    className="progress-text fw-600" 
-                    style={{ 
-                      fontSize: '15px', 
-                      lineHeight: 1.2,
-                      color: limits && limits.remaining === 0 ? '#ef4444' : undefined 
-                    }}
-                  >
-                    {limits ? `${limits.used}/${limits.max}` : '0/0'}
+                {/* Boutiques suivies - Progress Circle */}
+                <div 
+                  className="progress-circle d-flex gap-2 flex-row align-items-center" 
+                  style={{ flexShrink: 0 }}
+                >
+                  <div className="progress-circle-wrapper">
+                    <svg width="32px" height="32px">
+                      <circle 
+                        className="progress-bar-circle circle-2"
+                        cx="16" 
+                        cy="16" 
+                        r="12"
+                        fill="none"
+                        stroke={limits && limits.remaining === 0 ? "#ef4444" : "#0c6cfb"}
+                        strokeWidth="3"
+                        strokeDasharray="75"
+                        strokeDashoffset={75 - (75 * progressPercentage / 100)}
+                        strokeLinecap="round"
+                        style={{ transform: 'rotate(-90deg)', transformOrigin: 'center' }}
+                      />
+                    </svg>
                   </div>
-                  <div className="progress-label text-muted" style={{ fontSize: '11px' }}>Boutiques suivies</div>
+                  <div className="progress-details">
+                    <div 
+                      className="progress-text fw-600" 
+                      style={{ 
+                        fontSize: '15px', 
+                        lineHeight: 1.2,
+                        color: limits && limits.remaining === 0 ? '#ef4444' : undefined 
+                      }}
+                    >
+                      {limits ? `${limits.used}/${limits.max}` : '0/0'}
+                    </div>
+                    <div className="progress-label text-muted" style={{ fontSize: '11px' }}>Boutiques suivies</div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -435,222 +436,480 @@ function AnalyzeShopContent() {
                 </p>
               </div>
             ) : (
-              <div 
-                ref={tableWrapperRef}
-                className="border position-relative" 
-                style={{ borderRadius: '6px', overflow: 'hidden' }}
-              >
-                {/* Mouse-following tooltip */}
-                {showTooltip && (
-                  <div
-                    className="mouse-tooltip"
-                    style={{
-                      position: 'absolute',
-                      left: mousePosition.x,
-                      top: mousePosition.y,
-                      pointerEvents: 'none',
-                      background: 'rgba(0,0,0,0.8)',
-                      color: '#fff',
-                      padding: '6px 8px',
-                      borderRadius: '4px',
-                      fontSize: '13px',
-                      whiteSpace: 'nowrap',
-                      zIndex: 100,
-                    }}
-                  >
-                    Voir l&apos;analyse
-                  </div>
-                )}
-                <Table id="shopListTable" className="table mb-0 table-hover" style={{ tableLayout: 'fixed' }}>
-                  <colgroup>
-                    <col style={{ width: '35%' }} />
-                    <col style={{ width: '15%' }} />
-                    <col style={{ width: '15%' }} />
-                    <col style={{ width: '15%' }} />
-                    <col style={{ width: '15%' }} />
-                    <col style={{ width: '5%' }} />
-                  </colgroup>
-                  <TableHeader>
-                    <TableRow className="border-0 bg-weak-gray border-bottom">
-                      <TableHead scope="col" className="text-sub fs-small fw-500 border-0 align-middle">
-                        Nom de la boutique
-                      </TableHead>
-                      <TableHead scope="col" className="text-sub fs-small fw-500 border-0 text-start align-middle">
-                        Part de marché
-                      </TableHead>
-                      <TableHead scope="col" className="text-sub fs-small fw-500 border-0 text-center align-middle">
-                        Ventes quotidiennes estimées
-                      </TableHead>
-                      <TableHead scope="col" className="text-sub fs-small fw-500 border-0 text-center align-middle">
-                        Revenu mensuel estimé
-                      </TableHead>
-                      <TableHead scope="col" className="text-sub fs-small fw-500 border-0 text-center align-middle">
-                        Annonces actives <span className="text-light-gray fs-xs d-block">(Évolution du dernier mois)</span>
-                      </TableHead>
-                      <TableHead scope="col" className="text-sub fs-small fw-500 border-0 text-center align-middle">
-                      </TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
+              <>
+                {/* Desktop Table View */}
+                <div 
+                  ref={tableWrapperRef}
+                  className="border position-relative d-none d-lg-block" 
+                  style={{ borderRadius: '6px', overflow: 'hidden' }}
+                >
+                  {/* Mouse-following tooltip */}
+                  {showTooltip && (
+                    <div
+                      className="mouse-tooltip"
+                      style={{
+                        position: 'absolute',
+                        left: mousePosition.x,
+                        top: mousePosition.y,
+                        pointerEvents: 'none',
+                        background: 'rgba(0,0,0,0.8)',
+                        color: '#fff',
+                        padding: '6px 8px',
+                        borderRadius: '4px',
+                        fontSize: '13px',
+                        whiteSpace: 'nowrap',
+                        zIndex: 100,
+                      }}
+                    >
+                      Voir l&apos;analyse
+                    </div>
+                  )}
+                  <Table id="shopListTable" className="table mb-0 table-hover" style={{ tableLayout: 'fixed' }}>
+                    <colgroup>
+                      <col style={{ width: '35%' }} />
+                      <col style={{ width: '15%' }} />
+                      <col style={{ width: '15%' }} />
+                      <col style={{ width: '15%' }} />
+                      <col style={{ width: '15%' }} />
+                      <col style={{ width: '5%' }} />
+                    </colgroup>
+                    <TableHeader>
+                      <TableRow className="border-0 bg-weak-gray border-bottom">
+                        <TableHead scope="col" className="text-sub fs-small fw-500 border-0 align-middle">
+                          Nom de la boutique
+                        </TableHead>
+                        <TableHead scope="col" className="text-sub fs-small fw-500 border-0 text-start align-middle">
+                          Part de marché
+                        </TableHead>
+                        <TableHead scope="col" className="text-sub fs-small fw-500 border-0 text-center align-middle">
+                          Ventes quotidiennes estimées
+                        </TableHead>
+                        <TableHead scope="col" className="text-sub fs-small fw-500 border-0 text-center align-middle">
+                          Revenu mensuel estimé
+                        </TableHead>
+                        <TableHead scope="col" className="text-sub fs-small fw-500 border-0 text-center align-middle">
+                          Annonces actives <span className="text-light-gray fs-xs d-block">(Évolution du dernier mois)</span>
+                        </TableHead>
+                        <TableHead scope="col" className="text-sub fs-small fw-500 border-0 text-center align-middle">
+                        </TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {sortedShops.map((tracked) => (
+                        <TableRow
+                          key={tracked.id}
+                          className="position-relative shop-row clickable"
+                          style={{ cursor: 'pointer' }}
+                          onClick={(e) => {
+                            if ((e.target as HTMLElement).closest('.action-dropdown') || (e.target as HTMLElement).closest('a') || (e.target as HTMLElement).closest('[data-radix-popper-content-wrapper]')) return;
+                            router.push(`/dashboard/track/${tracked.shopId}`);
+                          }}
+                          onMouseEnter={() => setShowTooltip(true)}
+                          onMouseMove={handleMouseMove}
+                          onMouseLeave={() => setShowTooltip(false)}
+                        >
+                          {/* Shop Name with Screenshot + Logo + Icon */}
+                          <TableCell scope="row" className="align-middle border-b-gray py-3">
+                            <div className="d-flex align-items-center gap-3">
+                              {/* Site Preview Screenshot */}
+                              <div 
+                                className="shop-screenshot position-relative" 
+                                style={{ 
+                                  width: '140px', 
+                                  height: '85px', 
+                                  borderRadius: '8px', 
+                                  overflow: 'hidden', 
+                                  flexShrink: 0, 
+                                  border: '1px solid #e5e7eb',
+                                  backgroundColor: '#f9fafb'
+                                }}
+                              >
+                                <img
+                                  src={tracked.shop?.screenshot 
+                                    ? `https://app.copyfy.io/download/products/screenshots/${tracked.shop.screenshot}`
+                                    : `https://image.thum.io/get/width/280/crop/170/${tracked.shop?.url}`
+                                  }
+                                  alt={`${tracked.shop?.name || "Shop"} preview`}
+                                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                  onError={(e) => {
+                                    const target = e.target as HTMLImageElement;
+                                    if (!target.src.includes('thum.io') && !target.src.includes('img_not_found')) {
+                                      target.src = `https://image.thum.io/get/width/280/crop/170/${tracked.shop?.url}`;
+                                    } else if (!target.src.includes('img_not_found')) {
+                                      target.src = "/img_not_found.png";
+                                    }
+                                  }}
+                                />
+                              </div>
+                              {/* Shop Info with favicon logo */}
+                              <div className="d-flex align-items-center gap-2">
+                                {/* Favicon/Logo */}
+                                <img 
+                                  src={`https://www.google.com/s2/favicons?domain=${tracked.shop?.url}&sz=32`}
+                                  alt="Logo"
+                                  style={{ width: '24px', height: '24px', borderRadius: '4px', flexShrink: 0 }}
+                                  onError={(e) => {
+                                    const target = e.target as HTMLImageElement;
+                                    target.style.display = 'none';
+                                  }}
+                                />
+                                <div>
+                                  <h4 className="fs-small mb-1 fw-600 text-dark d-flex align-items-center gap-1">
+                                    {tracked.shop?.name || tracked.shop?.url}
+                                    <i className="ri-arrow-right-up-line" style={{ fontSize: '12px', color: '#9ca3af' }}></i>
+                                  </h4>
+                                  <a 
+                                    href={`https://${tracked.shop?.url}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-primary fs-xs text-decoration-none"
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    {tracked.shop?.url}
+                                  </a>
+                                </div>
+                              </div>
+                            </div>
+                          </TableCell>
+
+                          {/* Market Share - Simple flags with gray % */}
+                          <TableCell className="align-middle py-3 border-b-gray">
+                            <div className="d-flex flex-column gap-1" style={{ fontSize: '12px' }}>
+                              {tracked.shop?.countries && tracked.shop.countries.length > 0 ? (
+                                <>
+                                  {tracked.shop.countries.slice(0, 3).map((country, idx) => (
+                                    <div key={idx} className="d-flex align-items-center gap-2">
+                                      <img 
+                                        src={`/flags/${country.code.toLowerCase()}.svg`}
+                                        alt={country.code}
+                                        style={{ width: '18px', height: '13px' }}
+                                        onError={(e) => {
+                                          const target = e.target as HTMLImageElement;
+                                          target.style.display = 'none';
+                                        }}
+                                      />
+                                      <span style={{ color: '#6b7280' }}>({country.value}%)</span>
+                                    </div>
+                                  ))}
+                                  {tracked.shop.countries.length > 3 && (
+                                    <span style={{ color: '#6b7280' }}>Others ({tracked.shop.countries.slice(3).reduce((sum, c) => sum + c.value, 0)}%)</span>
+                                  )}
+                                </>
+                              ) : (
+                                <span style={{ color: '#6b7280' }}>-</span>
+                              )}
+                            </div>
+                          </TableCell>
+
+                          {/* Daily Revenue with DIAGONAL Arrow */}
+                          <TableCell className="align-middle py-3 border-b-gray text-center">
+                            <div className="d-flex align-items-center justify-content-center gap-1">
+                              <span className="fw-500">
+                                {formatCurrency(tracked.shop?.dailyRevenue, tracked.shop?.currency)}
+                              </span>
+                              {tracked.shop?.growthRate !== null && tracked.shop?.growthRate !== undefined && tracked.shop.growthRate !== 0 && (
+                                <i 
+                                  className={`ri-arrow-right-${tracked.shop.growthRate > 0 ? 'up' : 'down'}-line`}
+                                  style={{ color: tracked.shop.growthRate > 0 ? '#22c55e' : '#ef4444', fontSize: '14px' }}
+                                ></i>
+                              )}
+                            </div>
+                          </TableCell>
+
+                          {/* Monthly Revenue with DIAGONAL Arrow */}
+                          <TableCell className="align-middle py-3 border-b-gray text-center">
+                            <div className="d-flex align-items-center justify-content-center gap-1">
+                              <span className="fw-500">
+                                {formatCurrency(tracked.shop?.monthlyRevenue, tracked.shop?.currency)}
+                              </span>
+                              {tracked.shop?.growthRate !== null && tracked.shop?.growthRate !== undefined && tracked.shop.growthRate !== 0 && (
+                                <i 
+                                  className={`ri-arrow-right-${tracked.shop.growthRate > 0 ? 'up' : 'down'}-line`}
+                                  style={{ color: tracked.shop.growthRate > 0 ? '#22c55e' : '#ef4444', fontSize: '14px' }}
+                                ></i>
+                              )}
+                            </div>
+                          </TableCell>
+
+                          {/* Active Ads with Evolution - Laravel style */}
+                          <TableCell className="align-middle py-3 border-b-gray text-center">
+                            <div className="d-flex align-items-center justify-content-center gap-1">
+                              {/* Colored dot indicator */}
+                              <span 
+                                style={{ 
+                                  width: '8px', 
+                                  height: '8px', 
+                                  borderRadius: '50%', 
+                                  display: 'inline-block',
+                                  backgroundColor: (tracked.shop?.growthRate ?? 0) >= 0 ? '#22c55e' : '#ef4444',
+                                  flexShrink: 0
+                                }}
+                              ></span>
+                              {/* Number in bold black */}
+                              <span className="fw-600" style={{ color: '#1f2937' }}>
+                                {tracked.shop?.activeAds || 0}
+                              </span>
+                              {/* Percentage in smaller colored text */}
+                              {tracked.shop?.growthRate !== null && tracked.shop?.growthRate !== undefined && tracked.shop.growthRate !== 0 && (
+                                <span 
+                                  style={{ 
+                                    fontSize: '11px',
+                                    fontWeight: 500,
+                                    color: tracked.shop.growthRate > 0 ? '#22c55e' : '#ef4444'
+                                  }}
+                                >
+                                  ({tracked.shop.growthRate > 0 ? '+' : ''}{Math.round(tracked.shop.growthRate)}%)
+                                </span>
+                              )}
+                            </div>
+                          </TableCell>
+
+                          {/* Actions Dropdown */}
+                          <TableCell 
+                            className="align-middle py-3 border-b-gray text-center action-dropdown" 
+                            style={{ width: '60px' }}
+                            onMouseEnter={() => setShowTooltip(false)}
+                          >
+                            <DropdownMenu onOpenChange={(open) => { if (open) setShowTooltip(false); }}>
+                              <DropdownMenuTrigger asChild onClick={(e) => { e.stopPropagation(); setShowTooltip(false); }}>
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm"
+                                  className="h-8 w-8 p-0 hover:bg-gray-100"
+                                >
+                                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#6b7280" width="20" height="20">
+                                    <circle cx="12" cy="5" r="2"></circle>
+                                    <circle cx="12" cy="12" r="2"></circle>
+                                    <circle cx="12" cy="19" r="2"></circle>
+                                  </svg>
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" className="w-40">
+                                <DropdownMenuItem onClick={() => handleRefreshShop(tracked.shopId)}>
+                                  <i className="ri-refresh-line me-2"></i>
+                                  Actualiser
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => router.push(`/dashboard/track/${tracked.shopId}`)}>
+                                  <i className="ri-eye-line me-2"></i>
+                                  Voir l&apos;analyse
+                                </DropdownMenuItem>
+                                <DropdownMenuItem asChild>
+                                  <a href={`https://${tracked.shop?.url}`} target="_blank" rel="noopener noreferrer">
+                                    <i className="ri-external-link-line me-2"></i>
+                                    Visiter le site
+                                  </a>
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                {isOnTrial ? (
+                                  <TooltipProvider delayDuration={0}>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <div className="dropdown-item-disabled" style={{ cursor: 'not-allowed' }}>
+                                          <DropdownMenuItem 
+                                            disabled
+                                            className="text-danger opacity-50"
+                                            style={{ pointerEvents: 'none' }}
+                                          >
+                                            <i className="ri-delete-bin-line me-2"></i>
+                                            Supprimer
+                                          </DropdownMenuItem>
+                                        </div>
+                                      </TooltipTrigger>
+                                      <TooltipContent side="left" className="bg-dark text-white">
+                                        <p className="m-0">Pour effectuer cette action, vous devez prendre un plan</p>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
+                                ) : (
+                                  <DropdownMenuItem 
+                                    onClick={() => handleRemoveShop(tracked.id)}
+                                    className="text-danger"
+                                  >
+                                    <i className="ri-delete-bin-line me-2"></i>
+                                    Supprimer
+                                  </DropdownMenuItem>
+                                )}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+
+                {/* Mobile Card View */}
+                <div className="d-lg-none">
+                  <div className="d-flex flex-column gap-3">
                     {sortedShops.map((tracked) => (
-                      <TableRow
+                      <div 
                         key={tracked.id}
-                        className="position-relative shop-row clickable"
-                        style={{ cursor: 'pointer' }}
+                        className="shop-card border rounded-3 p-3"
+                        style={{ backgroundColor: '#fff', cursor: 'pointer' }}
                         onClick={(e) => {
-                          if ((e.target as HTMLElement).closest('.action-dropdown') || (e.target as HTMLElement).closest('a') || (e.target as HTMLElement).closest('[data-radix-popper-content-wrapper]')) return;
+                          if ((e.target as HTMLElement).closest('.action-dropdown') || (e.target as HTMLElement).closest('a')) return;
                           router.push(`/dashboard/track/${tracked.shopId}`);
                         }}
-                        onMouseEnter={() => setShowTooltip(true)}
-                        onMouseMove={handleMouseMove}
-                        onMouseLeave={() => setShowTooltip(false)}
                       >
-                        {/* Shop Name with Screenshot + Logo + Icon */}
-                        <TableCell scope="row" className="align-middle border-b-gray py-3">
-                          <div className="d-flex align-items-center gap-3">
-                            {/* Site Preview Screenshot */}
-                            <div 
-                              className="shop-screenshot position-relative" 
-                              style={{ 
-                                width: '140px', 
-                                height: '85px', 
-                                borderRadius: '8px', 
-                                overflow: 'hidden', 
-                                flexShrink: 0, 
-                                border: '1px solid #e5e7eb',
-                                backgroundColor: '#f9fafb'
-                              }}
-                            >
-                              <img
-                                src={tracked.shop?.screenshot 
-                                  ? `https://app.copyfy.io/download/products/screenshots/${tracked.shop.screenshot}`
-                                  : `https://image.thum.io/get/width/280/crop/170/${tracked.shop?.url}`
+                        {/* Header: Screenshot + Shop Info */}
+                        <div className="d-flex gap-3 mb-3">
+                          {/* Screenshot */}
+                          <div 
+                            style={{ 
+                              width: '100px', 
+                              height: '65px', 
+                              borderRadius: '8px', 
+                              overflow: 'hidden', 
+                              flexShrink: 0, 
+                              border: '1px solid #e5e7eb',
+                              backgroundColor: '#f9fafb'
+                            }}
+                          >
+                            <img
+                              src={tracked.shop?.screenshot 
+                                ? `https://app.copyfy.io/download/products/screenshots/${tracked.shop.screenshot}`
+                                : `https://image.thum.io/get/width/200/crop/130/${tracked.shop?.url}`
+                              }
+                              alt={`${tracked.shop?.name || "Shop"} preview`}
+                              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                              onError={(e) => {
+                                const target = e.target as HTMLImageElement;
+                                if (!target.src.includes('img_not_found')) {
+                                  target.src = "/img_not_found.png";
                                 }
-                                alt={`${tracked.shop?.name || "Shop"} preview`}
-                                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                                onError={(e) => {
-                                  const target = e.target as HTMLImageElement;
-                                  if (!target.src.includes('thum.io') && !target.src.includes('img_not_found')) {
-                                    target.src = `https://image.thum.io/get/width/280/crop/170/${tracked.shop?.url}`;
-                                  } else if (!target.src.includes('img_not_found')) {
-                                    target.src = "/img_not_found.png";
-                                  }
-                                }}
-                              />
-                            </div>
-                            {/* Shop Info with favicon logo */}
-                            <div className="d-flex align-items-center gap-2">
-                              {/* Favicon/Logo */}
+                              }}
+                            />
+                          </div>
+                          {/* Shop Info */}
+                          <div className="flex-grow-1 d-flex flex-column justify-content-center">
+                            <div className="d-flex align-items-center gap-2 mb-1">
                               <img 
                                 src={`https://www.google.com/s2/favicons?domain=${tracked.shop?.url}&sz=32`}
                                 alt="Logo"
-                                style={{ width: '24px', height: '24px', borderRadius: '4px', flexShrink: 0 }}
+                                style={{ width: '20px', height: '20px', borderRadius: '4px' }}
                                 onError={(e) => {
-                                  const target = e.target as HTMLImageElement;
-                                  target.style.display = 'none';
+                                  (e.target as HTMLImageElement).style.display = 'none';
                                 }}
                               />
-                              <div>
-                                <h4 className="fs-small mb-1 fw-600 text-dark d-flex align-items-center gap-1">
-                                  {tracked.shop?.name || tracked.shop?.url}
-                                  <i className="ri-arrow-right-up-line" style={{ fontSize: '12px', color: '#9ca3af' }}></i>
-                                </h4>
-                                <a 
-                                  href={`https://${tracked.shop?.url}`}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="text-primary fs-xs text-decoration-none"
-                                  onClick={(e) => e.stopPropagation()}
-                                >
-                                  {tracked.shop?.url}
-                                </a>
-                              </div>
+                              <h4 className="fs-small mb-0 fw-600 text-dark text-truncate" style={{ maxWidth: '160px' }}>
+                                {tracked.shop?.name || tracked.shop?.url}
+                              </h4>
                             </div>
+                            <a 
+                              href={`https://${tracked.shop?.url}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-primary fs-xs text-decoration-none text-truncate d-block"
+                              style={{ maxWidth: '180px' }}
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              {tracked.shop?.url}
+                            </a>
                           </div>
-                        </TableCell>
-
-                        {/* Market Share - Simple flags with gray % */}
-                        <TableCell className="align-middle py-3 border-b-gray">
-                          <div className="d-flex flex-column gap-1" style={{ fontSize: '12px' }}>
-                            {tracked.shop?.countries && tracked.shop.countries.length > 0 ? (
-                              <>
-                                {tracked.shop.countries.slice(0, 3).map((country, idx) => (
-                                  <div key={idx} className="d-flex align-items-center gap-2">
-                                    <img 
-                                      src={`/flags/${country.code.toLowerCase()}.svg`}
-                                      alt={country.code}
-                                      style={{ width: '18px', height: '13px' }}
-                                      onError={(e) => {
-                                        const target = e.target as HTMLImageElement;
-                                        target.style.display = 'none';
-                                      }}
-                                    />
-                                    <span style={{ color: '#6b7280' }}>({country.value}%)</span>
-                                  </div>
-                                ))}
-                                {tracked.shop.countries.length > 3 && (
-                                  <span style={{ color: '#6b7280' }}>Others ({tracked.shop.countries.slice(3).reduce((sum, c) => sum + c.value, 0)}%)</span>
-                                )}
-                              </>
-                            ) : (
-                              <span style={{ color: '#6b7280' }}>-</span>
-                            )}
+                          {/* Action Button */}
+                          <div className="action-dropdown">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#6b7280" width="20" height="20">
+                                    <circle cx="12" cy="5" r="2"></circle>
+                                    <circle cx="12" cy="12" r="2"></circle>
+                                    <circle cx="12" cy="19" r="2"></circle>
+                                  </svg>
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" className="w-40">
+                                <DropdownMenuItem onClick={() => handleRefreshShop(tracked.shopId)}>
+                                  <i className="ri-refresh-line me-2"></i>
+                                  Actualiser
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => router.push(`/dashboard/track/${tracked.shopId}`)}>
+                                  <i className="ri-eye-line me-2"></i>
+                                  Voir l&apos;analyse
+                                </DropdownMenuItem>
+                                <DropdownMenuItem asChild>
+                                  <a href={`https://${tracked.shop?.url}`} target="_blank" rel="noopener noreferrer">
+                                    <i className="ri-external-link-line me-2"></i>
+                                    Visiter le site
+                                  </a>
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem 
+                                  onClick={() => handleRemoveShop(tracked.id)}
+                                  className="text-danger"
+                                  disabled={isOnTrial}
+                                >
+                                  <i className="ri-delete-bin-line me-2"></i>
+                                  Supprimer
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
                           </div>
-                        </TableCell>
+                        </div>
 
-                        {/* Daily Revenue with DIAGONAL Arrow */}
-                        <TableCell className="align-middle py-3 border-b-gray text-center">
-                          <div className="d-flex align-items-center justify-content-center gap-1">
+                        {/* Stats Grid */}
+                        <div className="d-flex flex-wrap gap-2" style={{ fontSize: '12px' }}>
+                          {/* Market Share */}
+                          {tracked.shop?.countries && tracked.shop.countries.length > 0 && (
+                            <div className="d-flex align-items-center gap-1 bg-light px-2 py-1 rounded">
+                              {tracked.shop.countries.slice(0, 2).map((country, idx) => (
+                                <div key={idx} className="d-flex align-items-center gap-1">
+                                  <img 
+                                    src={`/flags/${country.code.toLowerCase()}.svg`}
+                                    alt={country.code}
+                                    style={{ width: '14px', height: '10px' }}
+                                    onError={(e) => {
+                                      (e.target as HTMLImageElement).style.display = 'none';
+                                    }}
+                                  />
+                                  <span style={{ color: '#6b7280' }}>({country.value}%)</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+
+                          {/* Daily Sales */}
+                          <div className="d-flex align-items-center gap-1 bg-light px-2 py-1 rounded">
                             <span className="fw-500">
                               {formatCurrency(tracked.shop?.dailyRevenue, tracked.shop?.currency)}
                             </span>
                             {tracked.shop?.growthRate !== null && tracked.shop?.growthRate !== undefined && tracked.shop.growthRate !== 0 && (
                               <i 
                                 className={`ri-arrow-right-${tracked.shop.growthRate > 0 ? 'up' : 'down'}-line`}
-                                style={{ color: tracked.shop.growthRate > 0 ? '#22c55e' : '#ef4444', fontSize: '14px' }}
+                                style={{ color: tracked.shop.growthRate > 0 ? '#22c55e' : '#ef4444', fontSize: '12px' }}
                               ></i>
                             )}
                           </div>
-                        </TableCell>
 
-                        {/* Monthly Revenue with DIAGONAL Arrow */}
-                        <TableCell className="align-middle py-3 border-b-gray text-center">
-                          <div className="d-flex align-items-center justify-content-center gap-1">
+                          {/* Monthly Revenue */}
+                          <div className="d-flex align-items-center gap-1 bg-light px-2 py-1 rounded">
                             <span className="fw-500">
                               {formatCurrency(tracked.shop?.monthlyRevenue, tracked.shop?.currency)}
                             </span>
                             {tracked.shop?.growthRate !== null && tracked.shop?.growthRate !== undefined && tracked.shop.growthRate !== 0 && (
                               <i 
                                 className={`ri-arrow-right-${tracked.shop.growthRate > 0 ? 'up' : 'down'}-line`}
-                                style={{ color: tracked.shop.growthRate > 0 ? '#22c55e' : '#ef4444', fontSize: '14px' }}
+                                style={{ color: tracked.shop.growthRate > 0 ? '#22c55e' : '#ef4444', fontSize: '12px' }}
                               ></i>
                             )}
                           </div>
-                        </TableCell>
 
-                        {/* Active Ads with Evolution - Laravel style */}
-                        <TableCell className="align-middle py-3 border-b-gray text-center">
-                          <div className="d-flex align-items-center justify-content-center gap-1">
-                            {/* Colored dot indicator */}
+                          {/* Active Ads */}
+                          <div className="d-flex align-items-center gap-1 bg-light px-2 py-1 rounded">
                             <span 
                               style={{ 
-                                width: '8px', 
-                                height: '8px', 
+                                width: '6px', 
+                                height: '6px', 
                                 borderRadius: '50%', 
                                 display: 'inline-block',
-                                backgroundColor: (tracked.shop?.growthRate ?? 0) >= 0 ? '#22c55e' : '#ef4444',
-                                flexShrink: 0
+                                backgroundColor: (tracked.shop?.growthRate ?? 0) >= 0 ? '#22c55e' : '#ef4444'
                               }}
                             ></span>
-                            {/* Number in bold black */}
-                            <span className="fw-600" style={{ color: '#1f2937' }}>
-                              {tracked.shop?.activeAds || 0}
-                            </span>
-                            {/* Percentage in smaller colored text */}
+                            <span className="fw-600">{tracked.shop?.activeAds || 0}</span>
                             {tracked.shop?.growthRate !== null && tracked.shop?.growthRate !== undefined && tracked.shop.growthRate !== 0 && (
                               <span 
                                 style={{ 
-                                  fontSize: '11px',
+                                  fontSize: '10px',
                                   fontWeight: 500,
                                   color: tracked.shop.growthRate > 0 ? '#22c55e' : '#ef4444'
                                 }}
@@ -659,81 +918,12 @@ function AnalyzeShopContent() {
                               </span>
                             )}
                           </div>
-                        </TableCell>
-
-                        {/* Actions Dropdown */}
-                        <TableCell 
-                          className="align-middle py-3 border-b-gray text-center action-dropdown" 
-                          style={{ width: '60px' }}
-                          onMouseEnter={() => setShowTooltip(false)}
-                        >
-                          <DropdownMenu onOpenChange={(open) => { if (open) setShowTooltip(false); }}>
-                            <DropdownMenuTrigger asChild onClick={(e) => { e.stopPropagation(); setShowTooltip(false); }}>
-                              <Button 
-                                variant="ghost" 
-                                size="sm"
-                                className="h-8 w-8 p-0 hover:bg-gray-100"
-                              >
-                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#6b7280" width="20" height="20">
-                                  <circle cx="12" cy="5" r="2"></circle>
-                                  <circle cx="12" cy="12" r="2"></circle>
-                                  <circle cx="12" cy="19" r="2"></circle>
-                                </svg>
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-40">
-                              <DropdownMenuItem onClick={() => handleRefreshShop(tracked.shopId)}>
-                                <i className="ri-refresh-line me-2"></i>
-                                Actualiser
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => router.push(`/dashboard/track/${tracked.shopId}`)}>
-                                <i className="ri-eye-line me-2"></i>
-                                Voir l&apos;analyse
-                              </DropdownMenuItem>
-                              <DropdownMenuItem asChild>
-                                <a href={`https://${tracked.shop?.url}`} target="_blank" rel="noopener noreferrer">
-                                  <i className="ri-external-link-line me-2"></i>
-                                  Visiter le site
-                                </a>
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              {isOnTrial ? (
-                                <TooltipProvider delayDuration={0}>
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <div className="dropdown-item-disabled" style={{ cursor: 'not-allowed' }}>
-                                        <DropdownMenuItem 
-                                          disabled
-                                          className="text-danger opacity-50"
-                                          style={{ pointerEvents: 'none' }}
-                                        >
-                                          <i className="ri-delete-bin-line me-2"></i>
-                                          Supprimer
-                                        </DropdownMenuItem>
-                                      </div>
-                                    </TooltipTrigger>
-                                    <TooltipContent side="left" className="bg-dark text-white">
-                                      <p className="m-0">Pour effectuer cette action, vous devez prendre un plan</p>
-                                    </TooltipContent>
-                                  </Tooltip>
-                                </TooltipProvider>
-                              ) : (
-                                <DropdownMenuItem 
-                                  onClick={() => handleRemoveShop(tracked.id)}
-                                  className="text-danger"
-                                >
-                                  <i className="ri-delete-bin-line me-2"></i>
-                                  Supprimer
-                                </DropdownMenuItem>
-                              )}
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
-                      </TableRow>
+                        </div>
+                      </div>
                     ))}
-                  </TableBody>
-                </Table>
-              </div>
+                  </div>
+                </div>
+              </>
             )}
           </motion.div>
         </div>
@@ -766,6 +956,35 @@ function AnalyzeShopContent() {
         }
         .shop-row:hover {
           background-color: #f9fafb;
+        }
+        
+        /* Mobile Card Styles */
+        .shop-card {
+          transition: box-shadow 0.2s ease;
+        }
+        .shop-card:hover {
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+        .shop-card:active {
+          background-color: #f9fafb !important;
+        }
+        
+        /* Mobile Input Adjustments */
+        @media (max-width: 991px) {
+          .header-search-input {
+            padding-left: 44px !important;
+          }
+        }
+        
+        @media (max-width: 576px) {
+          .apply-filters-btn {
+            min-width: 90px !important;
+            padding-left: 12px !important;
+            padding-right: 12px !important;
+          }
+          .progress-details .progress-label {
+            display: none;
+          }
         }
       `}</style>
     </>

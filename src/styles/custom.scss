@@ -6102,3 +6102,41 @@ input.export-url-with-icon.form-control,
     background-position: -200% 0;
   }
 }
+
+// Mobile Dropdown Styles
+@media (max-width: 768px) {
+  // Let Radix handle positioning naturally, just limit size
+  .dropdown-menu {
+    max-height: 70vh !important;
+    overflow-y: auto !important;
+  }
+  
+  // Shop creation filter specific - smaller calendar on mobile
+  .shop-creation-filter-content {
+    max-height: 65vh !important;
+    overflow-y: auto !important;
+    
+    .rdp {
+      font-size: 12px !important;
+      
+      .rdp-caption_label {
+        font-size: 13px !important;
+      }
+      
+      .rdp-head_cell {
+        font-size: 11px !important;
+        padding: 4px !important;
+      }
+      
+      .rdp-cell {
+        padding: 2px !important;
+        
+        .rdp-button {
+          width: 32px !important;
+          height: 32px !important;
+          font-size: 12px !important;
+        }
+      }
+    }
+  }
+}

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import DashboardHeader from "@/components/DashboardHeader";
 import {
@@ -15,15 +16,10 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
   Dialog,
   DialogContent,
   DialogTitle,
 } from "@/components/ui/dialog";
-import SmartDropdownContent from "@/components/SmartDropdownContent";
 import NicheDropdown from "@/components/NicheDropdown";
 import ProductTableSkeleton from "@/components/ProductTableSkeleton";
 import {
@@ -32,11 +28,20 @@ import {
   DailyRevenueFilter,
   MonthlyOrdersFilter,
   TrafficGrowthFilter,
+  MonthlyVisitsFilter,
   ActiveAdsFilter,
-  DatesFilter,
+  ProductsFilter,
   PixelsFilter,
+  ShopCreationFilter,
+  OriginFilter,
+  LanguageFilter,
+  DomainFilter,
+  TrustpilotFilter,
+  ThemesFilter,
+  ApplicationsFilter,
+  SocialNetworksFilter,
 } from "@/components/filters";
-import { useProducts } from "@/lib/hooks/use-products";
+import { useProducts, ProductsFilters } from "@/lib/hooks/use-products";
 
 // Currency symbols mapping
 const CURRENCY_SYMBOLS: Record<string, string> = {
@@ -206,6 +211,17 @@ function ToastAlerts({ alerts, onDismiss, onViewShop }: {
   );
 }
 
+// Interface for user stats
+interface UserStats {
+  plan: {
+    identifier: string;
+    title: string;
+    isOnTrial: boolean;
+    isExpired: boolean;
+    trialDaysRemaining: number;
+  };
+}
+
 function ProductsContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -216,25 +232,38 @@ function ProductsContent() {
   const [activeFilters, setActiveFilters] = useState<ActiveFilter[]>([]);
   const [imageModal, setImageModal] = useState<{ open: boolean; src: string; title: string }>({ open: false, src: '', title: '' });
   const [toastAlerts, setToastAlerts] = useState<ToastAlert[]>([]);
+  const [userStats, setUserStats] = useState<UserStats | null>(null);
   
-  // Filter states
-  const [minPrice, setMinPrice] = useState("");
-  const [maxPrice, setMaxPrice] = useState("");
-  const [minRevenue, setMinRevenue] = useState("");
-  const [maxRevenue, setMaxRevenue] = useState("");
-  const [minOrders, setMinOrders] = useState("");
-  const [maxOrders, setMaxOrders] = useState("");
-  const [minTraffic, setMinTraffic] = useState("");
-  const [maxTraffic, setMaxTraffic] = useState("");
-  const [minTrafficGrowth, setMinTrafficGrowth] = useState("");
-  const [maxTrafficGrowth, setMaxTrafficGrowth] = useState("");
-  const [minActiveAds, setMinActiveAds] = useState("");
-  const [maxActiveAds, setMaxActiveAds] = useState("");
-  const [dateFilter, setDateFilter] = useState("");
+  // Filter states - matching shops page structure with number types
+  const [minPrice, setMinPrice] = useState<number | undefined>();
+  const [maxPrice, setMaxPrice] = useState<number | undefined>();
+  const [minRevenue, setMinRevenue] = useState<number | undefined>();
+  const [maxRevenue, setMaxRevenue] = useState<number | undefined>();
+  const [minOrders, setMinOrders] = useState<number | undefined>();
+  const [maxOrders, setMaxOrders] = useState<number | undefined>();
+  const [minTraffic, setMinTraffic] = useState<number | undefined>();
+  const [maxTraffic, setMaxTraffic] = useState<number | undefined>();
+  const [minTrafficGrowth, setMinTrafficGrowth] = useState<number | undefined>();
+  const [maxTrafficGrowth, setMaxTrafficGrowth] = useState<number | undefined>();
+  const [minActiveAds, setMinActiveAds] = useState<number | undefined>();
+  const [maxActiveAds, setMaxActiveAds] = useState<number | undefined>();
+  const [minCatalogSize, setMinCatalogSize] = useState<number | undefined>();
+  const [maxCatalogSize, setMaxCatalogSize] = useState<number | undefined>();
+  const [minTrustpilotRating, setMinTrustpilotRating] = useState<number | undefined>();
+  const [maxTrustpilotRating, setMaxTrustpilotRating] = useState<number | undefined>();
+  const [minTrustpilotReviews, setMinTrustpilotReviews] = useState<number | undefined>();
+  const [maxTrustpilotReviews, setMaxTrustpilotReviews] = useState<number | undefined>();
+  const [shopCreationDate, setShopCreationDate] = useState("");
   const [selectedNiches, setSelectedNiches] = useState<string[]>([]);
   const [selectedCurrencies, setSelectedCurrencies] = useState<string[]>([]);
   const [selectedCountries, setSelectedCountries] = useState<string[]>([]);
   const [selectedPixels, setSelectedPixels] = useState<string[]>([]);
+  const [selectedOrigins, setSelectedOrigins] = useState<string[]>([]);
+  const [selectedLanguages, setSelectedLanguages] = useState<string[]>([]);
+  const [selectedDomains, setSelectedDomains] = useState<string[]>([]);
+  const [selectedThemes, setSelectedThemes] = useState<string[]>([]);
+  const [selectedApplications, setSelectedApplications] = useState<string[]>([]);
+  const [selectedSocialNetworks, setSelectedSocialNetworks] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState("recommended");
 
   // Use products hook
@@ -243,157 +272,199 @@ function ProductsContent() {
   // Ref for infinite scroll
   const loadMoreRef = useRef<HTMLDivElement>(null);
 
-  // Build filters object
-  const buildFilters = () => {
-    const filters: Record<string, any> = {};
-    if (searchText) filters.search = searchText;
-    if (minPrice) filters.minPrice = parseFloat(minPrice);
-    if (maxPrice) filters.maxPrice = parseFloat(maxPrice);
-    if (minRevenue) filters.minRevenue = parseFloat(minRevenue);
-    if (maxRevenue) filters.maxRevenue = parseFloat(maxRevenue);
-    if (minOrders) filters.minOrders = parseFloat(minOrders);
-    if (maxOrders) filters.maxOrders = parseFloat(maxOrders);
-    if (minTraffic) filters.minTraffic = parseFloat(minTraffic);
-    if (maxTraffic) filters.maxTraffic = parseFloat(maxTraffic);
-    if (minTrafficGrowth) filters.minTrafficGrowth = parseFloat(minTrafficGrowth);
-    if (maxTrafficGrowth) filters.maxTrafficGrowth = parseFloat(maxTrafficGrowth);
-    if (minActiveAds) filters.minActiveAds = parseFloat(minActiveAds);
-    if (maxActiveAds) filters.maxActiveAds = parseFloat(maxActiveAds);
-    if (dateFilter) filters.dateFilter = dateFilter;
+  // Build filters object - matching shops page structure
+  const buildFilters = (): ProductsFilters => {
+    const filters: ProductsFilters = { sortBy };
+    
+    if (appliedSearchText) filters.search = appliedSearchText;
+    if (selectedCountries.length) filters.country = selectedCountries.join(',');
     if (selectedNiches.length) filters.category = selectedNiches.join(',');
     if (selectedCurrencies.length) filters.currency = selectedCurrencies.join(',');
-    if (selectedCountries.length) filters.country = selectedCountries.join(',');
     if (selectedPixels.length) filters.pixels = selectedPixels.join(',');
-    if (sortBy) filters.sortBy = sortBy;
+    if (selectedOrigins.length) filters.origins = selectedOrigins.join(',');
+    if (selectedLanguages.length) filters.languages = selectedLanguages.join(',');
+    if (selectedDomains.length) filters.domains = selectedDomains.join(',');
+    if (selectedThemes.length) filters.themes = selectedThemes.join(',');
+    if (selectedApplications.length) filters.applications = selectedApplications.join(',');
+    if (shopCreationDate) filters.shopCreationDate = shopCreationDate;
+    if (minRevenue !== undefined) filters.minRevenue = minRevenue;
+    if (maxRevenue !== undefined) filters.maxRevenue = maxRevenue;
+    if (minTraffic !== undefined) filters.minTraffic = minTraffic;
+    if (maxTraffic !== undefined) filters.maxTraffic = maxTraffic;
+    if (minActiveAds !== undefined) filters.minActiveAds = minActiveAds;
+    if (maxActiveAds !== undefined) filters.maxActiveAds = maxActiveAds;
+    if (minTrafficGrowth !== undefined) filters.minTrafficGrowth = minTrafficGrowth;
+    if (maxTrafficGrowth !== undefined) filters.maxTrafficGrowth = maxTrafficGrowth;
+    if (minOrders !== undefined) filters.minOrders = minOrders;
+    if (maxOrders !== undefined) filters.maxOrders = maxOrders;
+    if (minPrice !== undefined) filters.minPrice = minPrice;
+    if (maxPrice !== undefined) filters.maxPrice = maxPrice;
+    if (minCatalogSize !== undefined) filters.minCatalogSize = minCatalogSize;
+    if (maxCatalogSize !== undefined) filters.maxCatalogSize = maxCatalogSize;
+    if (minTrustpilotRating !== undefined) filters.minTrustpilotRating = minTrustpilotRating;
+    if (maxTrustpilotRating !== undefined) filters.maxTrustpilotRating = maxTrustpilotRating;
+    if (minTrustpilotReviews !== undefined) filters.minTrustpilotReviews = minTrustpilotReviews;
+    if (maxTrustpilotReviews !== undefined) filters.maxTrustpilotReviews = maxTrustpilotReviews;
+    
     return filters;
+  };
+
+  // Handle filter apply - optionally accept override values for immediate updates
+  const handleApplyFilters = (overrideFilters?: Partial<ProductsFilters>) => {
+    const filters = { ...buildFilters(), ...overrideFilters };
+    fetchProducts(filters, 1, 20);
   };
 
   // Track applied search text (separate from input text)
   const [appliedSearchText, setAppliedSearchText] = useState("");
 
-  // Update active filters display
-  useEffect(() => {
+  // Build active filters from current state - matching shops page structure
+  const buildActiveFilters = (): ActiveFilter[] => {
     const filters: ActiveFilter[] = [];
     
     // Search text filter tag
     if (appliedSearchText) {
-      filters.push({
-        id: 'search',
-        label: '',
-        value: appliedSearchText,
-        type: 'search',
-        icon: 'ri-search-line'
+      filters.push({ id: 'search', label: '', value: appliedSearchText, type: 'search', icon: 'ri-search-line' });
+    }
+    
+    // Revenue filter
+    if (minRevenue !== undefined || maxRevenue !== undefined) {
+      filters.push({ 
+        id: 'revenue', label: '', 
+        value: `$${minRevenue?.toLocaleString() || '0'} - ${maxRevenue ? '$' + maxRevenue.toLocaleString() : 'Max'}`,
+        type: 'revenue', icon: 'ri-money-dollar-circle-line'
       });
     }
-    if (dateFilter) {
+    
+    // Traffic filter
+    if (minTraffic !== undefined || maxTraffic !== undefined) {
       filters.push({
-        id: 'date',
-        label: '',
-        value: dateFilter,
-        type: 'date',
-        icon: 'ri-calendar-line'
+        id: 'traffic', label: '',
+        value: `${(minTraffic || 0).toLocaleString()} - ${maxTraffic ? maxTraffic.toLocaleString() : 'Max'}`,
+        type: 'traffic', icon: 'ri-group-line'
       });
     }
-    if (minTrafficGrowth || maxTrafficGrowth) {
+    
+    // Active ads filter
+    if (minActiveAds !== undefined || maxActiveAds !== undefined) {
       filters.push({
-        id: 'traffic_growth',
-        label: '',
-        value: `${minTrafficGrowth || '0'} - ${maxTrafficGrowth || 'Max'}`,
-        type: 'traffic_growth',
-        icon: 'ri-line-chart-line'
-      });
-    }
-    if (minActiveAds || maxActiveAds) {
-      filters.push({
-        id: 'active_ads',
-        label: '',
+        id: 'activeAds', label: '',
         value: `${minActiveAds || '0'} - ${maxActiveAds || 'Max'}`,
-        type: 'active_ads',
-        icon: 'ri-megaphone-line'
+        type: 'activeAds', icon: 'ri-megaphone-line'
       });
     }
-    if (minPrice || maxPrice) {
+    
+    // Traffic growth filter
+    if (minTrafficGrowth !== undefined || maxTrafficGrowth !== undefined) {
       filters.push({
-        id: 'price',
-        label: '',
-        value: `$${minPrice || '0'} - $${maxPrice || 'Max'}`,
-        type: 'price',
-        icon: 'ri-money-dollar-circle-line'
+        id: 'trafficGrowth', label: '',
+        value: `${minTrafficGrowth || '0'}% - ${maxTrafficGrowth || 'Max'}%`,
+        type: 'trafficGrowth', icon: 'ri-line-chart-line'
       });
     }
-    if (minOrders || maxOrders) {
+    
+    // Orders filter
+    if (minOrders !== undefined || maxOrders !== undefined) {
       filters.push({
-        id: 'orders',
-        label: '',
-        value: `Min - ${maxOrders || 'Max'}`,
-        type: 'orders',
-        icon: 'ri-shopping-cart-line'
+        id: 'orders', label: '',
+        value: `${(minOrders || 0).toLocaleString()} - ${maxOrders ? maxOrders.toLocaleString() : 'Max'}`,
+        type: 'orders', icon: 'ri-shopping-cart-line'
       });
     }
-    if (minRevenue || maxRevenue) {
+    
+    // Price filter
+    if (minPrice !== undefined || maxPrice !== undefined) {
       filters.push({
-        id: 'revenue',
-        label: '',
-        value: `$${minRevenue?.toLocaleString() || '0'} - ${maxRevenue ? '$' + Number(maxRevenue).toLocaleString() : 'Max'}`,
-        type: 'revenue',
-        icon: 'ri-money-dollar-circle-line'
+        id: 'price', label: '',
+        value: `$${minPrice || '0'} - ${maxPrice ? '$' + maxPrice : 'Max'}`,
+        type: 'price', icon: 'ri-price-tag-3-line'
       });
     }
-    if (minTraffic || maxTraffic) {
+    
+    // Catalog size filter
+    if (minCatalogSize !== undefined || maxCatalogSize !== undefined) {
       filters.push({
-        id: 'traffic',
-        label: '',
-        value: `${Number(minTraffic || 0).toLocaleString()} - ${maxTraffic ? Number(maxTraffic).toLocaleString() : 'Max'}`,
-        type: 'traffic',
-        icon: 'ri-group-line'
+        id: 'catalogSize', label: '',
+        value: `${minCatalogSize || '0'} - ${maxCatalogSize || 'Max'} produits`,
+        type: 'catalogSize', icon: 'ri-shopping-bag-3-line'
       });
     }
-    if (selectedCurrencies.length) {
-      selectedCurrencies.forEach((curr) => {
-        filters.push({
-          id: `currency_${curr}`,
-          label: '',
-          value: curr,
-          type: 'currency',
-          icon: 'ri-coin-line'
-        });
-      });
+    
+    // Trustpilot filter
+    if (minTrustpilotRating !== undefined || maxTrustpilotRating !== undefined ||
+        minTrustpilotReviews !== undefined || maxTrustpilotReviews !== undefined) {
+      let value = '';
+      if (minTrustpilotRating !== undefined || maxTrustpilotRating !== undefined) {
+        value = `Note: ${minTrustpilotRating || '0'} - ${maxTrustpilotRating || '5'}`;
+      }
+      if (minTrustpilotReviews !== undefined || maxTrustpilotReviews !== undefined) {
+        if (value) value += ', ';
+        value += `Avis: ${minTrustpilotReviews || '0'} - ${maxTrustpilotReviews || 'Max'}`;
+      }
+      filters.push({ id: 'trustpilot', label: '', value, type: 'trustpilot', icon: 'ri-star-line' });
     }
-    if (selectedCountries.length) {
-      selectedCountries.forEach((country) => {
-        filters.push({
-          id: `country_${country}`,
-          label: '',
-          value: country,
-          type: 'country',
-          icon: 'ri-map-pin-line'
-        });
-      });
+    
+    // Shop creation date filter
+    if (shopCreationDate) {
+      filters.push({ id: 'shopCreationDate', label: '', value: shopCreationDate, type: 'shopCreationDate', icon: 'ri-calendar-line' });
     }
-    if (selectedNiches.length) {
-      selectedNiches.forEach((niche) => {
-        filters.push({
-          id: `niche_${niche}`,
-          label: '',
-          value: niche,
-          type: 'niche',
-          icon: 'ri-store-2-line'
-        });
-      });
-    }
-    if (selectedPixels.length) {
-      selectedPixels.forEach((pixel) => {
-        filters.push({
-          id: `pixel_${pixel}`,
-          label: '',
-          value: pixel,
-          type: 'pixel',
-          icon: 'ri-focus-3-line'
-        });
-      });
-    }
-    setActiveFilters(filters);
-  }, [appliedSearchText, minPrice, maxPrice, minRevenue, maxRevenue, minOrders, maxOrders, minTraffic, maxTraffic, minTrafficGrowth, maxTrafficGrowth, minActiveAds, maxActiveAds, dateFilter, selectedCurrencies, selectedCountries, selectedNiches, selectedPixels]);
+    
+    // Array filters
+    selectedCurrencies.forEach(curr => {
+      filters.push({ id: `currency_${curr}`, label: '', value: curr, type: 'currency', icon: 'ri-coin-line' });
+    });
+    
+    selectedCountries.forEach(country => {
+      filters.push({ id: `country_${country}`, label: '', value: country, type: 'country', icon: 'ri-map-pin-line' });
+    });
+    
+    selectedNiches.forEach(niche => {
+      filters.push({ id: `niche_${niche}`, label: '', value: niche, type: 'niche', icon: 'ri-store-2-line' });
+    });
+    
+    selectedPixels.forEach(pixel => {
+      filters.push({ id: `pixel_${pixel}`, label: '', value: pixel, type: 'pixel', icon: 'ri-focus-3-line' });
+    });
+    
+    selectedOrigins.forEach(origin => {
+      filters.push({ id: `origin_${origin}`, label: '', value: origin, type: 'origin', icon: 'ri-earth-line' });
+    });
+    
+    selectedLanguages.forEach(lang => {
+      filters.push({ id: `language_${lang}`, label: '', value: lang, type: 'language', icon: 'ri-global-line' });
+    });
+    
+    selectedDomains.forEach(domain => {
+      filters.push({ id: `domain_${domain}`, label: '', value: domain, type: 'domain', icon: 'ri-link' });
+    });
+    
+    selectedThemes.forEach(theme => {
+      filters.push({ id: `theme_${theme}`, label: '', value: theme, type: 'theme', icon: 'ri-palette-line' });
+    });
+    
+    selectedApplications.forEach(app => {
+      filters.push({ id: `app_${app}`, label: '', value: app, type: 'application', icon: 'ri-apps-line' });
+    });
+    
+    selectedSocialNetworks.forEach(network => {
+      filters.push({ id: `social_${network}`, label: '', value: network, type: 'socialNetwork', icon: 'ri-share-line' });
+    });
+    
+    return filters;
+  };
+
+  // Update active filters display
+  useEffect(() => {
+    setActiveFilters(buildActiveFilters());
+  }, [
+    appliedSearchText, minPrice, maxPrice, minRevenue, maxRevenue, minOrders, maxOrders, 
+    minTraffic, maxTraffic, minTrafficGrowth, maxTrafficGrowth, minActiveAds, maxActiveAds, 
+    minCatalogSize, maxCatalogSize, minTrustpilotRating, maxTrustpilotRating,
+    minTrustpilotReviews, maxTrustpilotReviews, shopCreationDate,
+    selectedCurrencies, selectedCountries, selectedNiches, selectedPixels,
+    selectedOrigins, selectedLanguages, selectedDomains, selectedThemes, 
+    selectedApplications, selectedSocialNetworks
+  ]);
 
   // Fetch products on mount
   useEffect(() => {
@@ -416,6 +487,24 @@ function ProductsContent() {
       }
     };
     fetchTrackedShops();
+  }, []);
+
+  // Fetch user stats to get trial days remaining
+  useEffect(() => {
+    const fetchUserStats = async () => {
+      try {
+        const res = await fetch('/api/user/stats');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success && data.stats) {
+            setUserStats(data.stats);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to fetch user stats:', err);
+      }
+    };
+    fetchUserStats();
   }, []);
 
   // Infinite scroll effect
@@ -441,188 +530,262 @@ function ProductsContent() {
   const handleSearch = () => {
     // Update applied search text to show in filter tags
     setAppliedSearchText(searchText);
-    const filters = buildFilters();
+    // Build filters but override with current searchText (since setState is async)
+    const filters = { ...buildFilters(), search: searchText || undefined };
     fetchProducts(filters, 1, 20);
   };
 
-  // Remove active filter
+  // Remove active filter - matching shops page structure
   const removeFilter = (filterId: string, filterType: string) => {
-    // Build new filter values
-    let newSearchText = appliedSearchText;
-    let newMinPrice = minPrice;
-    let newMaxPrice = maxPrice;
-    let newMinRevenue = minRevenue;
-    let newMaxRevenue = maxRevenue;
-    let newMinOrders = minOrders;
-    let newMaxOrders = maxOrders;
-    let newMinTraffic = minTraffic;
-    let newMaxTraffic = maxTraffic;
-    let newMinTrafficGrowth = minTrafficGrowth;
-    let newMaxTrafficGrowth = maxTrafficGrowth;
-    let newMinActiveAds = minActiveAds;
-    let newMaxActiveAds = maxActiveAds;
-    let newDateFilter = dateFilter;
-    let newCurrencies = [...selectedCurrencies];
-    let newCountries = [...selectedCountries];
-    let newNiches = [...selectedNiches];
-    let newPixels = [...selectedPixels];
-
-    if (filterId === 'search') {
-      setSearchText('');
-      setAppliedSearchText('');
-      newSearchText = '';
-    } else if (filterId.startsWith('currency_')) {
-      const curr = filterId.replace('currency_', '');
-      newCurrencies = newCurrencies.filter(c => c !== curr);
-      setSelectedCurrencies(newCurrencies);
-    } else if (filterId.startsWith('country_')) {
-      const country = filterId.replace('country_', '');
-      newCountries = newCountries.filter(c => c !== country);
-      setSelectedCountries(newCountries);
-    } else if (filterId.startsWith('niche_')) {
-      const niche = filterId.replace('niche_', '');
-      newNiches = newNiches.filter(n => n !== niche);
-      setSelectedNiches(newNiches);
-    } else if (filterId.startsWith('pixel_')) {
-      const pixel = filterId.replace('pixel_', '');
-      newPixels = newPixels.filter(p => p !== pixel);
-      setSelectedPixels(newPixels);
-    } else {
-      switch (filterId) {
-        case 'price':
-          setMinPrice('');
-          setMaxPrice('');
-          newMinPrice = '';
-          newMaxPrice = '';
-          break;
-        case 'revenue':
-          setMinRevenue('');
-          setMaxRevenue('');
-          newMinRevenue = '';
-          newMaxRevenue = '';
-          break;
-        case 'orders':
-          setMinOrders('');
-          setMaxOrders('');
-          newMinOrders = '';
-          newMaxOrders = '';
-          break;
-        case 'traffic':
-          setMinTraffic('');
-          setMaxTraffic('');
-          newMinTraffic = '';
-          newMaxTraffic = '';
-          break;
-        case 'traffic_growth':
-          setMinTrafficGrowth('');
-          setMaxTrafficGrowth('');
-          newMinTrafficGrowth = '';
-          newMaxTrafficGrowth = '';
-          break;
-        case 'active_ads':
-          setMinActiveAds('');
-          setMaxActiveAds('');
-          newMinActiveAds = '';
-          newMaxActiveAds = '';
-          break;
-        case 'date':
-          setDateFilter('');
-          newDateFilter = '';
-          break;
+    // Helper to build override filters after removal
+    const getOverrideFilters = (): Partial<ProductsFilters> => {
+      const override: Partial<ProductsFilters> = {};
+      
+      if (filterType === 'search' || filterId === 'search') {
+        setSearchText('');
+        setAppliedSearchText('');
+        override.search = undefined;
+      } else if (filterType === 'revenue' || filterId === 'revenue') {
+        setMinRevenue(undefined);
+        setMaxRevenue(undefined);
+        override.minRevenue = undefined;
+        override.maxRevenue = undefined;
+      } else if (filterType === 'traffic' || filterId === 'traffic') {
+        setMinTraffic(undefined);
+        setMaxTraffic(undefined);
+        override.minTraffic = undefined;
+        override.maxTraffic = undefined;
+      } else if (filterType === 'activeAds' || filterId === 'activeAds') {
+        setMinActiveAds(undefined);
+        setMaxActiveAds(undefined);
+        override.minActiveAds = undefined;
+        override.maxActiveAds = undefined;
+      } else if (filterType === 'trafficGrowth' || filterId === 'trafficGrowth') {
+        setMinTrafficGrowth(undefined);
+        setMaxTrafficGrowth(undefined);
+        override.minTrafficGrowth = undefined;
+        override.maxTrafficGrowth = undefined;
+      } else if (filterType === 'orders' || filterId === 'orders') {
+        setMinOrders(undefined);
+        setMaxOrders(undefined);
+        override.minOrders = undefined;
+        override.maxOrders = undefined;
+      } else if (filterType === 'price' || filterId === 'price') {
+        setMinPrice(undefined);
+        setMaxPrice(undefined);
+        override.minPrice = undefined;
+        override.maxPrice = undefined;
+      } else if (filterType === 'catalogSize' || filterId === 'catalogSize') {
+        setMinCatalogSize(undefined);
+        setMaxCatalogSize(undefined);
+        override.minCatalogSize = undefined;
+        override.maxCatalogSize = undefined;
+      } else if (filterType === 'trustpilot' || filterId === 'trustpilot') {
+        setMinTrustpilotRating(undefined);
+        setMaxTrustpilotRating(undefined);
+        setMinTrustpilotReviews(undefined);
+        setMaxTrustpilotReviews(undefined);
+        override.minTrustpilotRating = undefined;
+        override.maxTrustpilotRating = undefined;
+        override.minTrustpilotReviews = undefined;
+        override.maxTrustpilotReviews = undefined;
+      } else if (filterType === 'shopCreationDate' || filterId === 'shopCreationDate') {
+        setShopCreationDate('');
+        override.shopCreationDate = undefined;
+      } else if (filterId.startsWith('currency_')) {
+        const curr = filterId.replace('currency_', '');
+        const newCurrencies = selectedCurrencies.filter(c => c !== curr);
+        setSelectedCurrencies(newCurrencies);
+        override.currency = newCurrencies.length ? newCurrencies.join(',') : undefined;
+      } else if (filterId.startsWith('country_')) {
+        const country = filterId.replace('country_', '');
+        const newCountries = selectedCountries.filter(c => c !== country);
+        setSelectedCountries(newCountries);
+        override.country = newCountries.length ? newCountries.join(',') : undefined;
+      } else if (filterId.startsWith('niche_')) {
+        const niche = filterId.replace('niche_', '');
+        const newNiches = selectedNiches.filter(n => n !== niche);
+        setSelectedNiches(newNiches);
+        override.category = newNiches.length ? newNiches.join(',') : undefined;
+      } else if (filterId.startsWith('pixel_')) {
+        const pixel = filterId.replace('pixel_', '');
+        const newPixels = selectedPixels.filter(p => p !== pixel);
+        setSelectedPixels(newPixels);
+        override.pixels = newPixels.length ? newPixels.join(',') : undefined;
+      } else if (filterId.startsWith('origin_')) {
+        const origin = filterId.replace('origin_', '');
+        const newOrigins = selectedOrigins.filter(o => o !== origin);
+        setSelectedOrigins(newOrigins);
+        override.origins = newOrigins.length ? newOrigins.join(',') : undefined;
+      } else if (filterId.startsWith('language_')) {
+        const lang = filterId.replace('language_', '');
+        const newLangs = selectedLanguages.filter(l => l !== lang);
+        setSelectedLanguages(newLangs);
+        override.languages = newLangs.length ? newLangs.join(',') : undefined;
+      } else if (filterId.startsWith('domain_')) {
+        const domain = filterId.replace('domain_', '');
+        const newDomains = selectedDomains.filter(d => d !== domain);
+        setSelectedDomains(newDomains);
+        override.domains = newDomains.length ? newDomains.join(',') : undefined;
+      } else if (filterId.startsWith('theme_')) {
+        const theme = filterId.replace('theme_', '');
+        const newThemes = selectedThemes.filter(t => t !== theme);
+        setSelectedThemes(newThemes);
+        override.themes = newThemes.length ? newThemes.join(',') : undefined;
+      } else if (filterId.startsWith('app_')) {
+        const app = filterId.replace('app_', '');
+        const newApps = selectedApplications.filter(a => a !== app);
+        setSelectedApplications(newApps);
+        override.applications = newApps.length ? newApps.join(',') : undefined;
+      } else if (filterId.startsWith('social_')) {
+        const network = filterId.replace('social_', '');
+        const newNetworks = selectedSocialNetworks.filter(n => n !== network);
+        setSelectedSocialNetworks(newNetworks);
       }
-    }
+      
+      return override;
+    };
     
-    // Build and fetch with new filters immediately
-    const newFilters: Record<string, any> = { sortBy };
-    if (newSearchText) newFilters.search = newSearchText;
-    if (newMinPrice) newFilters.minPrice = parseFloat(newMinPrice);
-    if (newMaxPrice) newFilters.maxPrice = parseFloat(newMaxPrice);
-    if (newMinRevenue) newFilters.minRevenue = parseFloat(newMinRevenue);
-    if (newMaxRevenue) newFilters.maxRevenue = parseFloat(newMaxRevenue);
-    if (newMinOrders) newFilters.minOrders = parseFloat(newMinOrders);
-    if (newMaxOrders) newFilters.maxOrders = parseFloat(newMaxOrders);
-    if (newMinTraffic) newFilters.minTraffic = parseFloat(newMinTraffic);
-    if (newMaxTraffic) newFilters.maxTraffic = parseFloat(newMaxTraffic);
-    if (newMinTrafficGrowth) newFilters.minTrafficGrowth = parseFloat(newMinTrafficGrowth);
-    if (newMaxTrafficGrowth) newFilters.maxTrafficGrowth = parseFloat(newMaxTrafficGrowth);
-    if (newMinActiveAds) newFilters.minActiveAds = parseFloat(newMinActiveAds);
-    if (newMaxActiveAds) newFilters.maxActiveAds = parseFloat(newMaxActiveAds);
-    if (newDateFilter) newFilters.dateFilter = newDateFilter;
-    if (newNiches.length) newFilters.category = newNiches.join(',');
-    if (newCurrencies.length) newFilters.currency = newCurrencies.join(',');
-    if (newCountries.length) newFilters.country = newCountries.join(',');
-    if (newPixels.length) newFilters.pixels = newPixels.join(',');
-    
-    fetchProducts(newFilters, 1, 20);
+    const overrideFilters = getOverrideFilters();
+    handleApplyFilters(overrideFilters);
   };
 
-  // Reset all filters
+  // Reset all filters - matching shops page structure
   const resetFilters = () => {
-    setMinPrice('');
-    setMaxPrice('');
-    setMinRevenue('');
-    setMaxRevenue('');
-    setMinOrders('');
-    setMaxOrders('');
-    setMinTraffic('');
-    setMaxTraffic('');
-    setMinTrafficGrowth('');
-    setMaxTrafficGrowth('');
-    setMinActiveAds('');
-    setMaxActiveAds('');
-    setDateFilter('');
+    setSearchText("");
+    setAppliedSearchText("");
+    setSelectedCountries([]);
     setSelectedNiches([]);
     setSelectedCurrencies([]);
-    setSelectedCountries([]);
     setSelectedPixels([]);
-    setSearchText('');
-    setAppliedSearchText('');
-    setActivePreset('');
-    // Fetch products with empty filters directly (don't rely on state which may not be updated yet)
-    fetchProducts({ sortBy }, 1, 20);
+    setSelectedOrigins([]);
+    setSelectedLanguages([]);
+    setSelectedDomains([]);
+    setSelectedThemes([]);
+    setSelectedApplications([]);
+    setSelectedSocialNetworks([]);
+    setShopCreationDate("");
+    setMinRevenue(undefined);
+    setMaxRevenue(undefined);
+    setMinTraffic(undefined);
+    setMaxTraffic(undefined);
+    setMinActiveAds(undefined);
+    setMaxActiveAds(undefined);
+    setMinTrafficGrowth(undefined);
+    setMaxTrafficGrowth(undefined);
+    setMinOrders(undefined);
+    setMaxOrders(undefined);
+    setMinPrice(undefined);
+    setMaxPrice(undefined);
+    setMinCatalogSize(undefined);
+    setMaxCatalogSize(undefined);
+    setMinTrustpilotRating(undefined);
+    setMaxTrustpilotRating(undefined);
+    setMinTrustpilotReviews(undefined);
+    setMaxTrustpilotReviews(undefined);
+    setSortBy("recommended");
+    setActivePreset("");
+    fetchProducts({ sortBy: 'recommended' }, 1, 20);
   };
 
-  // Handle preset filter
+  // Handle preset filter - matching shops page auto-apply
   const handlePresetFilter = (preset: string) => {
     if (activePreset === preset) {
       resetFilters();
       setActivePreset('');
     } else {
-      // Reset first
-      setMinPrice('');
-      setMaxPrice('');
-      setMinRevenue('');
-      setMaxRevenue('');
-      setMinOrders('');
-      setMaxOrders('');
-      setMinTraffic('');
-      setMaxTraffic('');
-      setMinTrafficGrowth('');
-      setMaxTrafficGrowth('');
-      setMinActiveAds('');
-      setMaxActiveAds('');
-      setDateFilter('');
+      // Reset all filters first
+      setMinPrice(undefined);
+      setMaxPrice(undefined);
+      setMinRevenue(undefined);
+      setMaxRevenue(undefined);
+      setMinOrders(undefined);
+      setMaxOrders(undefined);
+      setMinTraffic(undefined);
+      setMaxTraffic(undefined);
+      setMinTrafficGrowth(undefined);
+      setMaxTrafficGrowth(undefined);
+      setMinActiveAds(undefined);
+      setMaxActiveAds(undefined);
+      setMinCatalogSize(undefined);
+      setMaxCatalogSize(undefined);
+      setShopCreationDate('');
+      
+      // Build override filters for direct apply
+      const overrideFilters: Partial<ProductsFilters> = { sortBy };
       
       // Apply preset filters
       const config = PRESET_CONFIGS[preset];
       if (config) {
-        if (config.min_price) setMinPrice(config.min_price);
-        if (config.max_price !== undefined) setMaxPrice(config.max_price);
-        if (config.min_revenue) setMinRevenue(config.min_revenue);
-        if (config.max_revenue !== undefined) setMaxRevenue(config.max_revenue);
-        if (config.min_sales) setMinOrders(config.min_sales);
-        if (config.max_sales !== undefined) setMaxOrders(config.max_sales);
-        if (config.min_traffic) setMinTraffic(config.min_traffic);
-        if (config.max_traffic !== undefined) setMaxTraffic(config.max_traffic);
-        if (config.min_traffic_growth) setMinTrafficGrowth(config.min_traffic_growth);
-        if (config.max_traffic_growth !== undefined) setMaxTrafficGrowth(config.max_traffic_growth);
-        if (config.min_active_ads) setMinActiveAds(config.min_active_ads);
-        if (config.max_active_ads !== undefined) setMaxActiveAds(config.max_active_ads);
-        if (config.datefilter) setDateFilter(config.datefilter);
+        if (config.min_price) {
+          const val = parseFloat(config.min_price);
+          setMinPrice(val);
+          overrideFilters.minPrice = val;
+        }
+        if (config.max_price !== undefined && config.max_price !== '') {
+          const val = parseFloat(config.max_price);
+          setMaxPrice(val);
+          overrideFilters.maxPrice = val;
+        }
+        if (config.min_revenue) {
+          const val = parseFloat(config.min_revenue);
+          setMinRevenue(val);
+          overrideFilters.minRevenue = val;
+        }
+        if (config.max_revenue !== undefined && config.max_revenue !== '') {
+          const val = parseFloat(config.max_revenue);
+          setMaxRevenue(val);
+          overrideFilters.maxRevenue = val;
+        }
+        if (config.min_sales) {
+          const val = parseFloat(config.min_sales);
+          setMinOrders(val);
+          overrideFilters.minOrders = val;
+        }
+        if (config.max_sales !== undefined && config.max_sales !== '') {
+          const val = parseFloat(config.max_sales);
+          setMaxOrders(val);
+          overrideFilters.maxOrders = val;
+        }
+        if (config.min_traffic) {
+          const val = parseFloat(config.min_traffic);
+          setMinTraffic(val);
+          overrideFilters.minTraffic = val;
+        }
+        if (config.max_traffic !== undefined && config.max_traffic !== '') {
+          const val = parseFloat(config.max_traffic);
+          setMaxTraffic(val);
+          overrideFilters.maxTraffic = val;
+        }
+        if (config.min_traffic_growth) {
+          const val = parseFloat(config.min_traffic_growth);
+          setMinTrafficGrowth(val);
+          overrideFilters.minTrafficGrowth = val;
+        }
+        if (config.max_traffic_growth !== undefined && config.max_traffic_growth !== '') {
+          const val = parseFloat(config.max_traffic_growth);
+          setMaxTrafficGrowth(val);
+          overrideFilters.maxTrafficGrowth = val;
+        }
+        if (config.min_active_ads) {
+          const val = parseFloat(config.min_active_ads);
+          setMinActiveAds(val);
+          overrideFilters.minActiveAds = val;
+        }
+        if (config.max_active_ads !== undefined && config.max_active_ads !== '') {
+          const val = parseFloat(config.max_active_ads);
+          setMaxActiveAds(val);
+          overrideFilters.maxActiveAds = val;
+        }
+        if (config.datefilter) {
+          setShopCreationDate(config.datefilter);
+          overrideFilters.shopCreationDate = config.datefilter;
+        }
       }
       
       setActivePreset(preset);
-      setTimeout(() => handleSearch(), 100);
+      // Apply immediately with override filters
+      handleApplyFilters(overrideFilters);
     }
   };
 
@@ -723,48 +886,51 @@ function ProductsContent() {
         icon="ri-price-tag-3-line"
         iconType="icon"
         showStats={false}
+        showLimitedStats={true}
       />
 
       <div className="bg-white home-content-wrapper">
         <div className="p-3 w-max-width-xl mx-auto">
           
-          {/* Trial Alert - Exact Laravel style */}
-          <div 
-            id="search-count-alert" 
-            className="py-2 px-2 px-md-3 mb-2 d-flex w-100 justify-content-between align-items-center flex-column flex-md-row gap-2"
-            style={{ 
-              backgroundColor: '#fff3cd', 
-              border: '1px solid #ffc107', 
-              borderRadius: '8px',
-              color: '#856404'
-            }}
-          >
-            <div className="small ms-2" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <i className="fa-solid fa-triangle-exclamation" style={{ color: '#ffc107' }}></i>
-              <span id="search-count-message">
-                Il vous reste <strong>19</strong> recherches avec filtres sur votre essai gratuit (<strong>5 jours</strong>).
-              </span>
+          {/* Trial Alert - Only show for trial users */}
+          {userStats?.plan?.isOnTrial && (
+            <div 
+              id="search-count-alert" 
+              className="py-2 px-2 px-md-3 mb-2 d-flex w-100 justify-content-between align-items-center flex-column flex-md-row gap-2"
+              style={{ 
+                backgroundColor: '#fff3cd', 
+                border: '1px solid #ffc107', 
+                borderRadius: '8px',
+                color: '#856404'
+              }}
+            >
+              <div className="small ms-2" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <i className="fa-solid fa-triangle-exclamation" style={{ color: '#ffc107' }}></i>
+                <span id="search-count-message">
+                  Il vous reste <strong>19</strong> recherches avec filtres sur votre essai gratuit (<strong style={{ color: '#d4ac0d' }}>{userStats.plan.trialDaysRemaining} jours</strong>).
+                </span>
+              </div>
+              <div className="small ms-2 d-flex gap-2 align-items-center">
+                <span className="d-none d-md-block">Pour effectuer plus de recherches, passez à la version complète.</span>
+                <Link 
+                  href="/dashboard/plans"
+                  className="btn btn-sm"
+                  style={{ 
+                    backgroundColor: '#1a1a2e', 
+                    color: 'white', 
+                    border: 'none',
+                    borderRadius: '6px',
+                    padding: '6px 12px',
+                    fontSize: '12px',
+                    fontWeight: '500',
+                    whiteSpace: 'nowrap'
+                  }}
+                >
+                  Débloquer l&apos;accès complet
+                </Link>
+              </div>
             </div>
-            <div className="small ms-2 d-flex gap-2 align-items-center">
-              <span className="d-none d-md-block">Pour effectuer plus de recherches, passez à la version complète.</span>
-              <button 
-                type="button" 
-                className="btn btn-sm"
-                style={{ 
-                  backgroundColor: '#1a1a2e', 
-                  color: 'white', 
-                  border: 'none',
-                  borderRadius: '6px',
-                  padding: '6px 12px',
-                  fontSize: '12px',
-                  fontWeight: '500',
-                  whiteSpace: 'nowrap'
-                }}
-              >
-                Débloquer l'accès complet
-              </button>
-            </div>
-          </div>
+          )}
 
           {/* Search Bar */}
           <motion.div
@@ -783,7 +949,7 @@ function ProductsContent() {
                 placeholder="Rechercher par mots clés"
                 value={searchText}
                 onChange={(e) => setSearchText(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
               />
             </div>
             <Button 
@@ -882,326 +1048,166 @@ function ProductsContent() {
             {/* Divider */}
             <div className="horizontal-solid-divider mb-5"></div>
 
-            {/* Advanced Filters */}
+            {/* Advanced Filters - Using same components as Top Boutiques */}
             <p className="text-uppercase fs-xs text-light-gray fw-500 mb-2 mt-1">FILTRES</p>
-            <div className="filters-grid mb-3">
-                {/* Price filter */}
-                <div className={`dropdown dropdown-filter ${(minPrice || maxPrice) ? 'active' : ''}`}>
-                  <DropdownMenu modal={false}>
-                    <DropdownMenuTrigger asChild>
-                      <Button 
-                        className={`btn dropdown-btn dropdown-toggle`} 
-                        type="button" 
-                        variant="outline"
-                        style={(minPrice || maxPrice) ? { 
-                          backgroundColor: 'rgba(12, 108, 251, 0.1)', 
-                          borderColor: '#0c6cfb', 
-                          color: '#0c6cfb' 
-                        } : {}}
-                      >
-                        <i className="dropdown-icon ri-money-dollar-circle-line" style={(minPrice || maxPrice) ? { color: '#0c6cfb' } : {}}></i> Prix du produit
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <SmartDropdownContent className="dropdown-menu p-3 text-muted" style={{ width: '325px', maxWidth: 'calc(100vw - 20px)' }} onClick={(e) => e.stopPropagation()} collisionPadding={10}>
-                      <div className="mb-3 d-flex">
-                        <Input
-                          type="number"
-                          className="form-control design-2"
-                          placeholder="0"
-                          value={minPrice}
-                          onChange={(e) => setMinPrice(e.target.value)}
-                        />
-                        <span className="separator mx-3"></span>
-                        <Input
-                          type="number"
-                          className="form-control design-2"
-                          placeholder="150"
-                          value={maxPrice}
-                          onChange={(e) => setMaxPrice(e.target.value)}
-                        />
-                      </div>
-                      <Button type="button" className="btn btn-primary w-100 apply-filters-btn" onClick={handleSearch}>
-                        Appliquer
-                      </Button>
-                    </SmartDropdownContent>
-                  </DropdownMenu>
-                </div>
+            <div className="filters-grid mb-4">
+              {/* Row 1: Produits, Évolution du trafic, Visites mensuelles, Publicités actives, Création de la Boutique, Marchés */}
+              <ProductsFilter 
+                minPrice={minPrice}
+                maxPrice={maxPrice}
+                minCatalogSize={minCatalogSize}
+                maxCatalogSize={maxCatalogSize}
+                onMinPriceChange={setMinPrice}
+                onMaxPriceChange={setMaxPrice}
+                onMinCatalogSizeChange={setMinCatalogSize}
+                onMaxCatalogSizeChange={setMaxCatalogSize}
+                onOpenChange={() => {}} 
+                onApply={handleApplyFilters}
+                isActive={minPrice !== undefined || maxPrice !== undefined || minCatalogSize !== undefined || maxCatalogSize !== undefined}
+              />
 
-                {/* Traffic Growth filter */}
-                <div className={`dropdown dropdown-filter ${(minTrafficGrowth || maxTrafficGrowth) ? 'active' : ''}`}>
-                  <DropdownMenu modal={false}>
-                    <DropdownMenuTrigger asChild>
-                      <Button 
-                        className="btn dropdown-btn dropdown-toggle" 
-                        type="button" 
-                        variant="outline"
-                        style={(minTrafficGrowth || maxTrafficGrowth) ? { 
-                          backgroundColor: 'rgba(12, 108, 251, 0.1)', 
-                          borderColor: '#0c6cfb', 
-                          color: '#0c6cfb' 
-                        } : {}}
-                      >
-                        <i className="dropdown-icon ri-line-chart-line" style={(minTrafficGrowth || maxTrafficGrowth) ? { color: '#0c6cfb' } : {}}></i> Évolution du trafic
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <SmartDropdownContent className="dropdown-menu p-3 text-muted" style={{ width: '325px', maxWidth: 'calc(100vw - 20px)' }} onClick={(e) => e.stopPropagation()} collisionPadding={10}>
-                      <div className="mb-3 d-flex">
-                        <Input
-                          type="number"
-                          className="form-control design-2"
-                          placeholder="Min %"
-                          value={minTrafficGrowth}
-                          onChange={(e) => setMinTrafficGrowth(e.target.value)}
-                        />
-                        <span className="separator mx-3"></span>
-                        <Input
-                          type="number"
-                          className="form-control design-2"
-                          placeholder="Max %"
-                          value={maxTrafficGrowth}
-                          onChange={(e) => setMaxTrafficGrowth(e.target.value)}
-                        />
-                      </div>
-                      <Button type="button" className="btn btn-primary w-100 apply-filters-btn" onClick={handleSearch}>
-                        Appliquer
-                      </Button>
-                    </SmartDropdownContent>
-                  </DropdownMenu>
-                </div>
+              <TrafficGrowthFilter 
+                minTrafficGrowth={minTrafficGrowth}
+                maxTrafficGrowth={maxTrafficGrowth}
+                onMinTrafficGrowthChange={setMinTrafficGrowth}
+                onMaxTrafficGrowthChange={setMaxTrafficGrowth}
+                onOpenChange={() => {}} 
+                onApply={handleApplyFilters}
+                isActive={minTrafficGrowth !== undefined || maxTrafficGrowth !== undefined}
+              />
 
-                {/* Active Ads filter */}
-                <div className={`dropdown dropdown-filter ${(minActiveAds || maxActiveAds) ? 'active' : ''}`}>
-                  <DropdownMenu modal={false}>
-                    <DropdownMenuTrigger asChild>
-                      <Button 
-                        className="btn dropdown-btn dropdown-toggle" 
-                        type="button" 
-                        variant="outline"
-                        style={(minActiveAds || maxActiveAds) ? { 
-                          backgroundColor: 'rgba(12, 108, 251, 0.1)', 
-                          borderColor: '#0c6cfb', 
-                          color: '#0c6cfb' 
-                        } : {}}
-                      >
-                        <i className="dropdown-icon ri-megaphone-line" style={(minActiveAds || maxActiveAds) ? { color: '#0c6cfb' } : {}}></i> Publicités Active
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <SmartDropdownContent className="dropdown-menu p-3 text-muted" style={{ width: '325px', maxWidth: 'calc(100vw - 20px)' }} onClick={(e) => e.stopPropagation()} collisionPadding={10}>
-                      <div className="mb-3 d-flex">
-                        <Input
-                          type="number"
-                          className="form-control design-2"
-                          placeholder="Min"
-                          value={minActiveAds}
-                          onChange={(e) => setMinActiveAds(e.target.value)}
-                        />
-                        <span className="separator mx-3"></span>
-                        <Input
-                          type="number"
-                          className="form-control design-2"
-                          placeholder="Max"
-                          value={maxActiveAds}
-                          onChange={(e) => setMaxActiveAds(e.target.value)}
-                        />
-                      </div>
-                      <Button type="button" className="btn btn-primary w-100 apply-filters-btn" onClick={handleSearch}>
-                        Appliquer
-                      </Button>
-                    </SmartDropdownContent>
-                  </DropdownMenu>
-                </div>
+              <MonthlyVisitsFilter 
+                minTraffic={minTraffic}
+                maxTraffic={maxTraffic}
+                onMinTrafficChange={setMinTraffic}
+                onMaxTrafficChange={setMaxTraffic}
+                onOpenChange={() => {}} 
+                onApply={handleApplyFilters}
+                isActive={minTraffic !== undefined || maxTraffic !== undefined}
+              />
+              
+              <ActiveAdsFilter 
+                minActiveAds={minActiveAds}
+                maxActiveAds={maxActiveAds}
+                onMinActiveAdsChange={setMinActiveAds}
+                onMaxActiveAdsChange={setMaxActiveAds}
+                onOpenChange={() => {}} 
+                onApply={handleApplyFilters}
+                isActive={minActiveAds !== undefined || maxActiveAds !== undefined}
+              />
+              
+              <ShopCreationFilter
+                value={shopCreationDate}
+                onChange={setShopCreationDate}
+                onApply={handleApplyFilters}
+                isActive={!!shopCreationDate}
+              />
 
-                {/* Date filter */}
-                <div className={`dropdown dropdown-filter ${dateFilter ? 'active' : ''}`}>
-                  <DropdownMenu modal={false}>
-                    <DropdownMenuTrigger asChild>
-                      <Button 
-                        className="btn dropdown-btn dropdown-toggle" 
-                        type="button" 
-                        variant="outline"
-                        style={dateFilter ? { 
-                          backgroundColor: 'rgba(12, 108, 251, 0.1)', 
-                          borderColor: '#0c6cfb', 
-                          color: '#0c6cfb' 
-                        } : {}}
-                      >
-                        <i className="dropdown-icon ri-calendar-line" style={dateFilter ? { color: '#0c6cfb' } : {}}></i> Création de la Boutique
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <SmartDropdownContent className="dropdown-menu p-3 text-muted" style={{ width: '325px', maxWidth: 'calc(100vw - 20px)' }} onClick={(e) => e.stopPropagation()} collisionPadding={10}>
-                      <div className="mb-3">
-                        <Input
-                          type="text"
-                          className="form-control design-2"
-                          placeholder="MM/DD/YYYY - MM/DD/YYYY"
-                          value={dateFilter}
-                          onChange={(e) => setDateFilter(e.target.value)}
-                        />
-                      </div>
-                      <Button type="button" className="btn btn-primary w-100 apply-filters-btn" onClick={handleSearch}>
-                        Appliquer
-                      </Button>
-                    </SmartDropdownContent>
-                  </DropdownMenu>
-                </div>
+              <MarketsFilter 
+                selectedCountries={selectedCountries}
+                onCountriesChange={setSelectedCountries}
+                onApply={handleApplyFilters}
+                isActive={selectedCountries.length > 0}
+              />
+              
+              {/* Row 2: Niche, Commandes mensuelles, Revenu quotidien, Devise, Pixels, Origine */}
+              <NicheDropdown
+                selectedNiches={selectedNiches}
+                onNichesChange={setSelectedNiches}
+                onApply={handleApplyFilters}
+                isActive={selectedNiches.length > 0}
+              />
 
-                {/* Markets filter */}
-                <MarketsFilter 
-                  selectedCountries={selectedCountries}
-                  onCountriesChange={setSelectedCountries}
-                  onApply={handleSearch}
-                  isActive={selectedCountries.length > 0}
-                />
+              <MonthlyOrdersFilter 
+                minOrders={minOrders}
+                maxOrders={maxOrders}
+                onMinOrdersChange={setMinOrders}
+                onMaxOrdersChange={setMaxOrders}
+                onOpenChange={() => {}} 
+                onApply={handleApplyFilters}
+                isActive={minOrders !== undefined || maxOrders !== undefined}
+              />
+              
+              <DailyRevenueFilter 
+                minRevenue={minRevenue}
+                maxRevenue={maxRevenue}
+                onMinRevenueChange={setMinRevenue}
+                onMaxRevenueChange={setMaxRevenue}
+                onOpenChange={() => {}} 
+                onApply={handleApplyFilters}
+                isActive={minRevenue !== undefined || maxRevenue !== undefined}
+              />
 
-                {/* Niche / Category filter */}
-                <NicheDropdown
-                  selectedNiches={selectedNiches}
-                  onNichesChange={setSelectedNiches}
-                  onApply={handleSearch}
-                  isActive={selectedNiches.length > 0}
-                />
+              <CurrencyFilter 
+                selectedCurrencies={selectedCurrencies}
+                onCurrenciesChange={setSelectedCurrencies}
+                onApply={handleApplyFilters}
+                isActive={selectedCurrencies.length > 0}
+              />
 
-                {/* Orders filter */}
-                <div className={`dropdown dropdown-filter ${(minOrders || maxOrders) ? 'active' : ''}`}>
-                  <DropdownMenu modal={false}>
-                    <DropdownMenuTrigger asChild>
-                      <Button 
-                        className="btn dropdown-btn dropdown-toggle" 
-                        type="button" 
-                        variant="outline"
-                        style={(minOrders || maxOrders) ? { 
-                          backgroundColor: 'rgba(12, 108, 251, 0.1)', 
-                          borderColor: '#0c6cfb', 
-                          color: '#0c6cfb' 
-                        } : {}}
-                      >
-                        <i className="dropdown-icon ri-shopping-cart-line" style={(minOrders || maxOrders) ? { color: '#0c6cfb' } : {}}></i> Commandes par mois
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <SmartDropdownContent className="dropdown-menu p-3 text-muted" style={{ width: '325px', maxWidth: 'calc(100vw - 20px)' }} onClick={(e) => e.stopPropagation()} collisionPadding={10}>
-                      <div className="mb-3 d-flex">
-                        <Input
-                          type="number"
-                          className="form-control design-2"
-                          placeholder="Min"
-                          value={minOrders}
-                          onChange={(e) => setMinOrders(e.target.value)}
-                        />
-                        <span className="separator mx-3"></span>
-                        <Input
-                          type="number"
-                          className="form-control design-2"
-                          placeholder="Max"
-                          value={maxOrders}
-                          onChange={(e) => setMaxOrders(e.target.value)}
-                        />
-                      </div>
-                      <Button type="button" className="btn btn-primary w-100 apply-filters-btn" onClick={handleSearch}>
-                        Appliquer
-                      </Button>
-                    </SmartDropdownContent>
-                  </DropdownMenu>
-                </div>
+              <PixelsFilter 
+                selectedPixels={selectedPixels}
+                onPixelsChange={setSelectedPixels}
+                onApply={handleApplyFilters}
+                isActive={selectedPixels.length > 0}
+              />
 
-                {/* Revenue filter */}
-                <div className={`dropdown dropdown-filter ${(minRevenue || maxRevenue) ? 'active' : ''}`}>
-                  <DropdownMenu modal={false}>
-                    <DropdownMenuTrigger asChild>
-                      <Button 
-                        className="btn dropdown-btn dropdown-toggle" 
-                        type="button" 
-                        variant="outline"
-                        style={(minRevenue || maxRevenue) ? { 
-                          backgroundColor: 'rgba(12, 108, 251, 0.1)', 
-                          borderColor: '#0c6cfb', 
-                          color: '#0c6cfb' 
-                        } : {}}
-                      >
-                        <i className="dropdown-icon ri-money-dollar-circle-line" style={(minRevenue || maxRevenue) ? { color: '#0c6cfb' } : {}}></i> Revenu par mois
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <SmartDropdownContent className="dropdown-menu p-3 text-muted" style={{ width: '325px', maxWidth: 'calc(100vw - 20px)' }} onClick={(e) => e.stopPropagation()} collisionPadding={10}>
-                      <div className="mb-3 d-flex">
-                        <Input
-                          type="number"
-                          className="form-control design-2"
-                          placeholder="Min $"
-                          value={minRevenue}
-                          onChange={(e) => setMinRevenue(e.target.value)}
-                        />
-                        <span className="separator mx-3"></span>
-                        <Input
-                          type="number"
-                          className="form-control design-2"
-                          placeholder="Max $"
-                          value={maxRevenue}
-                          onChange={(e) => setMaxRevenue(e.target.value)}
-                        />
-                      </div>
-                      <Button type="button" className="btn btn-primary w-100 apply-filters-btn" onClick={handleSearch}>
-                        Appliquer
-                      </Button>
-                    </SmartDropdownContent>
-                  </DropdownMenu>
-                </div>
+              <OriginFilter
+                selectedOrigins={selectedOrigins}
+                onOriginsChange={setSelectedOrigins}
+                onApply={handleApplyFilters}
+                isActive={selectedOrigins.length > 0}
+              />
 
-                {/* Traffic (Monthly Visits) filter */}
-                <div className={`dropdown dropdown-filter ${(minTraffic || maxTraffic) ? 'active' : ''}`}>
-                  <DropdownMenu modal={false}>
-                    <DropdownMenuTrigger asChild>
-                      <Button 
-                        className="btn dropdown-btn dropdown-toggle" 
-                        type="button" 
-                        variant="outline"
-                        style={(minTraffic || maxTraffic) ? { 
-                          backgroundColor: 'rgba(12, 108, 251, 0.1)', 
-                          borderColor: '#0c6cfb', 
-                          color: '#0c6cfb' 
-                        } : {}}
-                      >
-                        <i className="dropdown-icon ri-group-line" style={(minTraffic || maxTraffic) ? { color: '#0c6cfb' } : {}}></i> Nombres de visites par mois
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <SmartDropdownContent className="dropdown-menu p-3 text-muted" style={{ width: '325px', maxWidth: 'calc(100vw - 20px)' }} onClick={(e) => e.stopPropagation()} collisionPadding={10}>
-                      <div className="mb-3 d-flex">
-                        <Input
-                          type="number"
-                          className="form-control design-2"
-                          placeholder="Min"
-                          value={minTraffic}
-                          onChange={(e) => setMinTraffic(e.target.value)}
-                        />
-                        <span className="separator mx-3"></span>
-                        <Input
-                          type="number"
-                          className="form-control design-2"
-                          placeholder="Max"
-                          value={maxTraffic}
-                          onChange={(e) => setMaxTraffic(e.target.value)}
-                        />
-                      </div>
-                      <Button type="button" className="btn btn-primary w-100 apply-filters-btn" onClick={handleSearch}>
-                        Appliquer
-                      </Button>
-                    </SmartDropdownContent>
-                  </DropdownMenu>
-                </div>
-                
-                {/* Currency filter */}
-                <CurrencyFilter 
-                  selectedCurrencies={selectedCurrencies}
-                  onCurrenciesChange={setSelectedCurrencies}
-                  onApply={handleSearch}
-                  isActive={selectedCurrencies.length > 0}
-                />
+              {/* Row 3: Langue, Domaine, Trustpilot, Thèmes, Applications, Réseaux sociaux */}
+              <LanguageFilter
+                selectedLanguages={selectedLanguages}
+                onLanguagesChange={setSelectedLanguages}
+                onApply={handleApplyFilters}
+                isActive={selectedLanguages.length > 0}
+              />
 
-                {/* Pixels filter */}
-                <PixelsFilter 
-                  selectedPixels={selectedPixels}
-                  onPixelsChange={setSelectedPixels}
-                  onApply={handleSearch}
-                  isActive={selectedPixels.length > 0}
-                />
+              <DomainFilter
+                selectedDomains={selectedDomains}
+                onDomainsChange={setSelectedDomains}
+                onApply={handleApplyFilters}
+                isActive={selectedDomains.length > 0}
+              />
+
+              <TrustpilotFilter
+                minRating={minTrustpilotRating}
+                maxRating={maxTrustpilotRating}
+                minReviews={minTrustpilotReviews}
+                maxReviews={maxTrustpilotReviews}
+                onMinRatingChange={setMinTrustpilotRating}
+                onMaxRatingChange={setMaxTrustpilotRating}
+                onMinReviewsChange={setMinTrustpilotReviews}
+                onMaxReviewsChange={setMaxTrustpilotReviews}
+                onApply={handleApplyFilters}
+                isActive={minTrustpilotRating !== undefined || maxTrustpilotRating !== undefined || 
+                         minTrustpilotReviews !== undefined || maxTrustpilotReviews !== undefined}
+              />
+
+              <ThemesFilter
+                selectedThemes={selectedThemes}
+                onThemesChange={setSelectedThemes}
+                onApply={handleApplyFilters}
+                isActive={selectedThemes.length > 0}
+              />
+
+              <ApplicationsFilter
+                selectedApplications={selectedApplications}
+                onApplicationsChange={setSelectedApplications}
+                onApply={handleApplyFilters}
+                isActive={selectedApplications.length > 0}
+              />
+
+              <SocialNetworksFilter
+                selectedSocialNetworks={selectedSocialNetworks}
+                onSocialNetworksChange={setSelectedSocialNetworks}
+                onApply={handleApplyFilters}
+                isActive={selectedSocialNetworks.length > 0}
+              />
             </div>
 
             {/* Active Filters Tags */}

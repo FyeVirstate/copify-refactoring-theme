@@ -13,10 +13,36 @@ import {
   DatesFilter,
   CTAsFilter,
   ActiveAdsFilter,
+  MonthlyVisitsFilter,
+  TrafficGrowthFilter,
+  DailyRevenueFilter,
+  MonthlyOrdersFilter,
+  ShopCreationFilter,
+  CurrencyFilter,
+  PixelsFilter,
+  OriginFilter,
+  LanguageFilter,
+  DomainFilter,
+  TrustpilotFilter,
+  ThemesFilter,
+  ApplicationsFilter,
+  SocialNetworksFilter,
+  ProductsFilter,
 } from "@/components/filters";
 import NicheDropdown from "@/components/NicheDropdown";
 import FilterDropdown from "@/components/filters/FilterDropdown";
 import { useAds, AdsFilters } from "@/lib/hooks/use-ads";
+
+// Interface for user stats
+interface UserStats {
+  plan: {
+    identifier: string;
+    title: string;
+    isOnTrial: boolean;
+    isExpired: boolean;
+    trialDaysRemaining: number;
+  };
+}
 
 // Toast Alert Component
 interface ToastAlert {
@@ -450,6 +476,7 @@ export default function AdsPage() {
   const [savedAdsDrawerOpen, setSavedAdsDrawerOpen] = useState(false);
   const [savedAds, setSavedAds] = useState<any[]>([]);
   const [loadingSavedAds, setLoadingSavedAds] = useState(false);
+  const [userStats, setUserStats] = useState<UserStats | null>(null);
   
   // Filter states
   const [selectedCountries, setSelectedCountries] = useState<string[]>([]);
@@ -460,6 +487,33 @@ export default function AdsPage() {
   const [minActiveAds, setMinActiveAds] = useState<number | undefined>();
   const [maxActiveAds, setMaxActiveAds] = useState<number | undefined>();
   const [sortBy, setSortBy] = useState("recommended");
+  
+  // New filter states (from Top Boutiques/Produits)
+  const [minTraffic, setMinTraffic] = useState<number | undefined>();
+  const [maxTraffic, setMaxTraffic] = useState<number | undefined>();
+  const [minTrafficGrowth, setMinTrafficGrowth] = useState<number | undefined>();
+  const [maxTrafficGrowth, setMaxTrafficGrowth] = useState<number | undefined>();
+  const [minRevenue, setMinRevenue] = useState<number | undefined>();
+  const [maxRevenue, setMaxRevenue] = useState<number | undefined>();
+  const [minOrders, setMinOrders] = useState<number | undefined>();
+  const [maxOrders, setMaxOrders] = useState<number | undefined>();
+  const [shopCreationDate, setShopCreationDate] = useState<string | undefined>();
+  const [selectedCurrencies, setSelectedCurrencies] = useState<string[]>([]);
+  const [selectedPixels, setSelectedPixels] = useState<string[]>([]);
+  const [selectedOrigins, setSelectedOrigins] = useState<string[]>([]);
+  const [selectedLanguages, setSelectedLanguages] = useState<string[]>([]);
+  const [selectedDomains, setSelectedDomains] = useState<string[]>([]);
+  const [minTrustpilotRating, setMinTrustpilotRating] = useState<number | undefined>();
+  const [maxTrustpilotRating, setMaxTrustpilotRating] = useState<number | undefined>();
+  const [minTrustpilotReviews, setMinTrustpilotReviews] = useState<number | undefined>();
+  const [maxTrustpilotReviews, setMaxTrustpilotReviews] = useState<number | undefined>();
+  const [selectedThemes, setSelectedThemes] = useState<string[]>([]);
+  const [selectedApps, setSelectedApps] = useState<string[]>([]);
+  const [selectedSocialNetworks, setSelectedSocialNetworks] = useState<string[]>([]);
+  const [minPrice, setMinPrice] = useState<number | undefined>();
+  const [maxPrice, setMaxPrice] = useState<number | undefined>();
+  const [minCatalogSize, setMinCatalogSize] = useState<number | undefined>();
+  const [maxCatalogSize, setMaxCatalogSize] = useState<number | undefined>();
   
   const { 
     ads, 
@@ -487,9 +541,42 @@ export default function AdsPage() {
     if (minActiveAds !== undefined) filters.minActiveAds = minActiveAds;
     if (maxActiveAds !== undefined) filters.maxActiveAds = maxActiveAds;
     if (euTransparency) filters.euTransparency = true;
+    
+    // New filters from Top Boutiques/Produits
+    if (minTraffic !== undefined) filters.minVisits = minTraffic;
+    if (maxTraffic !== undefined) filters.maxVisits = maxTraffic;
+    if (minTrafficGrowth !== undefined) filters.minGrowth = minTrafficGrowth;
+    if (maxTrafficGrowth !== undefined) filters.maxGrowth = maxTrafficGrowth;
+    if (minRevenue !== undefined) filters.minRevenue = minRevenue;
+    if (maxRevenue !== undefined) filters.maxRevenue = maxRevenue;
+    if (minOrders !== undefined) filters.minOrders = minOrders;
+    if (maxOrders !== undefined) filters.maxOrders = maxOrders;
+    if (shopCreationDate) filters.shopCreationDate = shopCreationDate;
+    if (selectedCurrencies.length) filters.currencies = selectedCurrencies.join(',');
+    if (selectedPixels.length) filters.pixels = selectedPixels.join(',');
+    if (selectedOrigins.length) filters.origins = selectedOrigins.join(',');
+    if (selectedLanguages.length) filters.languages = selectedLanguages.join(',');
+    if (selectedDomains.length) filters.domains = selectedDomains.join(',');
+    if (minTrustpilotRating !== undefined) filters.minTrustpilotRating = minTrustpilotRating;
+    if (maxTrustpilotRating !== undefined) filters.maxTrustpilotRating = maxTrustpilotRating;
+    if (minTrustpilotReviews !== undefined) filters.minTrustpilotReviews = minTrustpilotReviews;
+    if (maxTrustpilotReviews !== undefined) filters.maxTrustpilotReviews = maxTrustpilotReviews;
+    if (selectedThemes.length) filters.themes = selectedThemes.join(',');
+    if (selectedApps.length) filters.apps = selectedApps.join(',');
+    if (selectedSocialNetworks.length) filters.socialNetworks = selectedSocialNetworks.join(',');
+    if (minPrice !== undefined) filters.minPrice = minPrice;
+    if (maxPrice !== undefined) filters.maxPrice = maxPrice;
+    if (minCatalogSize !== undefined) filters.minCatalogSize = minCatalogSize;
+    if (maxCatalogSize !== undefined) filters.maxCatalogSize = maxCatalogSize;
+    
     return filters;
   }, [sortBy, appliedSearchText, selectedCountries, selectedNiches, selectedCTAs, 
-      selectedStatus, selectedMediaType, minActiveAds, maxActiveAds, euTransparency]);
+      selectedStatus, selectedMediaType, minActiveAds, maxActiveAds, euTransparency,
+      minTraffic, maxTraffic, minTrafficGrowth, maxTrafficGrowth, minRevenue, maxRevenue,
+      minOrders, maxOrders, shopCreationDate, selectedCurrencies, selectedPixels,
+      selectedOrigins, selectedLanguages, selectedDomains, minTrustpilotRating,
+      maxTrustpilotRating, minTrustpilotReviews, maxTrustpilotReviews, selectedThemes,
+      selectedApps, selectedSocialNetworks, minPrice, maxPrice, minCatalogSize, maxCatalogSize]);
 
   // Toast functions
   const addToast = (type: ToastAlert['type'], message: string, shopUrl?: string, shopId?: number) => {
@@ -519,6 +606,24 @@ export default function AdsPage() {
       }
     };
     fetchTrackedShops();
+  }, []);
+
+  // Fetch user stats to get trial days remaining
+  useEffect(() => {
+    const fetchUserStats = async () => {
+      try {
+        const res = await fetch('/api/user/stats');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success && data.stats) {
+            setUserStats(data.stats);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to fetch user stats:', err);
+      }
+    };
+    fetchUserStats();
   }, []);
 
   // Fetch saved ads when drawer opens
@@ -564,9 +669,13 @@ export default function AdsPage() {
     fetchAds({ ...buildFilters(), sortBy: newSortBy }, 1, 20);
   };
 
-  const handleApplyFilters = () => {
+  const handleApplyFilters = (overrideFilters?: Partial<AdsFilters>) => {
     setActivePreset('');
-    fetchAds(buildFilters(), 1, 20);
+    const currentFilters = buildFilters();
+    const mergedFilters = overrideFilters 
+      ? { ...currentFilters, ...overrideFilters } 
+      : currentFilters;
+    fetchAds(mergedFilters, 1, 20);
   };
 
   const resetFilters = () => {
@@ -582,6 +691,34 @@ export default function AdsPage() {
     setSortBy("recommended");
     setActivePreset("");
     setEuTransparency(false);
+    
+    // Reset new filters
+    setMinTraffic(undefined);
+    setMaxTraffic(undefined);
+    setMinTrafficGrowth(undefined);
+    setMaxTrafficGrowth(undefined);
+    setMinRevenue(undefined);
+    setMaxRevenue(undefined);
+    setMinOrders(undefined);
+    setMaxOrders(undefined);
+    setShopCreationDate(undefined);
+    setSelectedCurrencies([]);
+    setSelectedPixels([]);
+    setSelectedOrigins([]);
+    setSelectedLanguages([]);
+    setSelectedDomains([]);
+    setMinTrustpilotRating(undefined);
+    setMaxTrustpilotRating(undefined);
+    setMinTrustpilotReviews(undefined);
+    setMaxTrustpilotReviews(undefined);
+    setSelectedThemes([]);
+    setSelectedApps([]);
+    setSelectedSocialNetworks([]);
+    setMinPrice(undefined);
+    setMaxPrice(undefined);
+    setMinCatalogSize(undefined);
+    setMaxCatalogSize(undefined);
+    
     fetchAds({ sortBy: 'recommended' }, 1, 20);
   };
 
@@ -665,6 +802,41 @@ export default function AdsPage() {
   if (selectedStatus !== 'all') activeFilters.push({ id: 'status', label: selectedStatus === 'active' ? 'Actives' : 'Inactives', key: 'status' });
   if (selectedMediaType) activeFilters.push({ id: 'mediaType', label: selectedMediaType === 'video' ? 'Vidéo' : 'Image', key: 'mediaType' });
   if (euTransparency) activeFilters.push({ id: 'eu', label: 'EU Transparency', key: 'eu' });
+  
+  // New filters active tags
+  if (minTraffic !== undefined || maxTraffic !== undefined) {
+    activeFilters.push({ id: 'traffic', label: `Visites: ${minTraffic || 0} - ${maxTraffic || '∞'}`, key: 'traffic' });
+  }
+  if (minTrafficGrowth !== undefined || maxTrafficGrowth !== undefined) {
+    activeFilters.push({ id: 'trafficGrowth', label: `Évolution trafic: ${minTrafficGrowth || 0}% - ${maxTrafficGrowth || '∞'}%`, key: 'trafficGrowth' });
+  }
+  if (minRevenue !== undefined || maxRevenue !== undefined) {
+    activeFilters.push({ id: 'revenue', label: `Revenu: ${minRevenue || 0}€ - ${maxRevenue || '∞'}€`, key: 'revenue' });
+  }
+  if (minOrders !== undefined || maxOrders !== undefined) {
+    activeFilters.push({ id: 'orders', label: `Commandes: ${minOrders || 0} - ${maxOrders || '∞'}`, key: 'orders' });
+  }
+  if (minActiveAds !== undefined || maxActiveAds !== undefined) {
+    activeFilters.push({ id: 'activeAds', label: `Pubs actives: ${minActiveAds || 0} - ${maxActiveAds || '∞'}`, key: 'activeAds' });
+  }
+  if (shopCreationDate) activeFilters.push({ id: 'shopCreation', label: `Création: ${shopCreationDate}`, key: 'shopCreation' });
+  selectedCurrencies.forEach(c => activeFilters.push({ id: `currency-${c}`, label: c, key: 'currency', value: c }));
+  selectedPixels.forEach(p => activeFilters.push({ id: `pixel-${p}`, label: p, key: 'pixel', value: p }));
+  selectedOrigins.forEach(o => activeFilters.push({ id: `origin-${o}`, label: o, key: 'origin', value: o }));
+  selectedLanguages.forEach(l => activeFilters.push({ id: `language-${l}`, label: l, key: 'language', value: l }));
+  selectedDomains.forEach(d => activeFilters.push({ id: `domain-${d}`, label: d, key: 'domain', value: d }));
+  if (minTrustpilotRating !== undefined || maxTrustpilotRating !== undefined || minTrustpilotReviews !== undefined || maxTrustpilotReviews !== undefined) {
+    activeFilters.push({ id: 'trustpilot', label: `Trustpilot: ${minTrustpilotRating || 0}★ - ${maxTrustpilotRating || 5}★`, key: 'trustpilot' });
+  }
+  selectedThemes.forEach(t => activeFilters.push({ id: `theme-${t}`, label: t, key: 'theme', value: t }));
+  selectedApps.forEach(a => activeFilters.push({ id: `app-${a}`, label: a, key: 'app', value: a }));
+  selectedSocialNetworks.forEach(s => activeFilters.push({ id: `social-${s}`, label: s, key: 'social', value: s }));
+  if (minPrice !== undefined || maxPrice !== undefined) {
+    activeFilters.push({ id: 'price', label: `Prix: ${minPrice || 0}€ - ${maxPrice || '∞'}€`, key: 'price' });
+  }
+  if (minCatalogSize !== undefined || maxCatalogSize !== undefined) {
+    activeFilters.push({ id: 'catalogSize', label: `Catalogue: ${minCatalogSize || 0} - ${maxCatalogSize || '∞'}`, key: 'catalogSize' });
+  }
 
   const removeFilter = (key: string, value?: string) => {
     if (key === 'search') { setSearchText(""); setAppliedSearchText(""); }
@@ -674,6 +846,23 @@ export default function AdsPage() {
     else if (key === 'status') setSelectedStatus('all');
     else if (key === 'mediaType') setSelectedMediaType('');
     else if (key === 'eu') setEuTransparency(false);
+    else if (key === 'traffic') { setMinTraffic(undefined); setMaxTraffic(undefined); }
+    else if (key === 'trafficGrowth') { setMinTrafficGrowth(undefined); setMaxTrafficGrowth(undefined); }
+    else if (key === 'revenue') { setMinRevenue(undefined); setMaxRevenue(undefined); }
+    else if (key === 'orders') { setMinOrders(undefined); setMaxOrders(undefined); }
+    else if (key === 'activeAds') { setMinActiveAds(undefined); setMaxActiveAds(undefined); }
+    else if (key === 'shopCreation') setShopCreationDate(undefined);
+    else if (key === 'currency' && value) setSelectedCurrencies(prev => prev.filter(c => c !== value));
+    else if (key === 'pixel' && value) setSelectedPixels(prev => prev.filter(p => p !== value));
+    else if (key === 'origin' && value) setSelectedOrigins(prev => prev.filter(o => o !== value));
+    else if (key === 'language' && value) setSelectedLanguages(prev => prev.filter(l => l !== value));
+    else if (key === 'domain' && value) setSelectedDomains(prev => prev.filter(d => d !== value));
+    else if (key === 'trustpilot') { setMinTrustpilotRating(undefined); setMaxTrustpilotRating(undefined); setMinTrustpilotReviews(undefined); setMaxTrustpilotReviews(undefined); }
+    else if (key === 'theme' && value) setSelectedThemes(prev => prev.filter(t => t !== value));
+    else if (key === 'app' && value) setSelectedApps(prev => prev.filter(a => a !== value));
+    else if (key === 'social' && value) setSelectedSocialNetworks(prev => prev.filter(s => s !== value));
+    else if (key === 'price') { setMinPrice(undefined); setMaxPrice(undefined); }
+    else if (key === 'catalogSize') { setMinCatalogSize(undefined); setMaxCatalogSize(undefined); }
     setTimeout(handleApplyFilters, 0);
   };
 
@@ -689,6 +878,7 @@ export default function AdsPage() {
         icon="ri-advertisement-line"
         iconType="icon"
         showStats={false}
+        showLimitedStats={true}
       >
         <button 
           onClick={() => setSavedAdsDrawerOpen(true)}
@@ -703,31 +893,33 @@ export default function AdsPage() {
       <div className="bg-white home-content-wrapper">
         <div className="p-3 w-max-width-xl mx-auto">
           
-          {/* Trial Alert Banner */}
-          <div
-            className="info-alert-box mb-3"
-            style={{
-              background: 'linear-gradient(90deg, #fef9e7 0%, #fef9e7 100%)',
-              border: '1px solid #f9e79f',
-              borderRadius: '8px',
-              padding: '14px 20px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: '16px',
-              flexWrap: 'wrap'
-            }}
-          >
-            <div className="d-flex align-items-center gap-2">
-              <i className="ri-information-line" style={{ color: '#f1c40f', fontSize: '20px' }}></i>
-              <span style={{ color: '#7d6608', fontSize: '14px' }}>
-                Il vous reste <strong style={{ color: '#d4ac0d' }}>5</strong> recherches avec filtres sur votre essai gratuit (2 jours).
-              </span>
+          {/* Trial Alert Banner - Only show for trial users */}
+          {userStats?.plan?.isOnTrial && (
+            <div
+              className="info-alert-box mb-3"
+              style={{
+                background: 'linear-gradient(90deg, #fef9e7 0%, #fef9e7 100%)',
+                border: '1px solid #f9e79f',
+                borderRadius: '8px',
+                padding: '14px 20px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '16px',
+                flexWrap: 'wrap'
+              }}
+            >
+              <div className="d-flex align-items-center gap-2">
+                <i className="ri-information-line" style={{ color: '#f1c40f', fontSize: '20px' }}></i>
+                <span style={{ color: '#7d6608', fontSize: '14px' }}>
+                  Il vous reste <strong style={{ color: '#d4ac0d' }}>5</strong> recherches avec filtres sur votre essai gratuit (<strong style={{ color: '#d4ac0d' }}>{userStats.plan.trialDaysRemaining} jours</strong>).
+                </span>
+              </div>
+              <Link href="/dashboard/plans" className="btn btn-primary btn-sm fw-500" style={{ whiteSpace: 'nowrap', padding: '8px 16px' }}>
+                Débloquer l&apos;accès complet
+              </Link>
             </div>
-            <Link href="/dashboard/plans" className="btn btn-primary btn-sm fw-500" style={{ whiteSpace: 'nowrap', padding: '8px 16px' }}>
-              Débloquer l&apos;accès complet
-            </Link>
-          </div>
+          )}
           
           {/* Search Bar */}
           <div className="mb-3 pb-1 d-flex gap-2 pt-2 flex-wrap flex-sm-nowrap">
@@ -740,7 +932,7 @@ export default function AdsPage() {
                 placeholder="Rechercher par mots clés..."
                 value={searchText}
                 onChange={(e) => setSearchText(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
               />
             </div>
             <Button type="button" className="btn btn-primary apply-filters-btn" style={{ height: '40px', flexShrink: 0 }} onClick={handleSearch}>
@@ -787,8 +979,8 @@ export default function AdsPage() {
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: 0.1 }}>
             <p className="text-uppercase fs-xs text-light-gray fw-500 mb-2 mt-1">FILTRES</p>
             <div className="filters-grid mb-3">
+              {/* Filtres spécifiques aux publicités */}
               <PerformanceScoreFilter onOpenChange={() => {}} onApply={handleApplyFilters} isActive={false} />
-              <DatesFilter onOpenChange={() => {}} onApply={handleApplyFilters} isActive={false} />
               <CTAsFilter selectedCTAs={selectedCTAs} onCTAsChange={setSelectedCTAs} onOpenChange={() => {}} onApply={handleApplyFilters} isActive={selectedCTAs.length > 0} />
               
               {/* Type de média - Radio style */}
@@ -809,9 +1001,6 @@ export default function AdsPage() {
                 </div>
                 <Button type="button" className="btn btn-primary w-100 apply-filters-btn" onClick={handleApplyFilters}>Appliquer les filtres</Button>
               </FilterDropdown>
-
-              <NicheDropdown selectedNiches={selectedNiches} onNichesChange={setSelectedNiches} onApply={handleApplyFilters} isActive={selectedNiches.length > 0} />
-              <MarketsFilter selectedCountries={selectedCountries} onCountriesChange={setSelectedCountries} onOpenChange={() => {}} onApply={handleApplyFilters} isActive={selectedCountries.length > 0} />
               
               {/* Statut Publicité - Radio style */}
               <FilterDropdown icon="ri-checkbox-circle-line" label="Statut Publicité" title="Statut Publicité" width="250px" isActive={selectedStatus !== 'all'}>
@@ -832,7 +1021,175 @@ export default function AdsPage() {
                 <Button type="button" className="btn btn-primary w-100 apply-filters-btn" onClick={handleApplyFilters}>Appliquer les filtres</Button>
               </FilterDropdown>
 
-              <ActiveAdsFilter minActiveAds={minActiveAds} maxActiveAds={maxActiveAds} onActiveAdsChange={(min, max) => { setMinActiveAds(min); setMaxActiveAds(max); }} onOpenChange={() => {}} onApply={handleApplyFilters} isActive={minActiveAds !== undefined || maxActiveAds !== undefined} />
+              {/* Filtres communs avec Top Boutiques/Produits */}
+              <ProductsFilter
+                minPrice={minPrice}
+                maxPrice={maxPrice}
+                minCatalogSize={minCatalogSize}
+                maxCatalogSize={maxCatalogSize}
+                onMinPriceChange={setMinPrice}
+                onMaxPriceChange={setMaxPrice}
+                onMinCatalogSizeChange={setMinCatalogSize}
+                onMaxCatalogSizeChange={setMaxCatalogSize}
+                onOpenChange={() => {}}
+                onApply={handleApplyFilters}
+                isActive={minPrice !== undefined || maxPrice !== undefined || minCatalogSize !== undefined || maxCatalogSize !== undefined}
+              />
+              <TrafficGrowthFilter
+                minTrafficGrowth={minTrafficGrowth}
+                maxTrafficGrowth={maxTrafficGrowth}
+                onMinTrafficGrowthChange={setMinTrafficGrowth}
+                onMaxTrafficGrowthChange={setMaxTrafficGrowth}
+                onOpenChange={() => {}}
+                onApply={(overrideFilters) => {
+                  if (overrideFilters) {
+                    // Transform minTrafficGrowth/maxTrafficGrowth to minGrowth/maxGrowth for API
+                    handleApplyFilters({
+                      minGrowth: overrideFilters.minTrafficGrowth,
+                      maxGrowth: overrideFilters.maxTrafficGrowth
+                    });
+                  } else {
+                    handleApplyFilters();
+                  }
+                }}
+                isActive={minTrafficGrowth !== undefined || maxTrafficGrowth !== undefined}
+              />
+              <MonthlyVisitsFilter
+                minTraffic={minTraffic}
+                maxTraffic={maxTraffic}
+                onMinTrafficChange={setMinTraffic}
+                onMaxTrafficChange={setMaxTraffic}
+                onOpenChange={() => {}}
+                onApply={(overrideFilters) => {
+                  if (overrideFilters) {
+                    // Transform minTraffic/maxTraffic to minVisits/maxVisits for API
+                    handleApplyFilters({
+                      minVisits: overrideFilters.minTraffic,
+                      maxVisits: overrideFilters.maxTraffic
+                    });
+                  } else {
+                    handleApplyFilters();
+                  }
+                }}
+                isActive={minTraffic !== undefined || maxTraffic !== undefined}
+              />
+              <ActiveAdsFilter 
+                minActiveAds={minActiveAds} 
+                maxActiveAds={maxActiveAds} 
+                onMinActiveAdsChange={setMinActiveAds}
+                onMaxActiveAdsChange={setMaxActiveAds}
+                onActiveAdsChange={(min, max) => { setMinActiveAds(min); setMaxActiveAds(max); }} 
+                onOpenChange={() => {}} 
+                onApply={handleApplyFilters} 
+                isActive={minActiveAds !== undefined || maxActiveAds !== undefined} 
+              />
+              <ShopCreationFilter
+                selectedDate={shopCreationDate}
+                onDateChange={setShopCreationDate}
+                onOpenChange={() => {}}
+                onApply={handleApplyFilters}
+                isActive={!!shopCreationDate}
+              />
+              <MarketsFilter 
+                selectedCountries={selectedCountries} 
+                onCountriesChange={setSelectedCountries} 
+                onOpenChange={() => {}} 
+                onApply={handleApplyFilters} 
+                isActive={selectedCountries.length > 0} 
+              />
+              <NicheDropdown 
+                selectedNiches={selectedNiches} 
+                onNichesChange={setSelectedNiches} 
+                onApply={handleApplyFilters} 
+                isActive={selectedNiches.length > 0} 
+              />
+              <MonthlyOrdersFilter
+                minOrders={minOrders}
+                maxOrders={maxOrders}
+                onMinOrdersChange={setMinOrders}
+                onMaxOrdersChange={setMaxOrders}
+                onOpenChange={() => {}}
+                onApply={handleApplyFilters}
+                isActive={minOrders !== undefined || maxOrders !== undefined}
+              />
+              <DailyRevenueFilter
+                minRevenue={minRevenue}
+                maxRevenue={maxRevenue}
+                onMinRevenueChange={setMinRevenue}
+                onMaxRevenueChange={setMaxRevenue}
+                onOpenChange={() => {}}
+                onApply={handleApplyFilters}
+                isActive={minRevenue !== undefined || maxRevenue !== undefined}
+              />
+              <CurrencyFilter
+                selectedCurrencies={selectedCurrencies}
+                onCurrenciesChange={setSelectedCurrencies}
+                onOpenChange={() => {}}
+                onApply={handleApplyFilters}
+                isActive={selectedCurrencies.length > 0}
+              />
+              <PixelsFilter
+                selectedPixels={selectedPixels}
+                onPixelsChange={setSelectedPixels}
+                onOpenChange={() => {}}
+                onApply={handleApplyFilters}
+                isActive={selectedPixels.length > 0}
+              />
+              <OriginFilter
+                selectedOrigins={selectedOrigins}
+                onOriginsChange={setSelectedOrigins}
+                onOpenChange={() => {}}
+                onApply={handleApplyFilters}
+                isActive={selectedOrigins.length > 0}
+              />
+              <LanguageFilter
+                selectedLanguages={selectedLanguages}
+                onLanguagesChange={setSelectedLanguages}
+                onOpenChange={() => {}}
+                onApply={handleApplyFilters}
+                isActive={selectedLanguages.length > 0}
+              />
+              <DomainFilter
+                selectedDomains={selectedDomains}
+                onDomainsChange={setSelectedDomains}
+                onOpenChange={() => {}}
+                onApply={handleApplyFilters}
+                isActive={selectedDomains.length > 0}
+              />
+              <TrustpilotFilter
+                minRating={minTrustpilotRating}
+                maxRating={maxTrustpilotRating}
+                minReviews={minTrustpilotReviews}
+                maxReviews={maxTrustpilotReviews}
+                onMinRatingChange={setMinTrustpilotRating}
+                onMaxRatingChange={setMaxTrustpilotRating}
+                onMinReviewsChange={setMinTrustpilotReviews}
+                onMaxReviewsChange={setMaxTrustpilotReviews}
+                onOpenChange={() => {}}
+                onApply={handleApplyFilters}
+                isActive={minTrustpilotRating !== undefined || maxTrustpilotRating !== undefined || minTrustpilotReviews !== undefined || maxTrustpilotReviews !== undefined}
+              />
+              <ThemesFilter
+                selectedThemes={selectedThemes}
+                onThemesChange={setSelectedThemes}
+                onOpenChange={() => {}}
+                onApply={handleApplyFilters}
+                isActive={selectedThemes.length > 0}
+              />
+              <ApplicationsFilter
+                selectedApplications={selectedApps}
+                onApplicationsChange={setSelectedApps}
+                onOpenChange={() => {}}
+                onApply={handleApplyFilters}
+                isActive={selectedApps.length > 0}
+              />
+              <SocialNetworksFilter
+                selectedSocialNetworks={selectedSocialNetworks}
+                onSocialNetworksChange={setSelectedSocialNetworks}
+                onOpenChange={() => {}}
+                onApply={handleApplyFilters}
+                isActive={selectedSocialNetworks.length > 0}
+              />
             </div>
 
             {/* Active Filters Tags - Like Top Products */}
@@ -965,7 +1322,7 @@ export default function AdsPage() {
 
           {/* Ads Grid - CSS Grid for 3 columns */}
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }}>
-            {isLoading && ads.length === 0 ? (
+            {isLoading ? (
               <div className="ads-grid-container">
                 {Array.from({ length: 9 }).map((_, i) => <AdCardSkeleton key={i} />)}
               </div>

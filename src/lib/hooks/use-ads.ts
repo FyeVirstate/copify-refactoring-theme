@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef } from 'react'
 
 export interface Ad {
   id: number
@@ -61,6 +61,27 @@ export interface AdsFilters {
   dateFilter?: string
   euTransparency?: boolean
   sortBy?: string
+  
+  // New filters from Top Boutiques/Produits
+  minOrders?: number
+  maxOrders?: number
+  shopCreationDate?: string
+  currencies?: string
+  pixels?: string
+  origins?: string
+  languages?: string
+  domains?: string
+  minTrustpilotRating?: number
+  maxTrustpilotRating?: number
+  minTrustpilotReviews?: number
+  maxTrustpilotReviews?: number
+  themes?: string
+  apps?: string
+  socialNetworks?: string
+  minPrice?: number
+  maxPrice?: number
+  minCatalogSize?: number
+  maxCatalogSize?: number
 }
 
 export interface AdsPagination {
@@ -84,6 +105,11 @@ export function useAds() {
     totalPages: 0,
     hasMore: false,
   })
+  
+  // AbortController ref to cancel previous requests
+  const abortControllerRef = useRef<AbortController | null>(null)
+  // Request counter to track the latest request
+  const requestIdRef = useRef(0)
 
   // Build query params from filters
   const buildQueryParams = (filters: AdsFilters, page: number, perPage: number) => {
@@ -113,6 +139,27 @@ export function useAds() {
     if (filters.dateFilter) params.set('dateFilter', filters.dateFilter)
     if (filters.euTransparency) params.set('euTransparency', 'true')
     if (filters.sortBy) params.set('sortBy', filters.sortBy)
+    
+    // New filters from Top Boutiques/Produits
+    if (filters.minOrders !== undefined) params.set('minOrders', filters.minOrders.toString())
+    if (filters.maxOrders !== undefined) params.set('maxOrders', filters.maxOrders.toString())
+    if (filters.shopCreationDate) params.set('shopCreationDate', filters.shopCreationDate)
+    if (filters.currencies) params.set('currencies', filters.currencies)
+    if (filters.pixels) params.set('pixels', filters.pixels)
+    if (filters.origins) params.set('origins', filters.origins)
+    if (filters.languages) params.set('languages', filters.languages)
+    if (filters.domains) params.set('domains', filters.domains)
+    if (filters.minTrustpilotRating !== undefined) params.set('minTrustpilotRating', filters.minTrustpilotRating.toString())
+    if (filters.maxTrustpilotRating !== undefined) params.set('maxTrustpilotRating', filters.maxTrustpilotRating.toString())
+    if (filters.minTrustpilotReviews !== undefined) params.set('minTrustpilotReviews', filters.minTrustpilotReviews.toString())
+    if (filters.maxTrustpilotReviews !== undefined) params.set('maxTrustpilotReviews', filters.maxTrustpilotReviews.toString())
+    if (filters.themes) params.set('themes', filters.themes)
+    if (filters.apps) params.set('apps', filters.apps)
+    if (filters.socialNetworks) params.set('socialNetworks', filters.socialNetworks)
+    if (filters.minPrice !== undefined) params.set('minPrice', filters.minPrice.toString())
+    if (filters.maxPrice !== undefined) params.set('maxPrice', filters.maxPrice.toString())
+    if (filters.minCatalogSize !== undefined) params.set('minCatalogSize', filters.minCatalogSize.toString())
+    if (filters.maxCatalogSize !== undefined) params.set('maxCatalogSize', filters.maxCatalogSize.toString())
 
     return params
   }
@@ -123,12 +170,32 @@ export function useAds() {
     page = 1,
     perPage = 20
   ) => {
+    // Cancel any pending request
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort()
+    }
+    
+    // Create new AbortController for this request
+    const controller = new AbortController()
+    abortControllerRef.current = controller
+    
+    // Increment request ID to track this request
+    const currentRequestId = ++requestIdRef.current
+    
     setIsLoading(true)
     setError(null)
 
     try {
       const params = buildQueryParams(filters, page, perPage)
-      const res = await fetch(`/api/ads?${params}`)
+      const res = await fetch(`/api/ads?${params}`, {
+        signal: controller.signal
+      })
+      
+      // If this is not the latest request, ignore the response
+      if (currentRequestId !== requestIdRef.current) {
+        return null
+      }
+      
       const data = await res.json()
 
       if (data.success) {
@@ -140,11 +207,18 @@ export function useAds() {
         throw new Error(data.error || 'Failed to fetch ads')
       }
     } catch (err) {
+      // Ignore abort errors
+      if (err instanceof Error && err.name === 'AbortError') {
+        return null
+      }
       const message = err instanceof Error ? err.message : 'Failed to fetch ads'
       setError(message)
       throw err
     } finally {
-      setIsLoading(false)
+      // Only set loading to false if this is still the latest request
+      if (currentRequestId === requestIdRef.current) {
+        setIsLoading(false)
+      }
     }
   }, [])
 

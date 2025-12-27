@@ -151,6 +151,7 @@ export default function MarketsFilter({
       onOpenChange={onOpenChange}
       isActive={isActive || selectedCountries.length > 0}
       badge={selectedCountries.length > 0 ? selectedCountries.length : undefined}
+      forceAlignEnd={true}
     >
       <p className="fw-500 mb-2">Marchés</p>
       <p className="fs-small fw-500 mb-2 text-muted">Préréglages</p>
@@ -163,7 +164,7 @@ export default function MarketsFilter({
       />
 
       <div className="border-t border-gray-200 dark:border-gray-700 my-3" />
-
+      
       <FilterCheckboxList
         items={countriesWithFlags}
         selectedItems={selectedCountries}
@@ -175,7 +176,7 @@ export default function MarketsFilter({
         showIncludeExclude={true}
         groupName="marketsCheckboxes"
       />
-
+      
       <Button 
         className="w-100 mt-3" 
         onClick={() => onApply?.()}
