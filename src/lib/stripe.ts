@@ -5,11 +5,13 @@ let stripeInstance: Stripe | null = null
 
 export function getStripe(): Stripe {
   if (!stripeInstance) {
-    if (!process.env.STRIPE_SECRET_KEY) {
-      throw new Error('STRIPE_SECRET_KEY is not set')
+    // Support both STRIPE_SECRET and STRIPE_SECRET_KEY for compatibility
+    const stripeKey = process.env.STRIPE_SECRET || process.env.STRIPE_SECRET_KEY
+    if (!stripeKey) {
+      throw new Error('STRIPE_SECRET is not set')
     }
-    stripeInstance = new Stripe(process.env.STRIPE_SECRET_KEY, {
-      apiVersion: '2025-12-15.clover',
+    stripeInstance = new Stripe(stripeKey, {
+      apiVersion: '2024-12-18.acacia',
       typescript: true,
     })
   }
@@ -17,9 +19,10 @@ export function getStripe(): Stripe {
 }
 
 // Legacy export for compatibility (will throw if used during build)
-export const stripe = process.env.STRIPE_SECRET_KEY 
-  ? new Stripe(process.env.STRIPE_SECRET_KEY, {
-      apiVersion: '2025-12-15.clover',
+const stripeKey = process.env.STRIPE_SECRET || process.env.STRIPE_SECRET_KEY
+export const stripe = stripeKey 
+  ? new Stripe(stripeKey, {
+      apiVersion: '2024-12-18.acacia',
       typescript: true,
     })
   : (null as unknown as Stripe)
@@ -35,7 +38,8 @@ export async function getOrCreateStripeCustomer(
     return existingCustomerId
   }
 
-  const customer = await stripe.customers.create({
+  const stripeClient = getStripe()
+  const customer = await stripeClient.customers.create({
     email,
     name,
     metadata: {

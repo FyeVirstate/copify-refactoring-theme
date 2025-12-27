@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
   // Get user - stripeId is the Stripe customer ID in Laravel schema
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: { stripeId: true }
+    select: { stripeId: true, lang: true }
   })
 
   if (!user?.stripeId) {
@@ -34,7 +34,8 @@ export async function POST(request: NextRequest) {
   // Create billing portal session
   const portalSession = await stripe.billingPortal.sessions.create({
     customer: user.stripeId,
-    return_url: `${baseUrl}/dashboard/billing`,
+    return_url: `${baseUrl}/dashboard/plans`,
+    locale: user.lang === 'en' ? 'en' : 'fr',
   })
 
   return NextResponse.json({

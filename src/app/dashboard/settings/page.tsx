@@ -1062,15 +1062,18 @@ function BlackFridayBanner({ currentPlan }: { currentPlan?: string }) {
   );
 }
 
-// Pricing Cards Component
+// Pricing Cards Component - Now with actual Stripe integration
 function PricingCards({ billingPeriod, currentPlan }: { billingPeriod: string; currentPlan?: string }) {
+  const [subscribingPlan, setSubscribingPlan] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
   const plans = [
     {
       name: "Starter",
       identifier: billingPeriod === "monthly" ? "starter" : billingPeriod === "quarterly" ? "starter-quarterly" : "starter-year",
-      monthlyPrice: 39,
-      quarterlyPrice: 105, // 35 * 3
-      annualPrice: 276, // 23 * 12
+      monthlyPrice: 29,
+      quarterlyPrice: 75,
+      annualPrice: 228,
       features: [
         "5 créations de boutiques IA ( limité )",
         "Suivi et analyse simultané de 10 boutiques",
@@ -1084,9 +1087,9 @@ function PricingCards({ billingPeriod, currentPlan }: { billingPeriod: string; c
     {
       name: "Growth",
       identifier: billingPeriod === "monthly" ? "basic" : billingPeriod === "quarterly" ? "basic-quarterly" : "basic-year",
-      monthlyPrice: 59,
-      quarterlyPrice: 159, // 53 * 3
-      annualPrice: 420, // 35 * 12
+      monthlyPrice: 49,
+      quarterlyPrice: 129,
+      annualPrice: 348,
       popular: true,
       features: [
         "Toutes les fonctionnalités du Starter, plus :",
@@ -1104,9 +1107,9 @@ function PricingCards({ billingPeriod, currentPlan }: { billingPeriod: string; c
     {
       name: "Pro",
       identifier: billingPeriod === "monthly" ? "pro" : billingPeriod === "quarterly" ? "pro-quarterly" : "pro-year",
-      monthlyPrice: 89,
-      quarterlyPrice: 240, // 80 * 3
-      annualPrice: 636, // 53 * 12
+      monthlyPrice: 79,
+      quarterlyPrice: 210,
+      annualPrice: 588,
       features: [
         "Toutes les fonctionnalités du Growth, plus :",
         "Suivi et analyse simultané de 120 boutiques",
@@ -1129,64 +1132,114 @@ function PricingCards({ billingPeriod, currentPlan }: { billingPeriod: string; c
     return "/mois, facturé annuellement";
   };
 
+  const handleSubscribe = async (planIdentifier: string) => {
+    setSubscribingPlan(planIdentifier);
+    setError(null);
+    
+    try {
+      console.log("[Settings] Subscribing to plan:", planIdentifier);
+      const res = await fetch("/api/billing/subscribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ planIdentifier }),
+      });
+      
+      const data = await res.json();
+      console.log("[Settings] Subscribe response:", data);
+      
+      if (!res.ok) {
+        throw new Error(data.message || data.error || "Erreur lors de la souscription");
+      }
+      
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        throw new Error("URL de paiement non reçue");
+      }
+    } catch (err) {
+      console.error("[Settings] Subscribe error:", err);
+      setError(err instanceof Error ? err.message : "Erreur inconnue");
+    } finally {
+      setSubscribingPlan(null);
+    }
+  };
+
   return (
-    <div className="d-lg-flex d-md-flex d-block gap-3 plan-wrapper justify-content-center">
-      {plans.map((plan) => {
-        const isCurrent = currentPlan === plan.identifier;
-        return (
-          <div key={plan.name} className="subscription-box mb-3 mb-lg-0">
-            {/* Popular badge above the card */}
-            {plan.popular && (
-              <div 
-                className="text-center mb-2"
-                style={{ marginTop: -8 }}
-              >
-                <span className="px-3 py-2 bg-primary text-white rounded-pill small fw-semibold" style={{ fontSize: '11px' }}>
-                  74% DES UTILISATEURS CHOISISSENT CE PLAN
-                </span>
-              </div>
-            )}
-            <div 
-              className={cn(
-                "card h-100 border-0 shadow-sm rounded-4",
-                plan.popular && "border border-primary border-2"
-              )}
-            >
-              <div className="card-body p-4">
-                <h5 className="fw-bold mb-3">{plan.name}</h5>
-                <div className="d-flex align-items-baseline gap-1 mb-2">
-                  <span className="fs-2 fw-bold">{getPrice(plan)}€</span>
-                  <span className="text-muted small">EUR {getBillingText()}</span>
-                </div>
-
-                <button
-                  className={cn(
-                    "btn w-100 py-2 mb-3",
-                    isCurrent ? "btn-success" : plan.popular ? "btn-primary" : "btn-outline-secondary"
-                  )}
-                  disabled={isCurrent}
+    <>
+      {error && (
+        <div className="alert alert-danger mb-4" role="alert">
+          {error}
+        </div>
+      )}
+      <div className="d-lg-flex d-md-flex d-block gap-3 plan-wrapper justify-content-center">
+        {plans.map((plan) => {
+          const isCurrent = currentPlan === plan.identifier;
+          const isLoading = subscribingPlan === plan.identifier;
+          return (
+            <div key={plan.name} className="subscription-box mb-3 mb-lg-0">
+              {/* Popular badge above the card */}
+              {plan.popular && (
+                <div 
+                  className="text-center mb-2"
+                  style={{ marginTop: -8 }}
                 >
-                  {isCurrent ? "Votre plan actuel" : "Choisir"}
-                </button>
+                  <span className="px-3 py-2 bg-primary text-white rounded-pill small fw-semibold" style={{ fontSize: '11px' }}>
+                    74% DES UTILISATEURS CHOISISSENT CE PLAN
+                  </span>
+                </div>
+              )}
+              <div 
+                className={cn(
+                  "card h-100 border-0 shadow-sm rounded-4",
+                  plan.popular && "border border-primary border-2"
+                )}
+              >
+                <div className="card-body p-4">
+                  <h5 className="fw-bold mb-3">{plan.name}</h5>
+                  <div className="d-flex align-items-baseline gap-1 mb-2">
+                    <span className="fs-2 fw-bold">{getPrice(plan)}€</span>
+                    <span className="text-muted small">EUR {getBillingText()}</span>
+                  </div>
 
-                <p className="text-muted small text-center mb-4" style={{ fontSize: '11px' }}>
-                  Annuler à tout moment | Satisfaction Garantie | Paiement sécurisé
-                </p>
+                  <button
+                    className={cn(
+                      "btn w-100 py-2 mb-3",
+                      isCurrent ? "btn-success" : plan.popular ? "btn-primary" : "btn-outline-secondary"
+                    )}
+                    disabled={isCurrent || isLoading || subscribingPlan !== null}
+                    onClick={() => !isCurrent && handleSubscribe(plan.identifier)}
+                  >
+                    {isLoading ? (
+                      <>
+                        <span className="spinner-border spinner-border-sm me-2" role="status"></span>
+                        Chargement...
+                      </>
+                    ) : isCurrent ? (
+                      "Votre plan actuel"
+                    ) : (
+                      "Choisir"
+                    )}
+                  </button>
 
-                <h6 className="fw-semibold mb-3">Ce qui est inclus</h6>
-                <ul className="list-unstyled">
-                  {plan.features.map((feature, i) => (
-                    <li key={i} className="d-flex align-items-start gap-2 mb-2">
-                      <i className="ri-check-line text-primary mt-1" style={{ fontSize: '14px' }}></i>
-                      <span style={{ fontSize: '13px' }}>{feature}</span>
-                    </li>
-                  ))}
-                </ul>
+                  <p className="text-muted small text-center mb-4" style={{ fontSize: '11px' }}>
+                    Annuler à tout moment | Satisfaction Garantie | Paiement sécurisé
+                  </p>
+
+                  <h6 className="fw-semibold mb-3">Ce qui est inclus</h6>
+                  <ul className="list-unstyled">
+                    {plan.features.map((feature, i) => (
+                      <li key={i} className="d-flex align-items-start gap-2 mb-2">
+                        <i className="ri-check-line text-primary mt-1" style={{ fontSize: '14px' }}></i>
+                        <span style={{ fontSize: '13px' }}>{feature}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               </div>
             </div>
-          </div>
-        );
-      })}
-    </div>
+          );
+        })}
+      </div>
+    </>
   );
 }

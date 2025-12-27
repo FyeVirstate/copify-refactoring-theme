@@ -71,8 +71,11 @@ export const authConfig: NextAuthConfig = {
         return Response.redirect(new URL('/dashboard', nextUrl))
       }
       
-      // Protect API routes (except auth, public, and share routes)
-      if (isApiRoute && !isAuthApiRoute && !isPublicApiRoute && !isShareApiRoute && !isLoggedIn) {
+      // Billing sync route is public for admin sync operations
+      const isBillingSyncRoute = pathname.startsWith('/api/billing/sync-stripe-ids')
+      
+      // Protect API routes (except auth, public, share, and billing sync routes)
+      if (isApiRoute && !isAuthApiRoute && !isPublicApiRoute && !isShareApiRoute && !isBillingSyncRoute && !isLoggedIn) {
         return false
       }
       

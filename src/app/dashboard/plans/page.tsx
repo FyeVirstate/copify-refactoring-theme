@@ -1,389 +1,660 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import DashboardHeader from "@/components/DashboardHeader";
-import { Button } from "@/components/ui/button";
-import { useBilling } from "@/lib/hooks/use-billing";
+import { useToast } from "@/components/ui/toast";
 
 interface Plan {
-  id: number;
+  id: string;
   identifier: string;
   title: string;
   price: number;
-  currency: string;
-  interval: string;
-  features: string[];
-  limits: {
-    shopTracker: number;
-    productExport: number;
-    generateProduct: number;
-    videoGeneration: number;
-    imageGeneration: number;
-  };
-  popular?: boolean;
+  stripeId: string | null;
+  stripeIdEn: string | null;
 }
 
-export default function PlansPage() {
-  const { plans, currentPlan, isLoading, fetchPlans, subscribe } = useBilling();
-  const [billingInterval, setBillingInterval] = useState<'monthly' | 'yearly'>('monthly');
-  const [isSubscribing, setIsSubscribing] = useState<string | null>(null);
+interface CurrentSubscription {
+  id: string;
+  planIdentifier: string;
+  status: string;
+  endsAt: string | null;
+}
+
+// Plan features configuration matching Laravel EXACTLY
+const planFeatures: Record<string, { features: string[]; allFeaturesOf?: string }> = {
+  starter: {
+    features: [
+      "5 créations de boutiques IA ( limité )",
+      "Suivi et analyse simultané de 10 boutiques",
+      "Top Boutiques : 25 recherches / jour",
+      "Produits Gagnants : 25 recherches / jour",
+      "Publicités Gagnantes : recherches / jour",
+      "Export produits ( limité à 20 )",
+      "Formation E-Commerce Copyfy",
+    ],
+  },
+  basic: {
+    allFeaturesOf: "Starter",
+    features: [
+      "Créations de boutiques illimités IA",
+      "Suivi et analyse simultané de 25 boutiques",
+      "Top Boutiques illimité",
+      "Produits gagnants illimité",
+      "Publicités gagnantes illimité",
+      "Export produits illimités",
+      "Coaching hebdo avec un Expert E-Commerce",
+      "Analyse Copyfy IA",
+      "SOON : Analyse de vos publicités",
+    ],
+  },
+  pro: {
+    allFeaturesOf: "Growth",
+    features: [
+      "Suivi et analyse simultané de 120 boutiques",
+      "Connexion multi-boutiques Shopify",
+      "Accès à nos agents ( Fournisseurs )",
+      "SOON : Tableau de bord ( Analyse des profits )",
+    ],
+  },
+};
+
+// Countdown Timer Component
+function CountdownTimer() {
+  const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
 
   useEffect(() => {
-    fetchPlans();
-  }, [fetchPlans]);
+    const targetDate = new Date("2025-01-06T23:59:59").getTime();
+    
+    const interval = setInterval(() => {
+      const now = new Date().getTime();
+      const distance = targetDate - now;
+      
+      if (distance < 0) {
+        clearInterval(interval);
+        return;
+      }
+      
+      setTimeLeft({
+        days: Math.floor(distance / (1000 * 60 * 60 * 24)),
+        hours: Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
+        minutes: Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60)),
+        seconds: Math.floor((distance % (1000 * 60)) / 1000),
+      });
+    }, 1000);
+    
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <div style={{
+      position: "absolute",
+      top: "-22px",
+      right: "40px",
+      zIndex: 10,
+    }}>
+      <div style={{
+        display: "flex",
+        gap: "8px",
+        background: "#3b82f6",
+        padding: "12px 8px",
+        borderRadius: "0 0 16px 16px",
+        boxShadow: "0 4px 15px rgba(59, 130, 246, 0.4)",
+      }}>
+        {[
+          { value: timeLeft.days, label: "JOURS" },
+          { value: timeLeft.hours, label: "HEURES" },
+          { value: timeLeft.minutes, label: "MIN" },
+          { value: timeLeft.seconds, label: "SEC" },
+        ].map((item, idx) => (
+          <div key={idx} style={{ display: "flex", alignItems: "center" }}>
+            {idx > 0 && <span style={{ color: "white", fontWeight: 700, margin: "0 4px" }}>:</span>}
+            <div style={{ textAlign: "center", minWidth: "50px" }}>
+              <div style={{ fontWeight: 600, color: "white", lineHeight: 1 }}>
+                {String(item.value).padStart(2, "0")}
+              </div>
+              <div style={{ fontSize: "10px", color: "rgba(255,255,255,0.7)", textTransform: "uppercase", letterSpacing: "1px", marginTop: "6px" }}>
+                {item.label}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function PlansContent() {
+  const searchParams = useSearchParams();
+  const { success: toastSuccess, error: toastError, info: toastInfo } = useToast();
+
+  const [plans, setPlans] = useState<Plan[]>([]);
+  const [currentSubscription, setCurrentSubscription] = useState<CurrentSubscription | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [billingInterval, setBillingInterval] = useState<"monthly" | "quarterly" | "annual">("monthly");
+  const [subscribingPlan, setSubscribingPlan] = useState<string | null>(null);
+  const [showPlans, setShowPlans] = useState(false);
+
+  useEffect(() => {
+    const successParam = searchParams.get("success");
+    const errorParam = searchParams.get("error");
+    const canceledParam = searchParams.get("canceled");
+    const planParam = searchParams.get("plan");
+    const messageParam = searchParams.get("message");
+    const priceIdParam = searchParams.get("priceId");
+
+    if (successParam === "true") {
+      toastSuccess(planParam ? `Félicitations ! Votre abonnement ${planParam} a été activé.` : "Abonnement activé !");
+      window.history.replaceState({}, "", "/dashboard/plans");
+    } else if (canceledParam === "true") {
+      toastInfo("Paiement annulé.");
+      window.history.replaceState({}, "", "/dashboard/plans");
+    } else if (errorParam) {
+      // More detailed error messages
+      const errorMessages: Record<string, string> = {
+        missing_session: "Session de paiement manquante.",
+        database_error: "Erreur de base de données.",
+        stripe_not_configured: "Stripe n'est pas configuré.",
+        no_subscription: "Pas d'abonnement trouvé dans la session.",
+        plan_not_found: priceIdParam 
+          ? `Plan non trouvé pour le prix: ${priceIdParam}. Vérifiez les IDs Stripe.`
+          : "Plan non trouvé. Contactez le support.",
+        payment_pending: "Le paiement est en attente.",
+        payment_failed: "Le paiement a échoué.",
+        processing_error: messageParam 
+          ? `Erreur de traitement: ${messageParam}`
+          : "Erreur lors du traitement du paiement.",
+      };
+      const errorMsg = errorMessages[errorParam] || `Erreur: ${errorParam}`;
+      console.error("[Plans] Error:", errorParam, messageParam, priceIdParam);
+      toastError(errorMsg);
+      window.history.replaceState({}, "", "/dashboard/plans");
+    }
+  }, [searchParams, toastSuccess, toastError, toastInfo]);
+
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        const [plansRes, subRes] = await Promise.all([fetch("/api/billing/plans"), fetch("/api/billing/subscription")]);
+        const plansData = await plansRes.json();
+        if (plansData.plans) setPlans(plansData.plans);
+        if (subRes.ok) {
+          const subData = await subRes.json();
+          if (subData.hasSubscription && subData.subscription) {
+            setCurrentSubscription({ id: subData.subscription.id, planIdentifier: subData.subscription.planIdentifier, status: subData.subscription.status, endsAt: subData.subscription.endsAt });
+          }
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    fetchData();
+  }, []);
+
+  const getPlansForInterval = (): Plan[] => {
+    const ids: Record<string, string[]> = {
+      monthly: ["starter", "basic", "pro"],
+      quarterly: ["starter-quarterly", "basic-quarterly", "pro-quarterly"],
+      annual: ["starter-year", "basic-year", "pro-year"],
+    };
+    return plans.filter((p) => ids[billingInterval].includes(p.identifier)).sort((a, b) => a.price - b.price);
+  };
+
+  const getMonthlyPrice = (plan: Plan): number => {
+    if (billingInterval === "quarterly") return Math.round((plan.price / 3) * 100) / 100;
+    if (billingInterval === "annual") return Math.floor(plan.price / 12);
+    return plan.price;
+  };
 
   const handleSubscribe = async (planIdentifier: string) => {
-    setIsSubscribing(planIdentifier);
+    setSubscribingPlan(planIdentifier);
     try {
-      // subscribe handles the redirect internally
-      await subscribe(planIdentifier);
-    } catch (error) {
-      console.error("Subscription error:", error);
+      const res = await fetch("/api/billing/subscribe", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ planIdentifier }) });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || data.error);
+      if (data.url) window.location.href = data.url;
+    } catch (err) {
+      toastError(err instanceof Error ? err.message : "Erreur");
     } finally {
-      setIsSubscribing(null);
+      setSubscribingPlan(null);
     }
   };
 
-  const getFilteredPlans = () => {
-    if (!plans) return [];
-    return plans.filter(plan => {
-      if (billingInterval === 'yearly') {
-        return plan.identifier.includes('year') || plan.identifier.includes('annual');
-      }
-      return !plan.identifier.includes('year') && !plan.identifier.includes('annual');
-    });
+  const handleOpenPortal = async () => {
+    try {
+      const res = await fetch("/api/billing/portal", { method: "POST" });
+      const data = await res.json();
+      if (data.url) window.location.href = data.url;
+    } catch { toastError("Erreur"); }
   };
 
-  const formatPrice = (price: number, currency: string) => {
-    return new Intl.NumberFormat('fr-FR', {
-      style: 'currency',
-      currency: currency || 'EUR',
-    }).format(price);
-  };
-
-  // Default plans for display when API not available
-  const defaultPlans: Plan[] = [
-    {
-      id: 1,
-      identifier: 'starter',
-      title: 'Starter',
-      price: 29,
-      currency: 'EUR',
-      interval: 'month',
-      popular: false,
-      features: [
-        '3 boutiques suivies',
-        '10 exports de produits/mois',
-        '5 générations de produits',
-        'Support email',
-      ],
-      limits: {
-        shopTracker: 3,
-        productExport: 10,
-        generateProduct: 5,
-        videoGeneration: 0,
-        imageGeneration: 5,
-      },
-    },
-    {
-      id: 2,
-      identifier: 'pro',
-      title: 'Pro',
-      price: 49,
-      currency: 'EUR',
-      interval: 'month',
-      popular: true,
-      features: [
-        '10 boutiques suivies',
-        '50 exports de produits/mois',
-        '25 générations de produits',
-        '10 vidéos IA/mois',
-        '25 images IA/mois',
-        'Support prioritaire',
-      ],
-      limits: {
-        shopTracker: 10,
-        productExport: 50,
-        generateProduct: 25,
-        videoGeneration: 10,
-        imageGeneration: 25,
-      },
-    },
-    {
-      id: 3,
-      identifier: 'business',
-      title: 'Business',
-      price: 99,
-      currency: 'EUR',
-      interval: 'month',
-      popular: false,
-      features: [
-        'Boutiques illimitées',
-        'Exports illimités',
-        '100 générations de produits',
-        '50 vidéos IA/mois',
-        '100 images IA/mois',
-        'Support dédié',
-        'API Access',
-      ],
-      limits: {
-        shopTracker: -1,
-        productExport: -1,
-        generateProduct: 100,
-        videoGeneration: 50,
-        imageGeneration: 100,
-      },
-    },
-  ];
-
-  const displayPlans = plans && plans.length > 0 ? getFilteredPlans() : defaultPlans;
+  const displayPlans = getPlansForInterval();
+  const hasQuarterlyPlans = plans.some(p => p.identifier.includes("quarterly"));
+  
+  // Always show Trimestriel toggle (like Laravel) - will be disabled if no plans
+  const showTrimestrielToggle = true;
 
   return (
     <>
-      <DashboardHeader title="Abonnements" />
-
+      <DashboardHeader title="Tarification" />
       <div className="bg-weak-50 home-content-wrapper">
-        <div className="container py-4">
-          {/* Header */}
-          <div            className="text-center mb-5"
-          >
-            <h2 className="mb-2">Choisissez votre plan</h2>
-            <p className="text-muted mb-4">
-              Sélectionnez le plan qui correspond le mieux à vos besoins
-            </p>
+        <div className="p-3 w-max-width-xl mx-auto">
 
-            {/* Billing Toggle */}
-            <div className="d-inline-flex align-items-center bg-white rounded-pill p-1 shadow-sm">
-              <button
-                className={`btn btn-sm rounded-pill px-4 ${
-                  billingInterval === 'monthly' ? 'btn-primary' : 'btn-light'
-                }`}
-                onClick={() => setBillingInterval('monthly')}
-              >
-                Mensuel
-              </button>
-              <button
-                className={`btn btn-sm rounded-pill px-4 ${
-                  billingInterval === 'yearly' ? 'btn-primary' : 'btn-light'
-                }`}
-                onClick={() => setBillingInterval('yearly')}
-              >
-                Annuel
-                <span className="badge bg-success ms-2">-20%</span>
-              </button>
-            </div>
-          </div>
+          {/* ===== BLACK FRIDAY Q4 BANNER - EXACT LARAVEL DESIGN ===== */}
+          <div style={{
+            background: "rgba(17, 17, 17, 1)",
+            borderRadius: "20px",
+            position: "relative",
+            boxShadow: "0 10px 40px rgba(0, 0, 0, 0.3)",
+            border: "1px solid rgba(59, 130, 246, 0.3)",
+            maxWidth: "1300px",
+            margin: "auto",
+            marginTop: "40px",
+            marginBottom: "24px",
+          }}>
+            <CountdownTimer />
+            <div style={{ display: "flex", flexWrap: "wrap", position: "relative", zIndex: 1, overflow: "hidden", borderRadius: "20px" }}>
+              {/* Left Section - Special Offer */}
+              <div style={{
+                position: "relative",
+                margin: "20px",
+                width: "424px",
+                flex: "0 0 auto",
+                boxShadow: "0 0 40px rgba(51, 92, 255, 0.25), 0 0 80px rgba(51, 92, 255, 0.18), 0 0 120px rgba(51, 92, 255, 0.12)",
+                borderRadius: "18px",
+                background: "linear-gradient(135deg, #007AFF, #3b82f6, #3A3A3A)",
+                padding: "2px",
+              }}>
+                <div style={{
+                  background: "#000000",
+                  borderRadius: "16px",
+                  padding: "24px",
+                  position: "relative",
+                  overflow: "hidden",
+                  height: "100%",
+                }}>
+                  {/* Confetti dots */}
+                  <div style={{ position: "absolute", top: "8%", left: "5%", width: "4px", height: "12px", background: "white", transform: "rotate(-30deg)" }} />
+                  <div style={{ position: "absolute", top: "15%", left: "18%", width: "3px", height: "10px", background: "white", transform: "rotate(45deg)" }} />
+                  <div style={{ position: "absolute", top: "5%", left: "35%", width: "4px", height: "14px", background: "#3b82f6", transform: "rotate(-20deg)" }} />
+                  <div style={{ position: "absolute", top: "19%", left: "28%", width: "10px", height: "10px", background: "#3b82f6", transform: "rotate(45deg)" }} />
+                  <div style={{ position: "absolute", top: "47%", right: "8%", width: "4px", height: "12px", background: "white", transform: "rotate(-45deg)" }} />
+                  <div style={{ position: "absolute", top: "50%", right: "15%", width: "10px", height: "10px", background: "#3b82f6", transform: "rotate(45deg)" }} />
 
-          {/* Plans Grid */}
-          {isLoading ? (
-            <div className="text-center py-5">
-              <div className="spinner-border text-primary" role="status">
-                <span className="visually-hidden">Loading...</span>
+                  <div style={{ display: "inline-block", background: "rgba(153, 160, 174, 0.15)", color: "#ffffff", padding: "8px 16px", borderRadius: "50px", fontWeight: 600, marginBottom: "16px", border: "1px solid rgba(255, 255, 255, 0.1)" }}>
+                    Pour les plus ambitieux
+                  </div>
+                  <h2 style={{ fontSize: "24px", fontWeight: 800, color: "white", lineHeight: 1.2, marginBottom: "50px" }}>
+                    Offre spéciale Q4 Black Friday
+                  </h2>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "6px" }}>
+                    <div>
+                      <div style={{ fontSize: "32px", fontWeight: 600, color: "white" }}>
+                        <span style={{ color: "rgba(255, 255, 255, 0.4)", fontSize: "24px", textDecoration: "line-through", marginRight: "4px" }}>€89</span>
+                        €49<span style={{ fontSize: "16px" }}>/par mois</span>
+                      </div>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                      <span style={{ background: "rgba(251, 55, 72, 0.24)", color: "rgba(233, 53, 68, 1)", padding: "2px 8px", borderRadius: "40px", fontSize: "12px", fontWeight: 500 }}>-45%</span>
+                      <span style={{ background: "rgba(31, 193, 107, 1)", color: "white", padding: "2px 8px", borderRadius: "40px", fontSize: "12px", fontWeight: 500 }}>Économisez $120</span>
+                    </div>
+                  </div>
+                  <p style={{ color: "rgba(255, 255, 255, 0.7)", fontSize: "14px", marginBottom: "24px" }}>facturé trimestriellement</p>
+                  {currentSubscription?.planIdentifier === "pro-quarterly" ? (
+                    <button style={{ background: "#22c55e", color: "white", border: "none", fontSize: "16px", padding: "16px 32px", fontWeight: 600, borderRadius: "90px", width: "100%", marginBottom: "10px" }}>
+                      <i className="ri-check-line me-1"></i>Votre plan actuel
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => handleSubscribe("pro-quarterly")}
+                      disabled={subscribingPlan === "pro-quarterly"}
+                      style={{ background: "white", color: "#0f0f2a", border: "none", fontSize: "16px", padding: "16px 32px", fontWeight: 600, borderRadius: "90px", cursor: "pointer", width: "100%", marginBottom: "10px" }}
+                    >
+                      {subscribingPlan === "pro-quarterly" ? "Chargement..." : "Commencer maintenant"}
+                    </button>
+                  )}
+                  <p style={{ color: "#ffffff", fontSize: "12px", textAlign: "center" }}>
+                    Sans engagement. <span style={{ color: "rgba(255, 255, 255, 0.6)" }}>Annulez à tout moment.</span>
+                  </p>
+                </div>
               </div>
-            </div>
-          ) : (
-            <div className="row g-4 justify-content-center">
-              {displayPlans.map((plan, index) => (
-                <div
-                  key={plan.id || index}
-                  
-                  
-                  
-                  className="col-12 col-md-6 col-lg-4"
-                >
-                  <div
-                    className={`card h-100 ${
-                      plan.popular ? 'border-primary shadow' : ''
-                    }`}
-                  >
-                    {plan.popular && (
-                      <div className="card-header bg-primary text-white text-center py-2">
-                        <small className="fw-500">
-                          <i className="ri-star-fill me-1"></i>
-                          Le plus populaire
-                        </small>
-                      </div>
-                    )}
-                    <div className="card-body d-flex flex-column">
-                      <h4 className="card-title text-center mb-3">{plan.title}</h4>
-                      
-                      <div className="text-center mb-4">
-                        <span className="display-5 fw-bold">
-                          {formatPrice(
-                            billingInterval === 'yearly' ? plan.price * 0.8 : plan.price,
-                            plan.currency || 'EUR'
-                          )}
-                        </span>
-                        <span className="text-muted">
-                          /{billingInterval === 'yearly' ? 'an' : 'mois'}
-                        </span>
-                      </div>
 
-                      <ul className="list-unstyled mb-4 flex-grow-1">
-                        {(plan.features || []).map((feature, idx) => (
-                          <li key={idx} className="mb-2 d-flex align-items-start">
-                            <i className="ri-check-line text-success me-2 mt-1"></i>
-                            <span>{feature}</span>
-                          </li>
-                        ))}
-                      </ul>
-
-                      <div className="mt-auto">
-                        {currentPlan?.identifier === plan.identifier ? (
-                          <Button
-                            className="w-100"
-                            variant="outline"
-                            disabled
-                          >
-                            <i className="ri-check-line me-1"></i>
-                            Plan actuel
-                          </Button>
-                        ) : (
-                          <Button
-                            className="w-100"
-                            variant={plan.popular ? 'default' : 'outline'}
-                            onClick={() => handleSubscribe(plan.identifier)}
-                            disabled={isSubscribing === plan.identifier}
-                          >
-                            {isSubscribing === plan.identifier ? (
-                              <span className="rotating">
-                                <i className="ri-loader-2-line"></i>
-                              </span>
-                            ) : (
-                              <>
-                                {currentPlan ? 'Changer de plan' : 'Commencer'}
-                              </>
-                            )}
-                          </Button>
-                        )}
-                      </div>
+              {/* Right Section - Features */}
+              <div style={{ flex: 1, padding: "20px 30px", display: "flex", flexDirection: "column", minWidth: "300px" }}>
+                <div style={{ paddingTop: "30px", display: "flex", gap: "40px", flexWrap: "wrap" }}>
+                  <div>
+                    <p style={{ color: "white", fontSize: "14px", fontWeight: 600, marginBottom: "12px" }}>Inclus :</p>
+                    <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
+                      {["Copyfy Pro Plan", "Créations de boutiques illimités IA", "Produits gagnants illimité", "Publicités gagnantes illimité", "Top Boutiques illimitées"].map((f, i) => (
+                        <li key={i} style={{ display: "flex", alignItems: "center", gap: "10px", color: "rgba(255, 255, 255, 0.85)", marginBottom: "10px" }}>
+                          <span style={{ width: "20px", height: "20px", background: "linear-gradient(135deg, #3b82f6, #2563eb)", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                            <i className="ri-check-line" style={{ color: "#111", fontSize: "12px" }}></i>
+                          </span>
+                          {f}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                  <div>
+                    <p style={{ color: "white", fontSize: "14px", fontWeight: 600, marginBottom: "12px" }}>&nbsp;</p>
+                    <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
+                      {["Suivi et analyse de 120 boutiques", "Exports de produits illimités", "Accès à nos fournisseurs vérifiés", "Accès au Chatbot Copyfy IA", "Coaching hebdo groupé"].map((f, i) => (
+                        <li key={i} style={{ display: "flex", alignItems: "center", gap: "10px", color: "rgba(255, 255, 255, 0.85)", marginBottom: "10px" }}>
+                          <span style={{ width: "20px", height: "20px", background: "linear-gradient(135deg, #3b82f6, #2563eb)", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                            <i className="ri-check-line" style={{ color: "#111", fontSize: "12px" }}></i>
+                          </span>
+                          {f}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+                {/* Gift Section */}
+                <div style={{ marginTop: "auto", paddingTop: "20px" }}>
+                  <p style={{ color: "white", fontSize: "14px", fontWeight: 600, marginBottom: "6px", textAlign: "center" }}>Et plus encore :</p>
+                  <div style={{ display: "flex", justifyContent: "space-between", maxWidth: "380px", gap: "20px", padding: "12px 12px 0 20px", background: "rgba(140, 148, 164, 0.05)", borderRadius: "12px", margin: "auto" }}>
+                    <div style={{ marginTop: "14px" }}>
+                      <h4 style={{ color: "white", fontSize: "16px", fontWeight: 600, margin: "0 0 4px 0" }}>20 Produits Gagnants Q4</h4>
+                      <span style={{ color: "#FF4158", fontWeight: 600 }}>Gratuit</span>
+                    </div>
+                    <div style={{ width: "120px", height: "82px" }}>
+                      <img src="/img/gift-image.png" alt="gift" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                     </div>
                   </div>
                 </div>
-              ))}
+              </div>
+            </div>
+          </div>
+
+          {/* ===== TOGGLE BUTTON ===== */}
+          <div className="text-center mb-4">
+            <button type="button" className="btn btn-light border" onClick={() => setShowPlans(!showPlans)} style={{ padding: "10px 20px", borderRadius: "8px", fontWeight: 500, color: "#6b7280" }}>
+              <span>{showPlans ? "Masquer les autres plans" : "Voir les autres plans"}</span>
+              <i className={`ms-2 ${showPlans ? "ri-arrow-up-s-line" : "ri-arrow-down-s-line"}`}></i>
+            </button>
+          </div>
+
+          {showPlans && (
+            <div className="pb-5">
+              {/* ===== BILLING TOGGLE - Mensuel / Trimestriel / Annuel (Laravel style) ===== */}
+              <div className="d-flex justify-content-center mt-4 mb-4">
+                <div style={{ 
+                  backgroundColor: "#f8f9fa", 
+                  border: "1px solid #e9ecef", 
+                  boxShadow: "0 2px 4px rgba(0, 0, 0, 0.05)",
+                  padding: "4px", 
+                  gap: 0,
+                  borderRadius: "12px", 
+                  display: "inline-flex", 
+                  position: "relative", 
+                  overflow: "hidden",
+                  maxWidth: "600px",
+                }}>
+                  {/* Sliding background */}
+                  <div style={{
+                    content: "''",
+                    position: "absolute", 
+                    top: "4px", 
+                    left: "4px",
+                    width: "calc(33.333% - 2.67px)",
+                    height: "calc(100% - 8px)", 
+                    backgroundColor: "#007bff",
+                    borderRadius: "8px",
+                    transition: "transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)", 
+                    zIndex: 1,
+                    boxShadow: "0 2px 8px rgba(0, 123, 255, 0.3)",
+                    transform: billingInterval === "monthly" 
+                      ? "translateX(0)" 
+                      : billingInterval === "quarterly" 
+                        ? "translateX(calc(100% + 2.67px))" 
+                        : "translateX(calc(200% + 5.34px))",
+                  }} />
+                  
+                  {/* Monthly button */}
+                  <button 
+                    type="button" 
+                    onClick={() => setBillingInterval("monthly")} 
+                    style={{ 
+                      backgroundColor: "transparent", 
+                      border: "none", 
+                      color: billingInterval === "monthly" ? "#fff" : "#495057", 
+                      fontWeight: 600, 
+                      padding: "8px 16px", 
+                      borderRadius: "8px", 
+                      position: "relative", 
+                      zIndex: 2, 
+                      fontSize: "14px", 
+                      cursor: "pointer",
+                      flex: "1 1 0",
+                      minWidth: "130px",
+                      height: "40px",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      lineHeight: "1.2",
+                      whiteSpace: "nowrap",
+                      transition: "all 0.3s ease",
+                    }}
+                  >
+                    Mensuel
+                  </button>
+                  
+                  {/* Quarterly button */}
+                  <button 
+                    type="button" 
+                    onClick={() => hasQuarterlyPlans ? setBillingInterval("quarterly") : toastInfo("Les plans trimestriels ne sont pas encore disponibles.")} 
+                    style={{ 
+                      backgroundColor: "transparent", 
+                      border: "none", 
+                      color: billingInterval === "quarterly" ? "#fff" : hasQuarterlyPlans ? "#495057" : "#9ca3af", 
+                      fontWeight: 600, 
+                      padding: "8px 16px", 
+                      borderRadius: "8px", 
+                      position: "relative", 
+                      zIndex: 2, 
+                      fontSize: "14px", 
+                      cursor: hasQuarterlyPlans ? "pointer" : "not-allowed", 
+                      display: "inline-flex", 
+                      alignItems: "center", 
+                      justifyContent: "center",
+                      gap: "4px",
+                      opacity: hasQuarterlyPlans ? 1 : 0.6,
+                      flex: "1 1 0",
+                      minWidth: "130px",
+                      height: "40px",
+                      lineHeight: "1.2",
+                      whiteSpace: "nowrap",
+                      transition: "all 0.3s ease",
+                    }}
+                  >
+                    Trimestriel
+                    <span style={{ 
+                      fontSize: "10px", 
+                      padding: "2px 6px", 
+                      borderRadius: "4px", 
+                      backgroundColor: billingInterval === "quarterly" ? "rgba(255,255,255,0.25)" : "rgba(23, 162, 184, 0.15)", 
+                      color: billingInterval === "quarterly" ? "#fff" : "#17a2b8", 
+                      fontWeight: 600,
+                      marginLeft: "4px",
+                    }}>3mo</span>
+                  </button>
+                  
+                  {/* Annual button */}
+                  <button 
+                    type="button" 
+                    onClick={() => setBillingInterval("annual")} 
+                    style={{ 
+                      backgroundColor: "transparent", 
+                      border: "none", 
+                      color: billingInterval === "annual" ? "#fff" : "#495057", 
+                      fontWeight: 600, 
+                      padding: "8px 16px", 
+                      borderRadius: "8px", 
+                      position: "relative", 
+                      zIndex: 2, 
+                      fontSize: "14px", 
+                      cursor: "pointer", 
+                      display: "inline-flex", 
+                      alignItems: "center", 
+                      justifyContent: "center",
+                      gap: "4px",
+                      flex: "1 1 0",
+                      minWidth: "130px",
+                      height: "40px",
+                      lineHeight: "1.2",
+                      whiteSpace: "nowrap",
+                      transition: "all 0.3s ease",
+                    }}
+                  >
+                    Annuel
+                    <span style={{ 
+                      fontSize: "10px", 
+                      padding: "2px 6px", 
+                      borderRadius: "4px", 
+                      backgroundColor: billingInterval === "annual" ? "rgba(255,255,255,0.25)" : "rgba(40, 167, 69, 0.15)", 
+                      color: billingInterval === "annual" ? "#fff" : "#28a745", 
+                      fontWeight: 600,
+                      marginLeft: "4px",
+                    }}>40%</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* ===== PLANS GRID ===== */}
+              {isLoading ? (
+                <div className="text-center py-5"><div className="spinner-border text-primary" role="status"></div></div>
+              ) : displayPlans.length === 0 ? (
+                <div className="text-center py-5"><p className="text-muted">Aucun plan disponible.</p></div>
+              ) : (
+                <div className="row g-4 mb-4 justify-content-center">
+                  {displayPlans.map((plan) => {
+                    const isPopular = plan.identifier.includes("basic");
+                    const isCurrent = currentSubscription?.planIdentifier === plan.identifier;
+                    const monthlyPrice = getMonthlyPrice(plan);
+                    const baseKey = plan.identifier.includes("starter") ? "starter" : plan.identifier.includes("basic") ? "basic" : "pro";
+                    const features = planFeatures[baseKey];
+                    const displayName = baseKey === "starter" ? "Starter" : baseKey === "basic" ? "Growth" : "Pro";
+                    
+                    // Determine plan tier for upgrade/downgrade logic
+                    const planTiers: Record<string, number> = { starter: 1, basic: 2, pro: 3 };
+                    const currentPlanBase = currentSubscription?.planIdentifier?.includes("starter") ? "starter" : currentSubscription?.planIdentifier?.includes("basic") ? "basic" : currentSubscription?.planIdentifier?.includes("pro") ? "pro" : null;
+                    const currentTier = currentPlanBase ? planTiers[currentPlanBase] : 0;
+                    const thisTier = planTiers[baseKey] || 0;
+                    const isUpgrade = currentSubscription && thisTier > currentTier;
+                    const isDowngrade = currentSubscription && thisTier < currentTier;
+
+                    // Button text and style based on subscription status
+                    const getButtonContent = () => {
+                      if (subscribingPlan === plan.identifier) {
+                        return <><span className="spinner-border spinner-border-sm me-2"></span>Chargement...</>;
+                      }
+                      if (isCurrent) return "Votre plan actuel";
+                      if (isUpgrade) return "Mettre à niveau";
+                      if (isDowngrade) return "Rétrograder";
+                      return "Choisir";
+                    };
+
+                    const getButtonStyle = () => {
+                      if (isCurrent) {
+                        return { backgroundColor: "#22c55e", border: "none", color: "#fff" };
+                      }
+                      if (isUpgrade) {
+                        return { backgroundColor: "#2563eb", border: "none", color: "#fff" };
+                      }
+                      if (isDowngrade) {
+                        return { backgroundColor: "transparent", border: "1px solid #e5e7eb", color: "#6b7280" };
+                      }
+                      return { backgroundColor: isPopular ? "#2563eb" : "transparent", border: isPopular ? "none" : "1px solid #e5e7eb", color: isPopular ? "#fff" : "#374151" };
+                    };
+
+                    return (
+                      <div key={plan.id} className="col-12 col-lg-4">
+                        <div style={{ position: "relative", background: "#fff", borderRadius: "16px", border: isPopular ? "2px solid #2563eb" : "1px solid #e5e7eb", padding: isPopular ? "32px 24px 24px" : "24px", boxShadow: isPopular ? "0 10px 40px rgba(37, 99, 235, 0.15)" : "0 4px 16px rgba(0,0,0,0.04)", height: "100%", display: "flex", flexDirection: "column" }}>
+                          {isPopular && (
+                            <div style={{ position: "absolute", top: "-14px", left: "50%", transform: "translateX(-50%)", backgroundColor: "#2563eb", color: "#fff", padding: "6px 16px", borderRadius: "6px", fontSize: "11px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px", whiteSpace: "nowrap" }}>
+                              74% des utilisateurs choisissent ce plan
+                            </div>
+                          )}
+                          <h3 style={{ fontSize: "18px", fontWeight: 600, color: "#1f2937", marginBottom: "16px" }}>{displayName}</h3>
+                          <div className="d-flex align-items-baseline gap-1 mb-1">
+                            <span style={{ fontSize: "42px", fontWeight: 700, color: "#1f2937", lineHeight: 1 }}>{monthlyPrice}€</span>
+                            <span style={{ fontSize: "14px", color: "#9ca3af" }}>EUR /mois</span>
+                          </div>
+                          <div className="my-3">
+                            <button 
+                              className="btn w-100" 
+                              style={{ padding: "12px 16px", borderRadius: "8px", fontWeight: 500, ...getButtonStyle() }} 
+                              onClick={() => isCurrent ? null : handleSubscribe(plan.identifier)} 
+                              disabled={isCurrent || subscribingPlan === plan.identifier}
+                            >
+                              {getButtonContent()}
+                            </button>
+                          </div>
+                          <p className="text-center mb-4" style={{ fontSize: "12px", color: "#9ca3af" }}>Annuler à tout moment | Satisfaction Garantie | Paiement sécurisé</p>
+                          <div style={{ flex: 1 }}>
+                            <h4 style={{ fontSize: "14px", fontWeight: 600, color: "#1f2937", marginBottom: "16px" }}>Ce qui est inclus</h4>
+                            <ul className="list-unstyled mb-0">
+                              {features?.allFeaturesOf && (
+                                <li className="d-flex align-items-start mb-3" style={{ fontSize: "14px", color: "#374151" }}>
+                                  <i className="ri-check-line me-2" style={{ fontSize: "18px", color: "#2563eb", marginTop: "1px" }}></i>
+                                  <span>Toutes les fonctionnalités du {features.allFeaturesOf}, plus :</span>
+                                </li>
+                              )}
+                              {features?.features.map((f, i) => (
+                                <li key={i} className="d-flex align-items-start mb-3" style={{ fontSize: "14px", color: "#374151" }}>
+                                  <i className="ri-check-line me-2" style={{ fontSize: "18px", color: "#2563eb", marginTop: "1px" }}></i>
+                                  <span>{f}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Trust Indicators */}
+              <div className="d-flex gap-4 justify-content-center align-items-center flex-wrap mt-4">
+                <div className="d-flex align-items-center gap-2">
+                  <span style={{ fontWeight: 600, color: "#1f2937" }}>★ Trustpilot</span>
+                  <span style={{ fontSize: "13px", color: "#6b7280" }}>4.4</span>
+                  <div className="d-flex">{[1,2,3,4].map(s => <span key={s} style={{ color: "#22c55e", fontSize: "16px" }}>★</span>)}<span style={{ color: "#d1d5db", fontSize: "16px" }}>★</span></div>
+                </div>
+                <div style={{ background: "#f3f4f6", borderRadius: "50px", padding: "8px 16px", display: "flex", alignItems: "center", gap: "8px" }}>
+                  <div className="d-flex" style={{ marginLeft: "-4px" }}>{[1,2,3].map(i => <div key={i} style={{ width: "24px", height: "24px", borderRadius: "50%", backgroundColor: "#9ca3af", border: "2px solid #fff", marginLeft: i > 1 ? "-8px" : "0" }} />)}</div>
+                  <span style={{ fontSize: "13px", color: "#374151" }}><strong style={{ color: "#2563eb" }}>+279</strong> E-Commerçants ont rejoint Copyfy cette semaine</span>
+                </div>
+              </div>
             </div>
           )}
 
-          {/* Features Comparison */}
-          <div            className="mt-5"
-          >
-            <h4 className="text-center mb-4">Comparaison des fonctionnalités</h4>
-            <div className="table-responsive">
-              <table className="table table-bordered">
-                <thead className="table-light">
-                  <tr>
-                    <th>Fonctionnalité</th>
-                    {displayPlans.map((plan, idx) => (
-                      <th key={idx} className="text-center">{plan.title}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <td>Boutiques suivies</td>
-                    {displayPlans.map((plan, idx) => (
-                      <td key={idx} className="text-center">
-                        {plan.limits?.shopTracker === -1 ? 'Illimité' : plan.limits?.shopTracker || '-'}
-                      </td>
-                    ))}
-                  </tr>
-                  <tr>
-                    <td>Exports de produits/mois</td>
-                    {displayPlans.map((plan, idx) => (
-                      <td key={idx} className="text-center">
-                        {plan.limits?.productExport === -1 ? 'Illimité' : plan.limits?.productExport || '-'}
-                      </td>
-                    ))}
-                  </tr>
-                  <tr>
-                    <td>Générations de produits IA</td>
-                    {displayPlans.map((plan, idx) => (
-                      <td key={idx} className="text-center">
-                        {plan.limits?.generateProduct || '-'}
-                      </td>
-                    ))}
-                  </tr>
-                  <tr>
-                    <td>Vidéos IA/mois</td>
-                    {displayPlans.map((plan, idx) => (
-                      <td key={idx} className="text-center">
-                        {plan.limits?.videoGeneration || '-'}
-                      </td>
-                    ))}
-                  </tr>
-                  <tr>
-                    <td>Images IA/mois</td>
-                    {displayPlans.map((plan, idx) => (
-                      <td key={idx} className="text-center">
-                        {plan.limits?.imageGeneration || '-'}
-                      </td>
-                    ))}
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          {/* FAQ */}
-          <div            className="mt-5"
-          >
-            <h4 className="text-center mb-4">Questions fréquentes</h4>
-            <div className="accordion" id="faqAccordion">
-              <div className="accordion-item">
-                <h2 className="accordion-header">
-                  <button
-                    className="accordion-button"
-                    type="button"
-                    data-bs-toggle="collapse"
-                    data-bs-target="#faq1"
-                  >
-                    Puis-je annuler mon abonnement à tout moment?
-                  </button>
-                </h2>
-                <div id="faq1" className="accordion-collapse collapse show" data-bs-parent="#faqAccordion">
-                  <div className="accordion-body">
-                    Oui, vous pouvez annuler votre abonnement à tout moment. Vous conserverez l'accès jusqu'à la fin de votre période de facturation.
-                  </div>
+          {/* Current Subscription Info */}
+          {currentSubscription && (
+            <div className="p-4 mt-3" style={{ border: "1px solid #E1E4EA", borderRadius: "15px", background: "#fff" }}>
+              <h3 style={{ fontSize: "15px", marginBottom: "12px", fontWeight: 600 }}>Votre plan actuel</h3>
+              <div className="d-flex flex-column flex-md-row align-items-md-center gap-3">
+                <div style={{ background: "linear-gradient(135deg, #2563eb 0%, #3b82f6 100%)", color: "#fff", padding: "12px 24px", borderRadius: "8px", fontWeight: 500 }}>
+                  {currentSubscription.planIdentifier.includes("starter") ? "Starter" : currentSubscription.planIdentifier.includes("basic") ? "Growth" : "Pro"}
                 </div>
-              </div>
-              <div className="accordion-item">
-                <h2 className="accordion-header">
-                  <button
-                    className="accordion-button collapsed"
-                    type="button"
-                    data-bs-toggle="collapse"
-                    data-bs-target="#faq2"
-                  >
-                    Les crédits non utilisés sont-ils reportés?
-                  </button>
-                </h2>
-                <div id="faq2" className="accordion-collapse collapse" data-bs-parent="#faqAccordion">
-                  <div className="accordion-body">
-                    Non, les crédits sont réinitialisés à chaque début de période de facturation.
-                  </div>
-                </div>
-              </div>
-              <div className="accordion-item">
-                <h2 className="accordion-header">
-                  <button
-                    className="accordion-button collapsed"
-                    type="button"
-                    data-bs-toggle="collapse"
-                    data-bs-target="#faq3"
-                  >
-                    Comment changer de plan?
-                  </button>
-                </h2>
-                <div id="faq3" className="accordion-collapse collapse" data-bs-parent="#faqAccordion">
-                  <div className="accordion-body">
-                    Vous pouvez changer de plan à tout moment. La différence sera calculée au prorata de votre période actuelle.
-                  </div>
-                </div>
+                <div className="flex-grow-1"><p style={{ fontSize: "14px", color: "#6b7280", marginBottom: "0" }}>Assurez-vous que vos informations de paiement sont à jour.</p></div>
+                <button className="btn btn-outline-secondary" onClick={handleOpenPortal}>Gérer l&apos;abonnement</button>
               </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
     </>
+  );
+}
+
+export default function PlansPage() {
+  return (
+    <Suspense fallback={<div className="d-flex justify-content-center align-items-center" style={{ minHeight: "400px" }}><div className="spinner-border text-primary" role="status"></div></div>}>
+      <PlansContent />
+    </Suspense>
   );
 }

@@ -17,13 +17,25 @@ export async function GET() {
 
   const userId = BigInt(session.user.id)
 
-  const subscription = await prisma.subscription.findFirst({
-    where: { 
-      userId,
-      stripeStatus: { in: ['active', 'trialing', 'past_due'] }
-    },
-    orderBy: { createdAt: 'desc' }
-  })
+  // Use raw SQL to get subscription with correct snake_case field names
+  const subscriptions = await prisma.$queryRaw<Array<{
+    id: bigint;
+    name: string;
+    stripe_id: string;
+    stripe_status: string;
+    stripe_plan: string | null;
+    trial_ends_at: Date | null;
+    ends_at: Date | null;
+  }>>`
+    SELECT id, name, stripe_id, stripe_status, stripe_plan, trial_ends_at, ends_at
+    FROM subscriptions 
+    WHERE user_id = ${userId}::bigint 
+      AND stripe_status IN ('active', 'trialing', 'past_due')
+    ORDER BY id DESC
+    LIMIT 1
+  `;
+
+  const subscription = subscriptions[0];
 
   if (!subscription) {
     return NextResponse.json({
@@ -43,7 +55,7 @@ export async function GET() {
   // Get more details from Stripe if needed
   let stripeSubscription = null
   try {
-    stripeSubscription = await stripe.subscriptions.retrieve(subscription.stripeId)
+    stripeSubscription = await stripe.subscriptions.retrieve(subscription.stripe_id)
   } catch (e) {
     console.error('Failed to fetch Stripe subscription:', e)
   }
@@ -52,7 +64,7 @@ export async function GET() {
     hasSubscription: true,
     subscription: {
       id: subscription.id.toString(),
-      status: subscription.stripeStatus,
+      status: subscription.stripe_status,
       planIdentifier: subscription.name,
       currentPeriodEnd: stripeSubscription && 'current_period_end' in stripeSubscription
         ? new Date((stripeSubscription as any).current_period_end * 1000)
@@ -60,7 +72,8 @@ export async function GET() {
       cancelAtPeriodEnd: stripeSubscription && 'cancel_at_period_end' in stripeSubscription 
         ? (stripeSubscription as any).cancel_at_period_end 
         : false,
-      trialEndsAt: subscription.trialEndsAt,
+      trialEndsAt: subscription.trial_ends_at,
+      endsAt: subscription.ends_at,
     },
     plan: plan ? {
       identifier: plan.identifier,

@@ -69,22 +69,58 @@ function getTrialDaysRemaining(user: {
   return 0;
 }
 
+// Define plan type to avoid null reference
+type PlanType = {
+  id: bigint;
+  identifier: string;
+  title: string;
+  price: number;
+  dayFreeTrial: number;
+  info: string | null;
+  stripeId: string;
+  stripeIdEn: string;
+  leaderboardShop: number;
+  limitShopTracker: number;
+  limitShopExporter: number;
+  limitProductExporter: number;
+  topShopsCount: number | null;
+  topProductsCount: number | null;
+  createdAt: Date | null;
+  updatedAt: Date | null;
+  limitGenerateProduct: number;
+  limitImportTheme: number;
+  topAdsCount: number | null;
+  maxLicenses: number;
+  limitVideoGeneration: number;
+  limitImageGeneration: number;
+} | null;
+
 // Helper to get active plan for user
 async function getActivePlan(userId: bigint, user: {
   utmSource: string | null;
   createdAt: Date | null;
   startOfferDate: Date | null;
-}): Promise<{ plan: Awaited<ReturnType<typeof prisma.plan.findFirst>>, isOnTrial: boolean }> {
-  // Check for active subscription
-  const subscription = await prisma.subscription.findFirst({
-    where: {
-      userId,
-      stripeStatus: 'active',
-    },
-    orderBy: {
-      createdAt: 'desc',
-    },
-  });
+}): Promise<{ plan: PlanType, isOnTrial: boolean }> {
+  if (!prisma) {
+    return { plan: null, isOnTrial: isUserOnTrial(user) };
+  }
+  
+  // Check for active subscription using raw SQL (correct snake_case field names)
+  const subscriptions = await prisma.$queryRaw<Array<{
+    id: bigint;
+    name: string;
+    stripe_status: string;
+    trial_ends_at: Date | null;
+  }>>`
+    SELECT id, name, stripe_status, trial_ends_at 
+    FROM subscriptions 
+    WHERE user_id = ${userId}::bigint 
+      AND stripe_status = 'active'
+    ORDER BY id DESC
+    LIMIT 1
+  `;
+  
+  const subscription = subscriptions[0];
   
   if (subscription) {
     // User has an active subscription - get the plan
@@ -95,7 +131,7 @@ async function getActivePlan(userId: bigint, user: {
     });
     
     // Check if subscription itself is on trial (Laravel's onTrial method)
-    const subscriptionIsOnTrial = subscription.trialEndsAt && new Date(subscription.trialEndsAt) > new Date();
+    const subscriptionIsOnTrial = subscription.trial_ends_at && new Date(subscription.trial_ends_at) > new Date();
     
     return { plan, isOnTrial: subscriptionIsOnTrial || false };
   }
@@ -174,6 +210,10 @@ export async function GET() {
     
     if (!session?.user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    
+    if (!prisma) {
+      return NextResponse.json({ error: 'Database not configured' }, { status: 503 });
     }
     
     const userId = BigInt(session.user.id);

@@ -6,6 +6,7 @@ import "@/styles/custom.scss";
 import "flag-icons/css/flag-icons.css";
 import AuthProvider from "@/providers/session-provider";
 import BootstrapClient from "@/components/BootstrapClient";
+import { ToastProvider } from "@/components/ui/toast";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -63,8 +64,10 @@ export default function RootLayout({
         suppressHydrationWarning
       >
         <AuthProvider>
-          <BootstrapClient />
-          {children}
+          <ToastProvider>
+            <BootstrapClient />
+            {children}
+          </ToastProvider>
         </AuthProvider>
       </body>
     </html>
