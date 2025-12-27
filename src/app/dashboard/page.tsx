@@ -243,20 +243,21 @@ export default function DashboardPage() {
               </div>
             </div>
           )}
-          {/* Show welcome message for paid users */}
+          {/* Show current plan for paid users */}
           {hasActivePlan && (
-            <div 
-              className="mt-3 alert alert-success d-flex gap-3 justify-content-between align-items-center"
-            >
-              <div className="d-flex align-items-center gap-2">
-                <i className="ri-vip-crown-2-line fs-4"></i>
-                <span className="fw-500">
-                  Plan {session.user.activePlan?.identifier} actif
-                </span>
+            <div className="p-4 mt-3" style={{ border: "1px solid #E1E4EA", borderRadius: "15px", background: "#fff" }}>
+              <h3 style={{ fontSize: "15px", marginBottom: "12px", fontWeight: 600 }}>Votre plan actuel</h3>
+              <div className="d-flex flex-column flex-md-row align-items-md-center gap-3">
+                <div style={{ background: "linear-gradient(135deg, #2563eb 0%, #3b82f6 100%)", color: "#fff", padding: "12px 24px", borderRadius: "8px", fontWeight: 500 }}>
+                  {session.user.activePlan?.identifier?.includes("starter") ? "Starter" : session.user.activePlan?.identifier?.includes("basic") ? "Growth" : session.user.activePlan?.identifier?.includes("pro") ? "Pro" : session.user.activePlan?.title || "Plan actif"}
+                </div>
+                <div className="flex-grow-1">
+                  <p style={{ fontSize: "14px", color: "#6b7280", marginBottom: "0" }}>Assurez-vous que vos informations de paiement sont à jour.</p>
+                </div>
+                <Link href="/dashboard/settings" className="btn btn-outline-secondary text-decoration-none">
+                  Gérer l&apos;abonnement
+                </Link>
               </div>
-              <Link href="/dashboard/settings" className="btn btn-sm btn-outline-success text-decoration-none">
-                Gérer mon abonnement
-              </Link>
             </div>
           )}
         </div>
