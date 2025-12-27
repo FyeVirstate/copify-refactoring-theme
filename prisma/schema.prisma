@@ -1092,6 +1092,8 @@ model shop {
   themeStyleUpdatedAt DateTime? @map("theme_style_updated_at") @db.Timestamp(0)
   appsLastSyncedAt    DateTime? @map("apps_last_synced_at") @db.Timestamp(0)
 
+  userShops           userShop[]
+
   @@index([createdAt], map: "idx_shops_created_at")
   @@index([url], map: "idx_shops_url")
   @@index([currency], map: "shops_currency_idx")
@@ -1462,6 +1464,8 @@ model userShop {
   createdAt DateTime? @map("created_at") @db.Timestamp(6)
   updatedAt DateTime? @map("updated_at") @db.Timestamp(6)
   deletedAt DateTime? @map("deleted_at") @db.Timestamp(6)
+
+  shop      shop      @relation(fields: [shopId], references: [id])
 
   @@unique([userId, shopId], map: "user_shops_user_id_shop_id_idx")
   @@map("user_shops")
