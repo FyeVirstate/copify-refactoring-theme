@@ -1,11 +1,11 @@
 "use client";
 
 import FilterDropdown from "./FilterDropdown";
-import FilterPresetGrid from "./FilterPresetGrid";
 import FilterCheckboxList from "./FilterCheckboxList";
 import { Button } from "@/components/ui/button";
+import Image from "next/image";
 
-interface DeviseFilterProps {
+interface CurrencyFilterProps {
   selectedCurrencies: string[];
   onCurrenciesChange: (currencies: string[]) => void;
   onOpenChange?: (open: boolean) => void;
@@ -13,110 +13,92 @@ interface DeviseFilterProps {
   isActive?: boolean;
 }
 
-export default function DeviseFilter({ 
+// Currency data with flags
+const currencies = [
+  { code: "USD", symbol: "$", flag: "us", name: "Dollar américain" },
+  { code: "EUR", symbol: "€", flag: "eu", name: "Euro" },
+  { code: "GBP", symbol: "£", flag: "gb", name: "Livre sterling" },
+  { code: "CAD", symbol: "C$", flag: "ca", name: "Dollar canadien" },
+  { code: "AUD", symbol: "A$", flag: "au", name: "Dollar australien" },
+  { code: "CHF", symbol: "₣", flag: "ch", name: "Franc suisse" },
+  { code: "JPY", symbol: "¥", flag: "jp", name: "Yen japonais" },
+  { code: "CNY", symbol: "¥", flag: "cn", name: "Yuan chinois" },
+  { code: "INR", symbol: "₹", flag: "in", name: "Roupie indienne" },
+  { code: "BRL", symbol: "R$", flag: "br", name: "Real brésilien" },
+  { code: "MXN", symbol: "Mex$", flag: "mx", name: "Peso mexicain" },
+  { code: "KRW", symbol: "₩", flag: "kr", name: "Won coréen" },
+  { code: "SEK", symbol: "kr", flag: "se", name: "Couronne suédoise" },
+  { code: "NOK", symbol: "kr", flag: "no", name: "Couronne norvégienne" },
+  { code: "DKK", symbol: "kr", flag: "dk", name: "Couronne danoise" },
+  { code: "PLN", symbol: "zł", flag: "pl", name: "Zloty polonais" },
+  { code: "NZD", symbol: "NZ$", flag: "nz", name: "Dollar néo-zélandais" },
+  { code: "SGD", symbol: "S$", flag: "sg", name: "Dollar singapourien" },
+  { code: "HKD", symbol: "HK$", flag: "hk", name: "Dollar hongkongais" },
+  { code: "TRY", symbol: "₺", flag: "tr", name: "Livre turque" },
+  { code: "AED", symbol: "د.إ", flag: "ae", name: "Dirham émirati" },
+  { code: "SAR", symbol: "ر.س", flag: "sa", name: "Riyal saoudien" },
+  { code: "MAD", symbol: "د.م", flag: "ma", name: "Dirham marocain" },
+  { code: "ZAR", symbol: "R", flag: "za", name: "Rand sud-africain" },
+  { code: "THB", symbol: "฿", flag: "th", name: "Baht thaïlandais" },
+  { code: "IDR", symbol: "Rp", flag: "id", name: "Roupie indonésienne" },
+  { code: "MYR", symbol: "RM", flag: "my", name: "Ringgit malaisien" },
+  { code: "PHP", symbol: "₱", flag: "ph", name: "Peso philippin" },
+  { code: "VND", symbol: "₫", flag: "vn", name: "Dong vietnamien" },
+  { code: "CZK", symbol: "Kč", flag: "cz", name: "Couronne tchèque" },
+  { code: "HUF", symbol: "Ft", flag: "hu", name: "Forint hongrois" },
+  { code: "RON", symbol: "lei", flag: "ro", name: "Leu roumain" },
+];
+
+export default function CurrencyFilter({ 
   selectedCurrencies, 
   onCurrenciesChange,
   onOpenChange,
   onApply,
   isActive = false
-}: DeviseFilterProps) {
-  const handlePresetClick = (presetId: string) => {
-    switch (presetId) {
-      case "main-currencies":
-        onCurrenciesChange(["USD", "EUR", "GBP", "AUD", "CAD"]);
-        break;
-      case "eu":
-        onCurrenciesChange(["EUR"]);
-        break;
-      case "hidden-ecommerce":
-        onCurrenciesChange(["MXN", "BRL", "NOK", "SEK", "AED"]);
-        break;
-    }
-  };
+}: CurrencyFilterProps) {
 
-  const presets = [
-    {
-      id: "main-currencies",
-      icon: "ri-coins-line",
-      title: "Principales",
-      description: "USD, EUR, GBP, AUS, CAD",
-      onClick: () => handlePresetClick("main-currencies"),
-    },
-    {
-      id: "eu",
-      icon: "ri-euro-line",
-      title: "UE",
-      description: "Euro €",
-      onClick: () => handlePresetClick("eu"),
-    },
-    {
-      id: "hidden-ecommerce",
-      icon: "ri-bank-line",
-      title: "E-commerce caché",
-      description: "MXN, BRL, NOK, SEK, AED",
-      onClick: () => handlePresetClick("hidden-ecommerce"),
-    },
-  ];
-
-  const currencies = [
-    { 
-      id: "USD", 
-      label: "USD", 
-      icon: <img src="/flags/us.svg" alt="USD" style={{ width: '20px', height: '15px', marginRight: '8px' }} /> 
-    },
-    { 
-      id: "EUR", 
-      label: "EUR", 
-      icon: <img src="/flags/eu.svg" alt="EUR" style={{ width: '20px', height: '15px', marginRight: '8px' }} /> 
-    },
-    { 
-      id: "GBP", 
-      label: "GBP", 
-      icon: <img src="/flags/gb.svg" alt="GBP" style={{ width: '20px', height: '15px', marginRight: '8px' }} /> 
-    },
-    { 
-      id: "CAD", 
-      label: "CAD", 
-      icon: <img src="/flags/ca.svg" alt="CAD" style={{ width: '20px', height: '15px', marginRight: '8px' }} /> 
-    },
-    { 
-      id: "AUD", 
-      label: "AUD", 
-      icon: <img src="/flags/au.svg" alt="AUD" style={{ width: '20px', height: '15px', marginRight: '8px' }} /> 
-    },
-  ];
+  const currenciesWithFlags = currencies.map(currency => ({
+    id: currency.code,
+    label: `${currency.code} (${currency.symbol})`,
+    icon: (
+      <Image 
+        src={`/flags/${currency.flag}.svg`} 
+        alt={currency.name} 
+        width={20} 
+        height={15}
+        className="rounded"
+        onError={(e) => {
+          (e.target as HTMLImageElement).style.display = 'none';
+        }}
+      />
+    )
+  }));
 
   return (
     <FilterDropdown
-      icon="ri-money-dollar-circle-line"
       label="Devise"
-      title="Devise"
-      width="400px"
+      icon="ri-money-euro-circle-line"
       onOpenChange={onOpenChange}
-      isActive={isActive}
+      isActive={isActive || selectedCurrencies.length > 0}
+      badge={selectedCurrencies.length > 0 ? selectedCurrencies.length : undefined}
     >
-      <FilterPresetGrid presets={presets} columns={2} />
-      
-      <div className="horizontal-dashed-divider mb-3"></div>
-      
+      <p className="fw-500 mb-2">Devise</p>
+
       <FilterCheckboxList
-        items={currencies}
+        items={currenciesWithFlags}
         selectedItems={selectedCurrencies}
         onItemsChange={onCurrenciesChange}
-        searchPlaceholder="Rechercher une devise"
+        searchPlaceholder="Rechercher une devise..."
+        showIncludeExclude={true}
+        groupName="currencyCheckboxes"
       />
-      
+
       <Button 
-        type="button" 
-        className="btn btn-primary w-100 apply-filters-btn mt-3"
-        onClick={() => {
-          onApply?.();
-          onOpenChange?.(false);
-        }}
+        className="w-100 mt-3" 
+        onClick={() => onApply?.()}
       >
         Appliquer
       </Button>
     </FilterDropdown>
   );
 }
-

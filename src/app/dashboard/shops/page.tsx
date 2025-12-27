@@ -28,6 +28,14 @@ import {
   DailyRevenueFilter,
   MonthlyOrdersFilter,
   PixelsFilter,
+  ShopCreationFilter,
+  OriginFilter,
+  LanguageFilter,
+  DomainFilter,
+  TrustpilotFilter,
+  ThemesFilter,
+  ApplicationsFilter,
+  SocialNetworksFilter,
 } from "@/components/filters";
 import { useShops, ShopsFilters } from "@/lib/hooks/use-shops";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -202,6 +210,13 @@ export default function ShopsPage() {
   const [selectedNiches, setSelectedNiches] = useState<string[]>([]);
   const [selectedCurrencies, setSelectedCurrencies] = useState<string[]>([]);
   const [selectedPixels, setSelectedPixels] = useState<string[]>([]);
+  const [selectedOrigins, setSelectedOrigins] = useState<string[]>([]);
+  const [selectedLanguages, setSelectedLanguages] = useState<string[]>([]);
+  const [selectedDomains, setSelectedDomains] = useState<string[]>([]);
+  const [selectedThemes, setSelectedThemes] = useState<string[]>([]);
+  const [selectedApplications, setSelectedApplications] = useState<string[]>([]);
+  const [selectedSocialNetworks, setSelectedSocialNetworks] = useState<string[]>([]);
+  const [shopCreationDate, setShopCreationDate] = useState<string>("");
   const [sortBy, setSortBy] = useState("recommended");
   const [activePreset, setActivePreset] = useState("recommended");
   
@@ -216,6 +231,17 @@ export default function ShopsPage() {
   const [maxActiveAds, setMaxActiveAds] = useState<number | undefined>();
   const [minTrafficGrowth, setMinTrafficGrowth] = useState<number | undefined>();
   const [maxTrafficGrowth, setMaxTrafficGrowth] = useState<number | undefined>();
+  const [minOrders, setMinOrders] = useState<number | undefined>();
+  const [maxOrders, setMaxOrders] = useState<number | undefined>();
+  const [minPrice, setMinPrice] = useState<number | undefined>();
+  const [maxPrice, setMaxPrice] = useState<number | undefined>();
+  const [minCatalogSize, setMinCatalogSize] = useState<number | undefined>();
+  const [maxCatalogSize, setMaxCatalogSize] = useState<number | undefined>();
+  // Trustpilot filters
+  const [minTrustpilotRating, setMinTrustpilotRating] = useState<number | undefined>();
+  const [maxTrustpilotRating, setMaxTrustpilotRating] = useState<number | undefined>();
+  const [minTrustpilotReviews, setMinTrustpilotReviews] = useState<number | undefined>();
+  const [maxTrustpilotReviews, setMaxTrustpilotReviews] = useState<number | undefined>();
 
   // Infinite scroll ref
   const loadMoreRef = useRef<HTMLDivElement>(null);
@@ -239,7 +265,8 @@ export default function ShopsPage() {
   };
 
   // Build filters object
-  const buildFilters = useCallback((): ShopsFilters => {
+  // Build filters without useCallback to always get fresh values
+  const buildFilters = (): ShopsFilters => {
     const filters: ShopsFilters = { sortBy };
     
     if (appliedSearchText) filters.search = appliedSearchText;
@@ -247,6 +274,17 @@ export default function ShopsPage() {
     if (selectedNiches.length) filters.category = selectedNiches.join(',');
     if (selectedCurrencies.length) filters.currency = selectedCurrencies.join(',');
     if (selectedPixels.length) filters.pixels = selectedPixels.join(',');
+    // Note: origins uses 'country' column (shop location)
+    if (selectedOrigins.length) filters.origins = selectedOrigins.join(',');
+    // Note: languages maps to 'locale' column in database
+    if (selectedLanguages.length) filters.languages = selectedLanguages.join(',');
+    // Note: domains searches in 'url' column
+    if (selectedDomains.length) filters.domains = selectedDomains.join(',');
+    // Note: themes searches in 'theme' column
+    if (selectedThemes.length) filters.themes = selectedThemes.join(',');
+    // Note: applications searches in 'apps' column
+    if (selectedApplications.length) filters.applications = selectedApplications.join(',');
+    if (shopCreationDate) filters.shopCreationDate = shopCreationDate;
     if (minRevenue !== undefined) filters.minRevenue = minRevenue;
     if (maxRevenue !== undefined) filters.maxRevenue = maxRevenue;
     if (minTraffic !== undefined) filters.minTraffic = minTraffic;
@@ -257,11 +295,20 @@ export default function ShopsPage() {
     if (maxActiveAds !== undefined) filters.maxActiveAds = maxActiveAds;
     if (minTrafficGrowth !== undefined) filters.minTrafficGrowth = minTrafficGrowth;
     if (maxTrafficGrowth !== undefined) filters.maxTrafficGrowth = maxTrafficGrowth;
+    if (minOrders !== undefined) filters.minOrders = minOrders;
+    if (maxOrders !== undefined) filters.maxOrders = maxOrders;
+    if (minPrice !== undefined) filters.minPrice = minPrice;
+    if (maxPrice !== undefined) filters.maxPrice = maxPrice;
+    if (minCatalogSize !== undefined) filters.minCatalogSize = minCatalogSize;
+    if (maxCatalogSize !== undefined) filters.maxCatalogSize = maxCatalogSize;
+    // Note: Trustpilot filters are not yet supported by the API but we include them for future use
+    // if (minTrustpilotRating !== undefined) filters.minTrustpilotRating = minTrustpilotRating;
+    // if (maxTrustpilotRating !== undefined) filters.maxTrustpilotRating = maxTrustpilotRating;
+    // if (minTrustpilotReviews !== undefined) filters.minTrustpilotReviews = minTrustpilotReviews;
+    // if (maxTrustpilotReviews !== undefined) filters.maxTrustpilotReviews = maxTrustpilotReviews;
     
     return filters;
-  }, [sortBy, appliedSearchText, selectedCountries, selectedNiches, selectedCurrencies, 
-      selectedPixels, minRevenue, maxRevenue, minTraffic, maxTraffic, minProducts, 
-      maxProducts, minActiveAds, maxActiveAds, minTrafficGrowth, maxTrafficGrowth]);
+  };
 
   // Fetch shops when component mounts
   useEffect(() => {
@@ -316,9 +363,10 @@ export default function ShopsPage() {
     fetchShops({ ...buildFilters(), sortBy: newSortBy }, 1, 20);
   };
 
-  // Handle filter apply
-  const handleApplyFilters = () => {
-    fetchShops(buildFilters(), 1, 20);
+  // Handle filter apply - optionally accept override values for immediate updates
+  const handleApplyFilters = (overrideFilters?: Partial<ShopsFilters>) => {
+    const filters = { ...buildFilters(), ...overrideFilters };
+    fetchShops(filters, 1, 20);
   };
 
   // Reset filters
@@ -329,6 +377,13 @@ export default function ShopsPage() {
     setSelectedNiches([]);
     setSelectedCurrencies([]);
     setSelectedPixels([]);
+    setSelectedOrigins([]);
+    setSelectedLanguages([]);
+    setSelectedDomains([]);
+    setSelectedThemes([]);
+    setSelectedApplications([]);
+    setSelectedSocialNetworks([]);
+    setShopCreationDate("");
     setMinRevenue(undefined);
     setMaxRevenue(undefined);
     setMinTraffic(undefined);
@@ -339,6 +394,16 @@ export default function ShopsPage() {
     setMaxActiveAds(undefined);
     setMinTrafficGrowth(undefined);
     setMaxTrafficGrowth(undefined);
+    setMinOrders(undefined);
+    setMaxOrders(undefined);
+    setMinPrice(undefined);
+    setMaxPrice(undefined);
+    setMinCatalogSize(undefined);
+    setMaxCatalogSize(undefined);
+    setMinTrustpilotRating(undefined);
+    setMaxTrustpilotRating(undefined);
+    setMinTrustpilotReviews(undefined);
+    setMaxTrustpilotReviews(undefined);
     setSortBy("recommended");
     setActivePreset("recommended");
     fetchShops({ sortBy: 'recommended' }, 1, 20);
@@ -351,11 +416,26 @@ export default function ShopsPage() {
     
     // Reset all filters first
     setSelectedCountries([]);
+    setSelectedNiches([]);
+    setSelectedCurrencies([]);
+    setSelectedPixels([]);
+    setSelectedOrigins([]);
+    setSelectedLanguages([]);
+    setSelectedDomains([]);
+    setSelectedThemes([]);
+    setSelectedApplications([]);
+    setSelectedSocialNetworks([]);
+    setShopCreationDate("");
+    setMinRevenue(undefined);
+    setMaxRevenue(undefined);
     setMinTraffic(undefined);
+    setMaxTraffic(undefined);
     setMinProducts(undefined);
     setMaxProducts(undefined);
     setMinTrafficGrowth(undefined);
+    setMaxTrafficGrowth(undefined);
     setMinActiveAds(undefined);
+    setMaxActiveAds(undefined);
     
     switch (preset) {
       case 'us_market':
@@ -450,27 +530,204 @@ export default function ShopsPage() {
     return new Intl.NumberFormat('fr-FR').format(num);
   };
 
-  // Build active filters for display
-  const activeFilters: { label: string; key: string; value?: string }[] = [];
-  if (appliedSearchText) activeFilters.push({ label: `Recherche: ${appliedSearchText}`, key: 'search' });
-  selectedCountries.forEach(c => activeFilters.push({ label: c, key: 'country', value: c }));
-  selectedCurrencies.forEach(c => activeFilters.push({ label: c, key: 'currency', value: c }));
-  selectedNiches.forEach(n => activeFilters.push({ label: n, key: 'niche', value: n }));
-  selectedPixels.forEach(p => activeFilters.push({ label: p, key: 'pixel', value: p }));
+  // Interface for active filters
+  interface ActiveFilter {
+    id: string;
+    label: string;
+    value: string;
+    type: string;
+    icon?: string;
+  }
+
+  // Build active filters for display - matching products page style
+  const buildActiveFilters = (): ActiveFilter[] => {
+    const filters: ActiveFilter[] = [];
+    
+    // Search text
+    if (appliedSearchText) {
+      filters.push({ id: 'search', label: '', value: appliedSearchText, type: 'search', icon: 'ri-search-line' });
+    }
+    
+    // Range filters
+    if (minRevenue !== undefined || maxRevenue !== undefined) {
+      filters.push({ 
+        id: 'revenue', label: '', 
+        value: `$${minRevenue || 0} - ${maxRevenue ? '$' + maxRevenue.toLocaleString() : 'Max'}`, 
+        type: 'revenue', icon: 'ri-money-dollar-circle-line' 
+      });
+    }
+    if (minTraffic !== undefined || maxTraffic !== undefined) {
+      filters.push({ 
+        id: 'traffic', label: '', 
+        value: `${(minTraffic || 0).toLocaleString()} - ${maxTraffic ? maxTraffic.toLocaleString() : 'Max'}`, 
+        type: 'traffic', icon: 'ri-group-line' 
+      });
+    }
+    if (minProducts !== undefined || maxProducts !== undefined) {
+      filters.push({ 
+        id: 'products', label: '', 
+        value: `${minProducts || 0} - ${maxProducts || 'Max'} produits`, 
+        type: 'products', icon: 'ri-price-tag-3-line' 
+      });
+    }
+    if (minActiveAds !== undefined || maxActiveAds !== undefined) {
+      filters.push({ 
+        id: 'activeAds', label: '', 
+        value: `${minActiveAds || 0} - ${maxActiveAds || 'Max'} pubs`, 
+        type: 'activeAds', icon: 'ri-megaphone-line' 
+      });
+    }
+    if (minTrafficGrowth !== undefined || maxTrafficGrowth !== undefined) {
+      filters.push({ 
+        id: 'trafficGrowth', label: '', 
+        value: `${minTrafficGrowth || 0}% - ${maxTrafficGrowth || 'Max'}%`, 
+        type: 'trafficGrowth', icon: 'ri-line-chart-line' 
+      });
+    }
+    if (minOrders !== undefined || maxOrders !== undefined) {
+      filters.push({ 
+        id: 'orders', label: '', 
+        value: `${(minOrders || 0).toLocaleString()} - ${maxOrders ? maxOrders.toLocaleString() : 'Max'} cmd/mois`, 
+        type: 'orders', icon: 'ri-shopping-cart-line' 
+      });
+    }
+    if (minPrice !== undefined || maxPrice !== undefined) {
+      filters.push({ 
+        id: 'price', label: '', 
+        value: `$${minPrice || 0} - ${maxPrice ? '$' + maxPrice : 'Max'}`, 
+        type: 'price', icon: 'ri-price-tag-3-line' 
+      });
+    }
+    if (minCatalogSize !== undefined || maxCatalogSize !== undefined) {
+      filters.push({ 
+        id: 'catalogSize', label: '', 
+        value: `${minCatalogSize || 0} - ${maxCatalogSize || 'Max'} produits`, 
+        type: 'catalogSize', icon: 'ri-shopping-bag-3-line' 
+      });
+    }
+    if (minTrustpilotRating !== undefined || maxTrustpilotRating !== undefined || 
+        minTrustpilotReviews !== undefined || maxTrustpilotReviews !== undefined) {
+      let trustpilotValue = '';
+      if (minTrustpilotRating !== undefined || maxTrustpilotRating !== undefined) {
+        trustpilotValue += `${minTrustpilotRating || 0}★ - ${maxTrustpilotRating || 5}★`;
+      }
+      if (minTrustpilotReviews !== undefined || maxTrustpilotReviews !== undefined) {
+        if (trustpilotValue) trustpilotValue += ', ';
+        trustpilotValue += `${minTrustpilotReviews || 0} - ${maxTrustpilotReviews || '∞'} avis`;
+      }
+      filters.push({ 
+        id: 'trustpilot', label: '', 
+        value: trustpilotValue, 
+        type: 'trustpilot', icon: 'ri-star-fill' 
+      });
+    }
+    if (shopCreationDate) {
+      filters.push({ id: 'creation', label: '', value: shopCreationDate, type: 'creation', icon: 'ri-calendar-line' });
+    }
+    
+    // Array filters
+    selectedCountries.forEach(c => {
+      filters.push({ id: `country_${c}`, label: '', value: c, type: 'country', icon: 'ri-map-pin-line' });
+    });
+    selectedCurrencies.forEach(c => {
+      filters.push({ id: `currency_${c}`, label: '', value: c, type: 'currency', icon: 'ri-coin-line' });
+    });
+    selectedNiches.forEach(n => {
+      filters.push({ id: `niche_${n}`, label: '', value: n, type: 'niche', icon: 'ri-store-2-line' });
+    });
+    selectedPixels.forEach(p => {
+      filters.push({ id: `pixel_${p}`, label: '', value: p, type: 'pixel', icon: 'ri-focus-3-line' });
+    });
+    selectedOrigins.forEach(o => {
+      filters.push({ id: `origin_${o}`, label: '', value: o, type: 'origin', icon: 'ri-earth-line' });
+    });
+    selectedLanguages.forEach(l => {
+      filters.push({ id: `language_${l}`, label: '', value: l, type: 'language', icon: 'ri-translate-2' });
+    });
+    selectedThemes.forEach(t => {
+      filters.push({ id: `theme_${t}`, label: '', value: t, type: 'theme', icon: 'ri-palette-line' });
+    });
+    selectedApplications.forEach(a => {
+      filters.push({ id: `app_${a}`, label: '', value: a, type: 'app', icon: 'ri-apps-line' });
+    });
+    selectedSocialNetworks.forEach(s => {
+      filters.push({ id: `social_${s}`, label: '', value: s, type: 'social', icon: 'ri-share-line' });
+    });
+    selectedDomains.forEach(d => {
+      filters.push({ id: `domain_${d}`, label: '', value: d, type: 'domain', icon: 'ri-global-line' });
+    });
+    
+    return filters;
+  };
+
+  const activeFilters = buildActiveFilters();
 
   // Remove single filter
-  const removeFilter = (key: string, value?: string) => {
-    if (key === 'search') {
-      setSearchText("");
-      setAppliedSearchText("");
-    } else if (key === 'country' && value) {
+  const removeFilter = (filterId: string, filterType: string) => {
+    if (filterId === 'search') {
+      setSearchText('');
+      setAppliedSearchText('');
+    } else if (filterId === 'revenue') {
+      setMinRevenue(undefined);
+      setMaxRevenue(undefined);
+    } else if (filterId === 'traffic') {
+      setMinTraffic(undefined);
+      setMaxTraffic(undefined);
+    } else if (filterId === 'products') {
+      setMinProducts(undefined);
+      setMaxProducts(undefined);
+    } else if (filterId === 'activeAds') {
+      setMinActiveAds(undefined);
+      setMaxActiveAds(undefined);
+    } else if (filterId === 'trafficGrowth') {
+      setMinTrafficGrowth(undefined);
+      setMaxTrafficGrowth(undefined);
+    } else if (filterId === 'orders') {
+      setMinOrders(undefined);
+      setMaxOrders(undefined);
+    } else if (filterId === 'price') {
+      setMinPrice(undefined);
+      setMaxPrice(undefined);
+    } else if (filterId === 'catalogSize') {
+      setMinCatalogSize(undefined);
+      setMaxCatalogSize(undefined);
+    } else if (filterId === 'trustpilot') {
+      setMinTrustpilotRating(undefined);
+      setMaxTrustpilotRating(undefined);
+      setMinTrustpilotReviews(undefined);
+      setMaxTrustpilotReviews(undefined);
+    } else if (filterId === 'creation') {
+      setShopCreationDate('');
+    } else if (filterId.startsWith('country_')) {
+      const value = filterId.replace('country_', '');
       setSelectedCountries(prev => prev.filter(c => c !== value));
-    } else if (key === 'currency' && value) {
+    } else if (filterId.startsWith('currency_')) {
+      const value = filterId.replace('currency_', '');
       setSelectedCurrencies(prev => prev.filter(c => c !== value));
-    } else if (key === 'niche' && value) {
+    } else if (filterId.startsWith('niche_')) {
+      const value = filterId.replace('niche_', '');
       setSelectedNiches(prev => prev.filter(n => n !== value));
-    } else if (key === 'pixel' && value) {
+    } else if (filterId.startsWith('pixel_')) {
+      const value = filterId.replace('pixel_', '');
       setSelectedPixels(prev => prev.filter(p => p !== value));
+    } else if (filterId.startsWith('origin_')) {
+      const value = filterId.replace('origin_', '');
+      setSelectedOrigins(prev => prev.filter(o => o !== value));
+    } else if (filterId.startsWith('language_')) {
+      const value = filterId.replace('language_', '');
+      setSelectedLanguages(prev => prev.filter(l => l !== value));
+    } else if (filterId.startsWith('theme_')) {
+      const value = filterId.replace('theme_', '');
+      setSelectedThemes(prev => prev.filter(t => t !== value));
+    } else if (filterId.startsWith('app_')) {
+      const value = filterId.replace('app_', '');
+      setSelectedApplications(prev => prev.filter(a => a !== value));
+    } else if (filterId.startsWith('social_')) {
+      const value = filterId.replace('social_', '');
+      setSelectedSocialNetworks(prev => prev.filter(s => s !== value));
+    } else if (filterId.startsWith('domain_')) {
+      const value = filterId.replace('domain_', '');
+      setSelectedDomains(prev => prev.filter(d => d !== value));
     }
     setTimeout(() => handleApplyFilters(), 0);
   };
@@ -683,11 +940,66 @@ export default function ShopsPage() {
           >
             <p className="text-uppercase fs-xs text-light-gray fw-500 mb-2 mt-1">FILTRES</p>
             <div className="filters-grid mb-4">
+              {/* Row 1: Produits, Évolution du trafic, Visites mensuelles, Publicités actives, Création de la Boutique, Marchés */}
               <ProductsFilter 
+                minPrice={minPrice}
+                maxPrice={maxPrice}
+                minCatalogSize={minCatalogSize}
+                maxCatalogSize={maxCatalogSize}
+                onMinPriceChange={setMinPrice}
+                onMaxPriceChange={setMaxPrice}
+                onMinCatalogSizeChange={setMinCatalogSize}
+                onMaxCatalogSizeChange={setMaxCatalogSize}
                 onOpenChange={() => {}} 
                 onApply={handleApplyFilters}
+                isActive={minPrice !== undefined || maxPrice !== undefined || minCatalogSize !== undefined || maxCatalogSize !== undefined}
               />
 
+              <TrafficGrowthFilter 
+                minTrafficGrowth={minTrafficGrowth}
+                maxTrafficGrowth={maxTrafficGrowth}
+                onMinTrafficGrowthChange={setMinTrafficGrowth}
+                onMaxTrafficGrowthChange={setMaxTrafficGrowth}
+                onOpenChange={() => {}} 
+                onApply={handleApplyFilters}
+                isActive={minTrafficGrowth !== undefined || maxTrafficGrowth !== undefined}
+              />
+
+              <MonthlyVisitsFilter 
+                minTraffic={minTraffic}
+                maxTraffic={maxTraffic}
+                onMinTrafficChange={setMinTraffic}
+                onMaxTrafficChange={setMaxTraffic}
+                onOpenChange={() => {}} 
+                onApply={handleApplyFilters}
+                isActive={minTraffic !== undefined || maxTraffic !== undefined}
+              />
+              
+              <ActiveAdsFilter 
+                minActiveAds={minActiveAds}
+                maxActiveAds={maxActiveAds}
+                onMinActiveAdsChange={setMinActiveAds}
+                onMaxActiveAdsChange={setMaxActiveAds}
+                onOpenChange={() => {}} 
+                onApply={handleApplyFilters}
+                isActive={minActiveAds !== undefined || maxActiveAds !== undefined}
+              />
+
+              <ShopCreationFilter
+                value={shopCreationDate}
+                onChange={setShopCreationDate}
+                onApply={handleApplyFilters}
+                isActive={!!shopCreationDate}
+              />
+
+              <MarketsFilter 
+                selectedCountries={selectedCountries}
+                onCountriesChange={setSelectedCountries}
+                onApply={handleApplyFilters}
+                isActive={selectedCountries.length > 0}
+              />
+
+              {/* Row 2: Niche, Commandes mensuelles, Revenu quotidien, Devise, Pixels, Origine */}
               <NicheDropdown
                 selectedNiches={selectedNiches}
                 onNichesChange={setSelectedNiches}
@@ -695,19 +1007,24 @@ export default function ShopsPage() {
                 isActive={selectedNiches.length > 0}
               />
 
-              <MonthlyVisitsFilter 
+              <MonthlyOrdersFilter 
+                minOrders={minOrders}
+                maxOrders={maxOrders}
+                onMinOrdersChange={setMinOrders}
+                onMaxOrdersChange={setMaxOrders}
                 onOpenChange={() => {}} 
                 onApply={handleApplyFilters}
-              />
-
-              <TrafficGrowthFilter 
-                onOpenChange={() => {}} 
-                onApply={handleApplyFilters}
+                isActive={minOrders !== undefined || maxOrders !== undefined}
               />
               
               <DailyRevenueFilter 
+                minRevenue={minRevenue}
+                maxRevenue={maxRevenue}
+                onMinRevenueChange={setMinRevenue}
+                onMaxRevenueChange={setMaxRevenue}
                 onOpenChange={() => {}} 
                 onApply={handleApplyFilters}
+                isActive={minRevenue !== undefined || maxRevenue !== undefined}
               />
 
               <CurrencyFilter 
@@ -717,51 +1034,149 @@ export default function ShopsPage() {
                 isActive={selectedCurrencies.length > 0}
               />
 
-              <MarketsFilter 
-                selectedCountries={selectedCountries}
-                onCountriesChange={setSelectedCountries}
-                onApply={handleApplyFilters}
-                isActive={selectedCountries.length > 0}
-              />
-              
-              <ActiveAdsFilter 
-                onOpenChange={() => {}} 
-                onApply={handleApplyFilters}
-              />
-
               <PixelsFilter 
                 selectedPixels={selectedPixels}
                 onPixelsChange={setSelectedPixels}
                 onApply={handleApplyFilters}
                 isActive={selectedPixels.length > 0}
               />
+
+              <OriginFilter
+                selectedOrigins={selectedOrigins}
+                onOriginsChange={setSelectedOrigins}
+                onApply={handleApplyFilters}
+                isActive={selectedOrigins.length > 0}
+              />
+
+              {/* Row 3: Langue, Domaine, Trustpilot, Thèmes, Applications, Réseaux sociaux */}
+              <LanguageFilter
+                selectedLanguages={selectedLanguages}
+                onLanguagesChange={setSelectedLanguages}
+                onApply={handleApplyFilters}
+                isActive={selectedLanguages.length > 0}
+              />
+
+              <DomainFilter
+                selectedDomains={selectedDomains}
+                onDomainsChange={setSelectedDomains}
+                onApply={handleApplyFilters}
+                isActive={selectedDomains.length > 0}
+              />
+
+              <TrustpilotFilter
+                minRating={minTrustpilotRating}
+                maxRating={maxTrustpilotRating}
+                minReviews={minTrustpilotReviews}
+                maxReviews={maxTrustpilotReviews}
+                onMinRatingChange={setMinTrustpilotRating}
+                onMaxRatingChange={setMaxTrustpilotRating}
+                onMinReviewsChange={setMinTrustpilotReviews}
+                onMaxReviewsChange={setMaxTrustpilotReviews}
+                onApply={handleApplyFilters}
+                isActive={minTrustpilotRating !== undefined || maxTrustpilotRating !== undefined || 
+                         minTrustpilotReviews !== undefined || maxTrustpilotReviews !== undefined}
+              />
+
+              <ThemesFilter
+                selectedThemes={selectedThemes}
+                onThemesChange={setSelectedThemes}
+                onApply={handleApplyFilters}
+                isActive={selectedThemes.length > 0}
+              />
+
+              <ApplicationsFilter
+                selectedApplications={selectedApplications}
+                onApplicationsChange={setSelectedApplications}
+                onApply={handleApplyFilters}
+                isActive={selectedApplications.length > 0}
+              />
+
+              <SocialNetworksFilter
+                selectedSocialNetworks={selectedSocialNetworks}
+                onSocialNetworksChange={setSelectedSocialNetworks}
+                onApply={handleApplyFilters}
+                isActive={selectedSocialNetworks.length > 0}
+              />
             </div>
 
-            {/* Active Filters Tags */}
+            {/* Active Filters Tags - Matching Products Page Style */}
             {activeFilters.length > 0 && (
-              <div className="d-flex flex-wrap gap-2 mb-3">
-                {activeFilters.map((filter, index) => (
-                  <span 
-                    key={`${filter.key}-${filter.value || index}`}
-                    className="badge bg-primary d-flex align-items-center gap-1"
-                    style={{ padding: '6px 10px', borderRadius: '20px', fontSize: '12px' }}
+              <div className="d-flex flex-wrap align-items-center gap-2 mb-3">
+                {activeFilters.map((filter) => (
+                  <div 
+                    key={filter.id} 
+                    className="d-flex align-items-center gap-1" 
+                    style={{ 
+                      backgroundColor: 'rgba(12, 108, 251, 0.1)', 
+                      border: '1px solid rgba(12, 108, 251, 0.3)',
+                      color: '#0c6cfb',
+                      padding: '6px 10px',
+                      borderRadius: '20px',
+                      fontSize: '13px',
+                      fontWeight: '500'
+                    }}
                   >
-                    {filter.label}
-                    <button 
-                      className="btn-close btn-close-white ms-1" 
-                      style={{ fontSize: '8px' }}
-                      onClick={() => removeFilter(filter.key, filter.value)}
-                    ></button>
-                  </span>
+                    {filter.icon && <i className={filter.icon} style={{ fontSize: '14px' }}></i>}
+                    <span>{filter.value}</span>
+                    <button
+                      type="button"
+                      onClick={() => removeFilter(filter.id, filter.type)}
+                      style={{ 
+                        background: 'none', 
+                        border: 'none', 
+                        padding: '0 0 0 4px',
+                        cursor: 'pointer',
+                        color: '#0c6cfb',
+                        fontSize: '14px',
+                        lineHeight: 1,
+                        display: 'flex',
+                        alignItems: 'center'
+                      }}
+                    >
+                      ×
+                    </button>
+                  </div>
                 ))}
-                <button 
-                  className="btn btn-link text-danger fs-xs p-0"
+                {/* Reset Filters Button */}
+                <button
+                  type="button"
                   onClick={resetFilters}
+                  style={{
+                    backgroundColor: 'transparent',
+                    border: '1px solid #ef4444',
+                    color: '#ef4444',
+                    padding: '6px 12px',
+                    borderRadius: '20px',
+                    fontSize: '13px',
+                    fontWeight: '500',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px'
+                  }}
                 >
-                  <i className="ri-refresh-line me-1"></i>
-                  Réinitialiser les filtres
+                  <i className="ri-filter-off-line"></i> Réinitialiser les filtres
                 </button>
-            </div>
+                {/* Save Filters Button */}
+                <button
+                  type="button"
+                  style={{
+                    backgroundColor: 'transparent',
+                    border: '1px solid #0c6cfb',
+                    color: '#0c6cfb',
+                    padding: '6px 12px',
+                    borderRadius: '20px',
+                    fontSize: '13px',
+                    fontWeight: '500',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px'
+                  }}
+                >
+                  <i className="ri-save-line"></i> Enregistrer les filtres
+                </button>
+              </div>
             )}
 
             <div className="horizontal-solid-divider mb-4 mt-2"></div>
@@ -819,7 +1234,7 @@ export default function ShopsPage() {
             transition={{ duration: 0.5, delay: 0.5, ease: "easeOut" }}
             className="table-view mt-2"
           >
-            {isLoading && shops.length === 0 ? (
+            {isLoading ? (
               <div className="table-wrapper" style={{ paddingBottom: '100px', overflowX: 'auto' }}>
                 <Table id="shopsTable" className="table mb-0">
                   <TableHeader className="bg-weak-gray">

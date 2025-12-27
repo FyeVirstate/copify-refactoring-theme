@@ -601,6 +601,31 @@ model ShopifyAppIntegration {
   @@map("shopify_app_integrations")
 }
 
+// Shopify Apps (from app store) - for filtering
+model ShopifyApp {
+  id                      BigInt    @id @default(autoincrement())
+  name                    String    @unique
+  token                   String?
+  link                    String?   @db.Text
+  description             String?   @db.Text
+  categories              Json?     @db.JsonB
+  icon                    String?
+  vendorName              String?   @map("vendor_name")
+  averageRating           Decimal?  @map("average_rating") @db.Decimal(3, 1)
+  reviewCount             Int?      @map("review_count")
+  installs                Int?
+  lastSyncedAt            DateTime? @map("last_synced_at")
+  
+  createdAt               DateTime? @map("created_at")
+  updatedAt               DateTime? @map("updated_at")
+  
+  @@index([name])
+  @@index([averageRating])
+  @@index([reviewCount])
+  @@index([installs])
+  @@map("shopify_apps")
+}
+
 // ============================================
 // AI GENERATION
 // ============================================

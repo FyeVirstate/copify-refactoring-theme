@@ -1,115 +1,187 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import FilterDropdown from "./FilterDropdown";
 import FilterPresetGrid from "./FilterPresetGrid";
 import FilterCheckboxList from "./FilterCheckboxList";
 import { Button } from "@/components/ui/button";
+import Image from "next/image";
 
-interface MarchesFilterProps {
+interface MarketsFilterProps {
   selectedCountries: string[];
   onCountriesChange: (countries: string[]) => void;
   onOpenChange?: (open: boolean) => void;
-  onApply?: () => void;
+  onApply?: (overrideFilters?: { country?: string }) => void;
   isActive?: boolean;
 }
 
-export default function MarchesFilter({ 
+// Country code to name mapping
+const countries = [
+  { code: "US", name: "États-Unis" },
+  { code: "GB", name: "Royaume-Uni" },
+  { code: "CA", name: "Canada" },
+  { code: "AU", name: "Australie" },
+  { code: "FR", name: "France" },
+  { code: "DE", name: "Allemagne" },
+  { code: "NL", name: "Pays-Bas" },
+  { code: "BE", name: "Belgique" },
+  { code: "ES", name: "Espagne" },
+  { code: "IT", name: "Italie" },
+  { code: "CH", name: "Suisse" },
+  { code: "AT", name: "Autriche" },
+  { code: "IE", name: "Irlande" },
+  { code: "NZ", name: "Nouvelle-Zélande" },
+  { code: "SE", name: "Suède" },
+  { code: "NO", name: "Norvège" },
+  { code: "DK", name: "Danemark" },
+  { code: "FI", name: "Finlande" },
+  { code: "PL", name: "Pologne" },
+  { code: "PT", name: "Portugal" },
+  { code: "JP", name: "Japon" },
+  { code: "KR", name: "Corée du Sud" },
+  { code: "CN", name: "Chine" },
+  { code: "SG", name: "Singapour" },
+  { code: "HK", name: "Hong Kong" },
+  { code: "AE", name: "Émirats Arabes Unis" },
+  { code: "SA", name: "Arabie Saoudite" },
+  { code: "BR", name: "Brésil" },
+  { code: "MX", name: "Mexique" },
+  { code: "IN", name: "Inde" },
+  { code: "ZA", name: "Afrique du Sud" },
+  { code: "RU", name: "Russie" },
+  { code: "TR", name: "Turquie" },
+  { code: "TH", name: "Thaïlande" },
+  { code: "ID", name: "Indonésie" },
+  { code: "MY", name: "Malaisie" },
+  { code: "PH", name: "Philippines" },
+  { code: "VN", name: "Vietnam" },
+];
+
+export default function MarketsFilter({ 
   selectedCountries, 
   onCountriesChange,
   onOpenChange,
   onApply,
   isActive = false
-}: MarchesFilterProps) {
+}: MarketsFilterProps) {
+  const [activePreset, setActivePreset] = useState<string | null>(null);
+
+  // Reset preset when selectedCountries is cleared externally
+  useEffect(() => {
+    if (selectedCountries.length === 0) {
+      setActivePreset(null);
+    }
+  }, [selectedCountries]);
+
   const handlePresetClick = (presetId: string) => {
+    let newCountries: string[] = [];
+    
     switch (presetId) {
-      case "big-4":
-        onCountriesChange(["US", "GB", "CA", "AU"]);
+      case "anglophone":
+        newCountries = ["US", "GB", "CA", "AU", "NZ", "IE"];
         break;
-      case "eu":
-        onCountriesChange(["FR", "DE", "ES", "IT", "NL", "BE", "PT", "AT"]);
+      case "europe":
+        newCountries = ["FR", "DE", "GB", "ES", "IT", "NL", "BE", "CH", "AT"];
         break;
-      case "untapped":
-        onCountriesChange(["MX", "BR", "IN", "PH", "ZA"]);
+      case "asia":
+        newCountries = ["JP", "KR", "CN", "SG", "HK", "TH", "ID", "MY", "PH", "VN"];
         break;
+      case "mena":
+        newCountries = ["AE", "SA"];
+        break;
+    }
+    
+    setActivePreset(presetId);
+    onCountriesChange(newCountries);
+    
+    // Auto-apply when preset is selected - pass values directly to avoid timing issues
+    if (onApply) {
+      onApply({ country: newCountries.join(',') });
     }
   };
 
   const presets = [
     {
-      id: "big-4",
-      icon: "ri-global-line",
-      title: "Les 4 grands",
-      description: "USA, UK, Canada, Australie",
-      onClick: () => handlePresetClick("big-4"),
+      id: "anglophone",
+      icon: "ri-verified-badge-line",
+      title: "Anglophone",
+      description: "US, UK, CA, AU, NZ, IE",
     },
     {
-      id: "eu",
-      icon: "ri-euro-line",
-      title: "UE",
-      description: "Pays européens",
-      onClick: () => handlePresetClick("eu"),
+      id: "europe",
+      icon: "ri-money-euro-circle-line",
+      title: "Europe",
+      description: "FR, DE, UK, ES, IT...",
     },
     {
-      id: "untapped",
-      icon: "ri-map-pin-line",
-      title: "Marchés inexploités",
-      description: "Marchés à faible concurrence",
-      onClick: () => handlePresetClick("untapped"),
+      id: "asia",
+      icon: "ri-earth-line",
+      title: "Asie",
+      description: "JP, KR, CN, SG...",
+    },
+    {
+      id: "mena",
+      icon: "ri-building-line",
+      title: "MENA",
+      description: "UAE, Arabie Saoudite",
     },
   ];
 
-  const countries = [
-    { id: "US", label: "États-Unis", icon: <img src="/flags/us.svg" alt="US" style={{ width: '20px', height: '15px', marginRight: '8px' }} /> },
-    { id: "GB", label: "Royaume-Uni", icon: <img src="/flags/gb.svg" alt="GB" style={{ width: '20px', height: '15px', marginRight: '8px' }} /> },
-    { id: "FR", label: "France", icon: <img src="/flags/fr.svg" alt="FR" style={{ width: '20px', height: '15px', marginRight: '8px' }} /> },
-    { id: "DE", label: "Allemagne", icon: <img src="/flags/de.svg" alt="DE" style={{ width: '20px', height: '15px', marginRight: '8px' }} /> },
-    { id: "CA", label: "Canada", icon: <img src="/flags/ca.svg" alt="CA" style={{ width: '20px', height: '15px', marginRight: '8px' }} /> },
-  ];
+  const countriesWithFlags = countries.map(country => ({
+    id: country.code,
+    label: country.name,
+    icon: (
+      <Image 
+        src={`/flags/${country.code.toLowerCase()}.svg`} 
+        alt={country.name} 
+        width={20} 
+        height={15}
+        className="rounded"
+        onError={(e) => {
+          (e.target as HTMLImageElement).style.display = 'none';
+        }}
+      />
+    )
+  }));
 
   return (
     <FilterDropdown
-      icon="ri-store-line"
       label="Marchés"
-      title="Marchés"
-      width="400px"
+      icon="ri-earth-line"
       onOpenChange={onOpenChange}
-      isActive={isActive}
+      isActive={isActive || selectedCountries.length > 0}
+      badge={selectedCountries.length > 0 ? selectedCountries.length : undefined}
     >
-      <FilterPresetGrid presets={presets} columns={2} />
-      
-      <div className="horizontal-dashed-divider mb-3"></div>
-      
-      <div className="mb-3">
-        <div className="form-check">
-          <input
-            className="form-check-input"
-            type="checkbox"
-            id="uniqueMarket"
-          />
-          <label className="form-check-label fs-small" htmlFor="uniqueMarket">
-            Uniquement les boutiques où l'un de vos marchés sélectionnés est leur #1
-          </label>
-        </div>
-      </div>
-      
-      <FilterCheckboxList
-        items={countries}
-        selectedItems={selectedCountries}
-        onItemsChange={onCountriesChange}
-        searchPlaceholder="Rechercher devise, pays..."
+      <p className="fw-500 mb-2">Marchés</p>
+      <p className="fs-small fw-500 mb-2 text-muted">Préréglages</p>
+
+      <FilterPresetGrid 
+        presets={presets} 
+        onPresetClick={handlePresetClick}
+        activePreset={activePreset}
+        columns={2}
       />
-      
-      <Button 
-        type="button" 
-        className="btn btn-primary w-100 apply-filters-btn mt-3"
-        onClick={() => {
-          onApply?.();
-          onOpenChange?.(false);
+
+      <div className="border-t border-gray-200 dark:border-gray-700 my-3" />
+
+      <FilterCheckboxList
+        items={countriesWithFlags}
+        selectedItems={selectedCountries}
+        onItemsChange={(items) => {
+          setActivePreset(null);
+          onCountriesChange(items);
         }}
+        searchPlaceholder="Rechercher un pays..."
+        showIncludeExclude={true}
+        groupName="marketsCheckboxes"
+      />
+
+      <Button 
+        className="w-100 mt-3" 
+        onClick={() => onApply?.()}
       >
         Appliquer
       </Button>
     </FilterDropdown>
   );
 }
-

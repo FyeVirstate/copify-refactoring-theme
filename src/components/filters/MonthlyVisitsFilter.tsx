@@ -1,60 +1,168 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import FilterDropdown from "./FilterDropdown";
 import FilterPresetGrid from "./FilterPresetGrid";
 import FilterInputGroup from "./FilterInputGroup";
 import { Button } from "@/components/ui/button";
 
-interface VisitesMensuellesFilterProps {
+interface MonthlyVisitsFilterProps {
+  minTraffic?: number;
+  maxTraffic?: number;
+  onMinTrafficChange?: (value: number | undefined) => void;
+  onMaxTrafficChange?: (value: number | undefined) => void;
   onOpenChange?: (open: boolean) => void;
+  onApply?: (overrideFilters?: { minTraffic?: number; maxTraffic?: number }) => void;
+  isActive?: boolean;
 }
 
-export default function VisitesMensuellesFilter({ onOpenChange }: VisitesMensuellesFilterProps) {
-  const [minVisits, setMinVisits] = useState("");
-  const [maxVisits, setMaxVisits] = useState("");
+export default function MonthlyVisitsFilter({ 
+  minTraffic: externalMin,
+  maxTraffic: externalMax,
+  onMinTrafficChange,
+  onMaxTrafficChange,
+  onOpenChange, 
+  onApply, 
+  isActive 
+}: MonthlyVisitsFilterProps) {
+  const [minVisitsStr, setMinVisitsStr] = useState(externalMin?.toString() || "");
+  const [maxVisitsStr, setMaxVisitsStr] = useState(externalMax?.toString() || "");
+  const [activePreset, setActivePreset] = useState<string | null>(null);
+
+  // Sync with external values and reset preset when values are cleared
+  useEffect(() => {
+    setMinVisitsStr(externalMin?.toString() || "");
+    if (externalMin === undefined) {
+      setActivePreset(null);
+    }
+  }, [externalMin]);
+  
+  useEffect(() => {
+    setMaxVisitsStr(externalMax?.toString() || "");
+    if (externalMax === undefined && externalMin === undefined) {
+      setActivePreset(null);
+    }
+  }, [externalMax, externalMin]);
+
+  const handlePresetClick = (presetId: string) => {
+    setActivePreset(presetId);
+    
+    let newMin: number | undefined;
+    let newMax: number | undefined;
+    
+    switch (presetId) {
+      case "test":
+        newMin = 0;
+        newMax = 50000;
+        break;
+      case "scaling":
+        newMin = 50000;
+        newMax = 500000;
+        break;
+      case "dominants":
+        newMin = 500000;
+        newMax = 2000000;
+        break;
+      case "established":
+        newMin = 2000000;
+        newMax = undefined;
+        break;
+    }
+    
+    setMinVisitsStr(newMin?.toString() || "");
+    setMaxVisitsStr(newMax?.toString() || "");
+    
+    // Update parent state immediately
+    if (onMinTrafficChange) onMinTrafficChange(newMin);
+    if (onMaxTrafficChange) onMaxTrafficChange(newMax);
+    
+    // Auto-apply when preset is selected - pass values directly to avoid timing issues
+    if (onApply) {
+      onApply({ minTraffic: newMin, maxTraffic: newMax });
+    }
+  };
+
+  const handleMinChange = (val: string) => {
+    setMinVisitsStr(val);
+    setActivePreset(null);
+    if (onMinTrafficChange) {
+      onMinTrafficChange(val ? parseInt(val) : undefined);
+    }
+  };
+
+  const handleMaxChange = (val: string) => {
+    setMaxVisitsStr(val);
+    setActivePreset(null);
+    if (onMaxTrafficChange) {
+      onMaxTrafficChange(val ? parseInt(val) : undefined);
+    }
+  };
 
   const presets = [
     {
       id: "test",
-      icon: "ri-test-tube-line",
+      icon: "ri-seedling-line",
       title: "Test",
-      description: "Entre 1K et 50K",
+      description: "0 - 50K visiteurs/mois",
     },
     {
       id: "scaling",
-      icon: "ri-rocket-line",
+      icon: "ri-line-chart-line",
       title: "Mise à l'échelle",
-      description: "50K et plus",
+      description: "50K - 500K visiteurs/mois",
+    },
+    {
+      id: "dominants",
+      icon: "ri-bar-chart-fill",
+      title: "Dominants",
+      description: "500K - 2M visiteurs/mois",
+    },
+    {
+      id: "established",
+      icon: "ri-building-2-line",
+      title: "Marques établies",
+      description: "2M+ visiteurs/mois",
     },
   ];
 
+  const hasValue = minVisitsStr !== "" || maxVisitsStr !== "";
+
   return (
     <FilterDropdown
-      icon="ri-group-line"
       label="Visites mensuelles"
-      title="Visites mensuelles"
-      width="400px"
+      icon="ri-group-line"
       onOpenChange={onOpenChange}
+      isActive={isActive || hasValue}
+      badge={hasValue ? 1 : undefined}
     >
-      <FilterPresetGrid presets={presets} columns={2} />
-      
-      <div className="horizontal-dashed-divider mb-3"></div>
-      
+      <p className="fw-500 mb-2">Visites mensuelles</p>
+      <p className="fs-small fw-500 mb-2 text-muted">Préréglages</p>
+
+      <FilterPresetGrid 
+        presets={presets} 
+        onPresetClick={handlePresetClick}
+        activePreset={activePreset}
+        columns={2}
+      />
+
+      <div className="border-t border-gray-200 dark:border-gray-700 my-3" />
+
       <FilterInputGroup
-        label="Nombre de visites par mois"
-        minValue={minVisits}
-        maxValue={maxVisits}
-        onMinChange={setMinVisits}
-        onMaxChange={setMaxVisits}
+        label="Nombre de visiteurs par mois"
+        minValue={minVisitsStr}
+        maxValue={maxVisitsStr}
+        onMinChange={handleMinChange}
+        onMaxChange={handleMaxChange}
         minPlaceholder="Min"
         maxPlaceholder="∞"
       />
-      
-      <Button type="button" className="btn btn-primary w-100 apply-filters-btn">
-        Appliquer les filtres
+
+      <Button 
+        className="w-100 mt-3" 
+        onClick={() => onApply?.()}
+      >
+        Appliquer
       </Button>
     </FilterDropdown>
   );
 }
-

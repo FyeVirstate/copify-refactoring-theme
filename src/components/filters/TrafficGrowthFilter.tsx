@@ -1,81 +1,159 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import FilterDropdown from "./FilterDropdown";
 import FilterPresetGrid from "./FilterPresetGrid";
+import FilterInputGroup from "./FilterInputGroup";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 
-interface EvolutionTraficFilterProps {
+interface TrafficGrowthFilterProps {
+  minTrafficGrowth?: number;
+  maxTrafficGrowth?: number;
+  onMinTrafficGrowthChange?: (value: number | undefined) => void;
+  onMaxTrafficGrowthChange?: (value: number | undefined) => void;
   onOpenChange?: (open: boolean) => void;
+  onApply?: (overrideFilters?: { minTrafficGrowth?: number; maxTrafficGrowth?: number }) => void;
+  isActive?: boolean;
 }
 
-export default function EvolutionTraficFilter({ onOpenChange }: EvolutionTraficFilterProps) {
-  const [growthValue, setGrowthValue] = useState("");
-  const [months, setMonths] = useState("3");
+export default function TrafficGrowthFilter({ 
+  minTrafficGrowth: externalMin,
+  maxTrafficGrowth: externalMax,
+  onMinTrafficGrowthChange,
+  onMaxTrafficGrowthChange,
+  onOpenChange, 
+  onApply, 
+  isActive 
+}: TrafficGrowthFilterProps) {
+  const [minGrowthStr, setMinGrowthStr] = useState(externalMin?.toString() || "");
+  const [maxGrowthStr, setMaxGrowthStr] = useState(externalMax?.toString() || "");
+  const [activePreset, setActivePreset] = useState<string | null>(null);
+
+  // Sync with external values and reset preset when values are cleared
+  useEffect(() => {
+    setMinGrowthStr(externalMin?.toString() || "");
+    if (externalMin === undefined) {
+      setActivePreset(null);
+    }
+  }, [externalMin]);
+  
+  useEffect(() => {
+    setMaxGrowthStr(externalMax?.toString() || "");
+    if (externalMax === undefined && externalMin === undefined) {
+      setActivePreset(null);
+    }
+  }, [externalMax, externalMin]);
+
+  const handlePresetClick = (presetId: string) => {
+    setActivePreset(presetId);
+    
+    let newMin: number | undefined;
+    let newMax: number | undefined;
+    
+    switch (presetId) {
+      case "rapid":
+        newMin = 100;
+        newMax = undefined;
+        break;
+      case "sustained":
+        newMin = 50;
+        newMax = 100;
+        break;
+      case "upward":
+        newMin = 10;
+        newMax = 50;
+        break;
+    }
+    
+    setMinGrowthStr(newMin?.toString() || "");
+    setMaxGrowthStr(newMax?.toString() || "");
+    
+    // Update parent state immediately
+    if (onMinTrafficGrowthChange) onMinTrafficGrowthChange(newMin);
+    if (onMaxTrafficGrowthChange) onMaxTrafficGrowthChange(newMax);
+    
+    // Auto-apply when preset is selected - pass values directly to avoid timing issues
+    if (onApply) {
+      onApply({ minTrafficGrowth: newMin, maxTrafficGrowth: newMax });
+    }
+  };
+
+  const handleMinChange = (val: string) => {
+    setMinGrowthStr(val);
+    setActivePreset(null);
+    if (onMinTrafficGrowthChange) {
+      onMinTrafficGrowthChange(val ? parseInt(val) : undefined);
+    }
+  };
+
+  const handleMaxChange = (val: string) => {
+    setMaxGrowthStr(val);
+    setActivePreset(null);
+    if (onMaxTrafficGrowthChange) {
+      onMaxTrafficGrowthChange(val ? parseInt(val) : undefined);
+    }
+  };
 
   const presets = [
     {
-      id: "rapid-growth",
-      icon: "ri-speed-up-line",
+      id: "rapid",
+      icon: "ri-rocket-2-line",
       title: "Mise à l'échelle rapide",
-      description: "+50% derniers 3 mois",
+      description: "Croissance de +100%",
     },
     {
-      id: "slowdown",
-      icon: "ri-arrow-down-line",
-      title: "Ralentissement",
-      description: "-10% derniers 3 mois",
+      id: "sustained",
+      icon: "ri-line-chart-line",
+      title: "Croissance soutenue",
+      description: "Croissance de +50% à +100%",
+    },
+    {
+      id: "upward",
+      icon: "ri-arrow-up-line",
+      title: "Tendance ascendante",
+      description: "Croissance de +10% à +50%",
     },
   ];
 
+  const hasValue = minGrowthStr !== "" || maxGrowthStr !== "";
+
   return (
     <FilterDropdown
-      icon="ri-line-chart-line"
       label="Évolution du trafic"
-      title="Croissance du trafic"
-      width="400px"
+      icon="ri-line-chart-line"
       onOpenChange={onOpenChange}
+      isActive={isActive || hasValue}
+      badge={hasValue ? 1 : undefined}
     >
-      <FilterPresetGrid presets={presets} columns={2} />
-      
-      <div className="horizontal-dashed-divider mb-3"></div>
-      
-      <div className="mb-3">
-        <label className="fs-small text-sub mb-2 d-block fw-500">Croissance</label>
-        <select className="form-select mb-2" defaultValue="superior">
-          <option value="superior">est supérieur à</option>
-          <option value="inferior">est inférieur à</option>
-          <option value="equal">est égal à</option>
-        </select>
-        <div className="d-flex align-items-center gap-2">
-          <i className="ri-arrow-right-line text-primary"></i>
-          <Input
-            type="number"
-            className="form-control design-2"
-            placeholder="0"
-            value={growthValue}
-            onChange={(e) => setGrowthValue(e.target.value)}
-            style={{ flex: 1 }}
-          />
-          <span className="fs-small">%</span>
-          <span className="fs-small text-sub">dernier</span>
-          <Input
-            type="number"
-            className="form-control design-2"
-            placeholder="3"
-            value={months}
-            onChange={(e) => setMonths(e.target.value)}
-            style={{ width: '80px' }}
-          />
-          <span className="fs-small">mois</span>
-        </div>
-      </div>
-      
-      <Button type="button" className="btn btn-primary w-100 apply-filters-btn">
+      <p className="fw-500 mb-2">Évolution du trafic</p>
+      <p className="fs-small fw-500 mb-2 text-muted">Préréglages</p>
+
+      <FilterPresetGrid 
+        presets={presets} 
+        onPresetClick={handlePresetClick}
+        activePreset={activePreset}
+        columns={2}
+      />
+
+      <div className="border-t border-gray-200 dark:border-gray-700 my-3" />
+
+      <FilterInputGroup
+        label="Taux de croissance (%)"
+        minValue={minGrowthStr}
+        maxValue={maxGrowthStr}
+        onMinChange={handleMinChange}
+        onMaxChange={handleMaxChange}
+        minPlaceholder="Min"
+        maxPlaceholder="∞"
+        suffix="%"
+      />
+
+      <Button 
+        className="w-100 mt-3" 
+        onClick={() => onApply?.()}
+      >
         Appliquer
       </Button>
     </FilterDropdown>
   );
 }
-

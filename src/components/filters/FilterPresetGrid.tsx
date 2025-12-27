@@ -1,11 +1,12 @@
 "use client";
 
-import { ReactNode, useState } from "react";
+import { ReactNode, CSSProperties } from "react";
 
 interface PresetItem {
   id: string;
   icon?: string;
   iconElement?: ReactNode;
+  iconStyle?: CSSProperties;
   title: string;
   description?: string;
   onClick?: () => void;
@@ -15,23 +16,28 @@ interface FilterPresetGridProps {
   title?: string;
   presets: PresetItem[];
   columns?: 2 | 3 | 4;
+  onPresetClick?: (presetId: string) => void;
+  activePreset?: string | null;
+  showTitle?: boolean;
 }
 
 export default function FilterPresetGrid({ 
   title = "Préréglages", 
   presets,
-  columns = 2 
+  columns = 2,
+  onPresetClick,
+  activePreset,
+  showTitle = false
 }: FilterPresetGridProps) {
-  const [activePreset, setActivePreset] = useState<string | null>(null);
 
   const handlePresetClick = (presetId: string, onClick?: () => void) => {
-    setActivePreset(presetId);
+    onPresetClick?.(presetId);
     onClick?.();
   };
 
   return (
     <div className="mb-3">
-      <p className="fs-small text-sub mb-3 fw-500">{title}</p>
+      {showTitle && <p className="fs-small text-sub mb-3 fw-500">{title}</p>}
       <div 
         className="mb-3"
         style={{
@@ -82,7 +88,8 @@ export default function FilterPresetGrid({
                     style={{ 
                       fontSize: '18px', 
                       color: isActive ? 'white' : '#99A0AE',
-                      flexShrink: 0
+                      flexShrink: 0,
+                      ...preset.iconStyle
                     }}
                   ></i>
                 ) : null}
@@ -115,4 +122,3 @@ export default function FilterPresetGrid({
     </div>
   );
 }
-

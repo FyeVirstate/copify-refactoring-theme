@@ -42,6 +42,24 @@ export async function GET(request: NextRequest) {
   const countries = searchParams.get('country')?.split(',').filter(Boolean) || []
   const categories = searchParams.get('category')?.split(',').filter(Boolean) || []
   const pixels = searchParams.get('pixels')?.split(',').filter(Boolean) || []
+  // Note: 'origins' uses 'country' column (shop location, separate from market countries from traffic)
+  const origins = searchParams.get('origins')?.split(',').filter(Boolean) || []
+  // Note: 'languages' maps to 'locale' column in database
+  const languages = searchParams.get('languages')?.split(',').filter(Boolean) || []
+  const domains = searchParams.get('domains')?.split(',').filter(Boolean) || []
+  const themes = searchParams.get('themes')?.split(',').filter(Boolean) || []
+  // Note: 'applications' searches in 'apps' text column
+  const applications = searchParams.get('applications')?.split(',').filter(Boolean) || []
+  const shopCreationDate = searchParams.get('shopCreationDate') || ''
+  // Monthly orders filter
+  const minOrders = searchParams.get('minOrders') ? parseInt(searchParams.get('minOrders')!) : null
+  const maxOrders = searchParams.get('maxOrders') ? parseInt(searchParams.get('maxOrders')!) : null
+  
+  // Price and catalog filters
+  const minPrice = searchParams.get('minPrice') ? parseFloat(searchParams.get('minPrice')!) : null
+  const maxPrice = searchParams.get('maxPrice') ? parseFloat(searchParams.get('maxPrice')!) : null
+  const minCatalogSize = searchParams.get('minCatalogSize') ? parseInt(searchParams.get('minCatalogSize')!) : null
+  const maxCatalogSize = searchParams.get('maxCatalogSize') ? parseInt(searchParams.get('maxCatalogSize')!) : null
 
   try {
     // Build the WHERE conditions for shops table only (fast filtering)
@@ -76,6 +94,18 @@ export async function GET(request: NextRequest) {
       paramIndex++
     }
 
+    // Catalog size filter (products_count)
+    if (minCatalogSize !== null) {
+      shopConditions.push(`s.products_count >= $${paramIndex}`)
+      params.push(minCatalogSize)
+      paramIndex++
+    }
+    if (maxCatalogSize !== null) {
+      shopConditions.push(`s.products_count <= $${paramIndex}`)
+      params.push(maxCatalogSize)
+      paramIndex++
+    }
+
     // Active ads filter (on shops table - indexed)
     if (minActiveAds !== null) {
       shopConditions.push(`s.active_ads >= $${paramIndex}`)
@@ -96,12 +126,21 @@ export async function GET(request: NextRequest) {
       paramIndex += currencies.length
     }
 
-    // Country filter (on shops table - indexed)
+    // Country filter (on shops table - indexed) - This is for traffic market countries
     if (countries.length > 0) {
       const countryPlaceholders = countries.map((_, i) => `$${paramIndex + i}`).join(', ')
       shopConditions.push(`s.country IN (${countryPlaceholders})`)
       params.push(...countries)
       paramIndex += countries.length
+    }
+
+    // Origins filter - shop location country (uses same 'country' column)
+    // This is separate from market countries - it filters by where the shop is located
+    if (origins.length > 0) {
+      const originPlaceholders = origins.map((_, i) => `$${paramIndex + i}`).join(', ')
+      shopConditions.push(`s.country IN (${originPlaceholders})`)
+      params.push(...origins)
+      paramIndex += origins.length
     }
 
     // Pixels filter
@@ -112,10 +151,96 @@ export async function GET(request: NextRequest) {
       paramIndex += pixels.length
     }
 
+    // Languages filter - uses 'locale' column in database
+    // Locale contains language codes like 'en', 'fr', 'es', etc.
+    if (languages.length > 0) {
+      // Map language names to locale codes
+      const languageMap: Record<string, string[]> = {
+        'English': ['en', 'en-US', 'en-GB', 'en-AU', 'en-CA'],
+        'French': ['fr', 'fr-FR', 'fr-CA'],
+        'Spanish': ['es', 'es-ES', 'es-MX'],
+        'German': ['de', 'de-DE', 'de-AT'],
+        'Portuguese': ['pt', 'pt-BR', 'pt-PT'],
+        'Italian': ['it', 'it-IT'],
+        'Dutch': ['nl', 'nl-NL'],
+        'Polish': ['pl', 'pl-PL'],
+        'Norwegian': ['no', 'nb', 'nn'],
+        'Swedish': ['sv', 'sv-SE'],
+        'Danish': ['da', 'da-DK'],
+        'Japanese': ['ja', 'ja-JP'],
+        'Chinese': ['zh', 'zh-CN', 'zh-TW'],
+        'Arabic': ['ar', 'ar-SA'],
+        'Russian': ['ru', 'ru-RU'],
+        'Korean': ['ko', 'ko-KR'],
+      }
+      
+      const localeCodes: string[] = []
+      for (const lang of languages) {
+        const codes = languageMap[lang] || [lang.toLowerCase().substring(0, 2)]
+        localeCodes.push(...codes)
+      }
+      
+      if (localeCodes.length > 0) {
+        const langConditions = localeCodes.map((_, i) => `s.locale ILIKE $${paramIndex + i}`).join(' OR ')
+        shopConditions.push(`(${langConditions})`)
+        params.push(...localeCodes.map(l => `${l}%`))
+        paramIndex += localeCodes.length
+      }
+    }
+
+    // Domains filter - search in 'url' column
+    // Looking for URLs ending with specific extensions like .com, .fr, .co.uk
+    if (domains.length > 0) {
+      const domainConditions = domains.map((_, i) => `s.url ILIKE $${paramIndex + i}`).join(' OR ')
+      shopConditions.push(`(${domainConditions})`)
+      // Match URLs ending with the domain extension
+      params.push(...domains.map(d => `%${d}`))
+      paramIndex += domains.length
+    }
+
+    // Themes filter - search in 'theme' column
+    if (themes.length > 0) {
+      const themeConditions = themes.map((_, i) => `s.theme ILIKE $${paramIndex + i}`).join(' OR ')
+      shopConditions.push(`(${themeConditions})`)
+      params.push(...themes.map(t => `%${t}%`))
+      paramIndex += themes.length
+    }
+
+    // Applications filter - search in 'apps' text column
+    // The apps column contains comma-separated or JSON list of app names
+    if (applications.length > 0) {
+      const appConditions = applications.map((_, i) => `s.apps ILIKE $${paramIndex + i}`).join(' OR ')
+      shopConditions.push(`(${appConditions})`)
+      params.push(...applications.map(a => `%${a}%`))
+      paramIndex += applications.length
+    }
+
+    // Shop creation date filter
+    if (shopCreationDate) {
+      // Parse date range (format: MM/DD/YYYY - MM/DD/YYYY)
+      const dates = shopCreationDate.split(' - ')
+      if (dates.length === 2) {
+        const startDate = new Date(dates[0])
+        const endDate = new Date(dates[1])
+        if (!isNaN(startDate.getTime())) {
+          shopConditions.push(`s.created_at >= $${paramIndex}`)
+          params.push(startDate.toISOString())
+          paramIndex++
+        }
+        if (!isNaN(endDate.getTime())) {
+          shopConditions.push(`s.created_at <= $${paramIndex}`)
+          params.push(endDate.toISOString())
+          paramIndex++
+        }
+      }
+    }
+
     // Traffic-based filters (will be applied after join)
     const hasTrafficFilters = minRevenue !== null || maxRevenue !== null || 
                               minTraffic !== null || maxTraffic !== null ||
-                              minTrafficGrowth !== null || maxTrafficGrowth !== null
+                              minTrafficGrowth !== null || maxTrafficGrowth !== null ||
+                              minOrders !== null || maxOrders !== null ||
+                              minPrice !== null || maxPrice !== null
 
     // Revenue filter (from traffic table)
     if (minRevenue !== null) {
@@ -150,6 +275,30 @@ export async function GET(request: NextRequest) {
     if (maxTrafficGrowth !== null) {
       trafficConditions.push(`COALESCE(t.growth_rate, 0) <= $${paramIndex}`)
       params.push(maxTrafficGrowth)
+      paramIndex++
+    }
+
+    // Monthly orders filter (from traffic table)
+    if (minOrders !== null) {
+      trafficConditions.push(`COALESCE(t.estimated_order, 0) >= $${paramIndex}`)
+      params.push(minOrders)
+      paramIndex++
+    }
+    if (maxOrders !== null) {
+      trafficConditions.push(`COALESCE(t.estimated_order, 0) <= $${paramIndex}`)
+      params.push(maxOrders)
+      paramIndex++
+    }
+
+    // Price filter (avg_price in traffic table)
+    if (minPrice !== null) {
+      trafficConditions.push(`COALESCE(t.avg_price, 0) >= $${paramIndex}`)
+      params.push(minPrice)
+      paramIndex++
+    }
+    if (maxPrice !== null) {
+      trafficConditions.push(`COALESCE(t.avg_price, 0) <= $${paramIndex}`)
+      params.push(maxPrice)
       paramIndex++
     }
 
@@ -220,7 +369,8 @@ export async function GET(request: NextRequest) {
           growth_rate,
           visits,
           dates,
-          countries
+          countries,
+          avg_price
         FROM traffic
         ORDER BY shop_id, created_at DESC
       ),
@@ -335,7 +485,7 @@ export async function GET(request: NextRequest) {
       // Optimized count query without LATERAL
       const countQuery = `
         WITH latest_traffic AS (
-          SELECT DISTINCT ON (shop_id) shop_id, estimated_monthly, last_month_visits, growth_rate
+          SELECT DISTINCT ON (shop_id) shop_id, estimated_monthly, last_month_visits, growth_rate, estimated_order, avg_price
           FROM traffic
           ORDER BY shop_id, created_at DESC
         )

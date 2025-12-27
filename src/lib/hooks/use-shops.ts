@@ -54,10 +54,27 @@ export interface ShopsFilters {
   maxActiveAds?: number
   minTrafficGrowth?: number
   maxTrafficGrowth?: number
+  minPrice?: number
+  maxPrice?: number
+  minCatalogSize?: number
+  maxCatalogSize?: number
+  minOrders?: number
+  maxOrders?: number
   currency?: string
   country?: string
   category?: string
   pixels?: string
+  // Note: origins uses 'country' column (shop country, not traffic market)
+  origins?: string
+  // Note: languages maps to 'locale' column in database
+  languages?: string
+  // Note: domains searches in 'url' column
+  domains?: string
+  // Note: themes searches in 'theme' column
+  themes?: string
+  // Note: applications searches in 'apps' column
+  applications?: string
+  shopCreationDate?: string
 }
 
 export function useShops() {

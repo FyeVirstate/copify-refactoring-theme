@@ -23,6 +23,9 @@ export { default as ThemesFilter } from './ThemesFilter';
 export { default as ApplicationsFilter } from './ApplicationsFilter';
 export { default as SocialNetworksFilter } from './SocialNetworksFilter';
 
+// Shop creation date filter
+export { default as ShopCreationFilter } from './ShopCreationFilter';
+
 // Ads page specific filters
 export { default as PerformanceScoreFilter } from './PerformanceScoreFilter';
 export { default as CTAsFilter } from './CTAsFilter';

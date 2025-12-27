@@ -1,104 +1,166 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import FilterDropdown from "./FilterDropdown";
 import FilterPresetGrid from "./FilterPresetGrid";
 import FilterCheckboxList from "./FilterCheckboxList";
 import { Button } from "@/components/ui/button";
+import Image from "next/image";
 
-interface OrigineFilterProps {
+interface OriginFilterProps {
   selectedOrigins: string[];
   onOriginsChange: (origins: string[]) => void;
   onOpenChange?: (open: boolean) => void;
-  onApply?: () => void;
+  onApply?: (overrideFilters?: { origins?: string }) => void;
   isActive?: boolean;
 }
 
-export default function OrigineFilter({ 
+// Country code to name mapping
+const countries = [
+  { code: "US", name: "États-Unis" },
+  { code: "GB", name: "Royaume-Uni" },
+  { code: "CA", name: "Canada" },
+  { code: "AU", name: "Australie" },
+  { code: "FR", name: "France" },
+  { code: "DE", name: "Allemagne" },
+  { code: "NL", name: "Pays-Bas" },
+  { code: "BE", name: "Belgique" },
+  { code: "ES", name: "Espagne" },
+  { code: "IT", name: "Italie" },
+  { code: "CH", name: "Suisse" },
+  { code: "AT", name: "Autriche" },
+  { code: "IE", name: "Irlande" },
+  { code: "NZ", name: "Nouvelle-Zélande" },
+  { code: "SE", name: "Suède" },
+  { code: "NO", name: "Norvège" },
+  { code: "DK", name: "Danemark" },
+  { code: "FI", name: "Finlande" },
+  { code: "PL", name: "Pologne" },
+  { code: "PT", name: "Portugal" },
+  { code: "JP", name: "Japon" },
+  { code: "KR", name: "Corée du Sud" },
+  { code: "CN", name: "Chine" },
+  { code: "SG", name: "Singapour" },
+  { code: "HK", name: "Hong Kong" },
+  { code: "AE", name: "Émirats Arabes Unis" },
+  { code: "BR", name: "Brésil" },
+  { code: "MX", name: "Mexique" },
+  { code: "IN", name: "Inde" },
+];
+
+export default function OriginFilter({ 
   selectedOrigins, 
   onOriginsChange,
   onOpenChange,
   onApply,
-  isActive 
-}: OrigineFilterProps) {
-  const presets = [
-    {
-      id: "big-4",
-      icon: "ri-global-line",
-      title: "Les 4 grands",
-      description: "USA, UK, Canada, Australie",
-    },
-    {
-      id: "european",
-      icon: "ri-euro-line",
-      title: "Européen",
-      description: "Pays européens",
-    },
-    {
-      id: "expats",
-      icon: "ri-flight-takeoff-line",
-      title: "Expatriés connus",
-      description: "EAU, Singapour, Malte, Thaïlande",
-    },
-  ];
+  isActive = false
+}: OriginFilterProps) {
+  const [activePreset, setActivePreset] = useState<string | null>(null);
 
-  const countries = [
-    { 
-      id: "US", 
-      label: "États-Unis", 
-      icon: <img src="/flags/us.svg" alt="US" style={{ width: '20px', height: '15px', marginRight: '8px' }} /> 
-    },
-    { 
-      id: "GB", 
-      label: "Royaume-Uni", 
-      icon: <img src="/flags/gb.svg" alt="GB" style={{ width: '20px', height: '15px', marginRight: '8px' }} /> 
-    },
-    { 
-      id: "FR", 
-      label: "France", 
-      icon: <img src="/flags/fr.svg" alt="FR" style={{ width: '20px', height: '15px', marginRight: '8px' }} /> 
-    },
-    { 
-      id: "DE", 
-      label: "Allemagne", 
-      icon: <img src="/flags/de.svg" alt="DE" style={{ width: '20px', height: '15px', marginRight: '8px' }} /> 
-    },
-    { 
-      id: "CA", 
-      label: "Canada", 
-      icon: <img src="/flags/ca.svg" alt="CA" style={{ width: '20px', height: '15px', marginRight: '8px' }} /> 
-    },
-  ];
+  // Reset preset when selectedOrigins is cleared externally
+  useEffect(() => {
+    if (selectedOrigins.length === 0) {
+      setActivePreset(null);
+    }
+  }, [selectedOrigins]);
 
-  const handleApply = () => {
+  const handlePresetClick = (presetId: string) => {
+    let newOrigins: string[] = [];
+    
+    switch (presetId) {
+      case "big4":
+        newOrigins = ["US", "GB", "CA", "AU"];
+        break;
+      case "european":
+        newOrigins = ["FR", "GB", "DE", "NL", "BE", "ES", "IT"];
+        break;
+      case "expats":
+        newOrigins = ["IE"];
+        break;
+    }
+    
+    setActivePreset(presetId);
+    onOriginsChange(newOrigins);
+    
+    // Auto-apply when preset is selected - pass values directly to avoid timing issues
     if (onApply) {
-      onApply();
+      onApply({ origins: newOrigins.join(',') });
     }
   };
 
+  const presets = [
+    {
+      id: "big4",
+      icon: "ri-verified-badge-line",
+      title: "Big 4",
+      description: "US, UK, Canada, Australie",
+    },
+    {
+      id: "european",
+      icon: "ri-money-euro-circle-line",
+      title: "Européen",
+      description: "FR, UK, DE, NL, BE, ES, IT",
+    },
+    {
+      id: "expats",
+      icon: "ri-funds-line",
+      title: "Expats connus",
+      description: "Irlande",
+    },
+  ];
+
+  const countriesWithFlags = countries.map(country => ({
+    id: country.code,
+    label: country.name,
+    icon: (
+      <Image 
+        src={`/flags/${country.code.toLowerCase()}.svg`} 
+        alt={country.name} 
+        width={20} 
+        height={15}
+        className="rounded"
+        onError={(e) => {
+          (e.target as HTMLImageElement).style.display = 'none';
+        }}
+      />
+    )
+  }));
+
   return (
     <FilterDropdown
-      icon="ri-earth-line"
       label="Origine"
-      title="Origine"
-      width="400px"
+      icon="ri-home-4-line"
       onOpenChange={onOpenChange}
       isActive={isActive || selectedOrigins.length > 0}
+      badge={selectedOrigins.length > 0 ? selectedOrigins.length : undefined}
     >
-      <FilterPresetGrid presets={presets} columns={2} />
-      
-      <div className="horizontal-dashed-divider mb-3"></div>
-      
-      <FilterCheckboxList
-        items={countries}
-        selectedItems={selectedOrigins}
-        onItemsChange={onOriginsChange}
-        searchPlaceholder="Rechercher devise, pays..."
+      <p className="fw-500 mb-2">Origine</p>
+      <p className="fs-small fw-500 mb-2 text-muted">Préréglages</p>
+
+      <FilterPresetGrid 
+        presets={presets} 
+        onPresetClick={handlePresetClick}
+        activePreset={activePreset}
+        columns={2}
       />
-      
+
+      <div className="border-t border-gray-200 dark:border-gray-700 my-3" />
+
+      <FilterCheckboxList
+        items={countriesWithFlags}
+        selectedItems={selectedOrigins}
+        onItemsChange={(items) => {
+          setActivePreset(null);
+          onOriginsChange(items);
+        }}
+        searchPlaceholder="Rechercher un pays..."
+        showIncludeExclude={true}
+        groupName="originCheckboxes"
+      />
+
       <Button 
-        type="button" 
-        className="btn btn-primary w-100 apply-filters-btn mt-3"
-        onClick={handleApply}
+        className="w-100 mt-3" 
+        onClick={() => onApply?.()}
       >
         Appliquer
       </Button>

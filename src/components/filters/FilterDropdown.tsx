@@ -11,11 +11,12 @@ import {
 interface FilterDropdownProps {
   icon: string;
   label: string;
-  title: string;
+  title?: string;
   children: ReactNode;
   width?: string;
   onOpenChange?: (open: boolean) => void;
   isActive?: boolean;
+  badge?: number;
 }
 
 export default function FilterDropdown({
@@ -23,9 +24,10 @@ export default function FilterDropdown({
   label,
   title,
   children,
-  width = "600px",
+  width = "480px",
   onOpenChange,
   isActive = false,
+  badge,
 }: FilterDropdownProps) {
   const triggerRef = useRef<HTMLButtonElement>(null);
   const [align, setAlign] = useState<"start" | "end">("start");
@@ -73,6 +75,25 @@ export default function FilterDropdown({
             variant="outline"
           >
             <i className={`dropdown-icon ${icon}`}></i> {label}
+            {badge !== undefined && badge > 0 && (
+              <span 
+                className="filter-rounded-tag ms-1"
+                style={{
+                  backgroundColor: '#0E121B',
+                  color: 'white',
+                  borderRadius: '10px',
+                  padding: '2px 8px',
+                  fontSize: '11px',
+                  fontWeight: '500',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  minWidth: '20px'
+                }}
+              >
+                {badge}
+              </span>
+            )}
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent 
@@ -84,11 +105,10 @@ export default function FilterDropdown({
           collisionPadding={10}
           sideOffset={4}
         >
-          <h5 className="mb-3 fw-600" style={{ color: '#0E121B', fontSize: '15px' }}>{title}</h5>
+          {title && <h5 className="mb-3 fw-600" style={{ color: '#0E121B', fontSize: '15px' }}>{title}</h5>}
           {children}
         </DropdownMenuContent>
       </DropdownMenu>
     </div>
   );
 }
-

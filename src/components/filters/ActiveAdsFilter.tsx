@@ -1,112 +1,168 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import FilterDropdown from "./FilterDropdown";
 import FilterPresetGrid from "./FilterPresetGrid";
 import FilterInputGroup from "./FilterInputGroup";
 import { Button } from "@/components/ui/button";
 
-interface PublicitesActivesFilterProps {
+interface ActiveAdsFilterProps {
+  minActiveAds?: number;
+  maxActiveAds?: number;
+  onMinActiveAdsChange?: (value: number | undefined) => void;
+  onMaxActiveAdsChange?: (value: number | undefined) => void;
   onOpenChange?: (open: boolean) => void;
+  onApply?: (overrideFilters?: { minActiveAds?: number; maxActiveAds?: number }) => void;
+  isActive?: boolean;
 }
 
-export default function PublicitesActivesFilter({ onOpenChange }: PublicitesActivesFilterProps) {
-  const [minActive, setMinActive] = useState("");
-  const [maxActive, setMaxActive] = useState("");
-  const [minTotal, setMinTotal] = useState("");
-  const [maxTotal, setMaxTotal] = useState("");
+export default function ActiveAdsFilter({ 
+  minActiveAds: externalMin,
+  maxActiveAds: externalMax,
+  onMinActiveAdsChange,
+  onMaxActiveAdsChange,
+  onOpenChange, 
+  onApply, 
+  isActive 
+}: ActiveAdsFilterProps) {
+  const [minAdsStr, setMinAdsStr] = useState(externalMin?.toString() || "");
+  const [maxAdsStr, setMaxAdsStr] = useState(externalMax?.toString() || "");
+  const [activePreset, setActivePreset] = useState<string | null>(null);
+
+  // Sync with external values and reset preset when values are cleared
+  useEffect(() => {
+    setMinAdsStr(externalMin?.toString() || "");
+    if (externalMin === undefined) {
+      setActivePreset(null);
+    }
+  }, [externalMin]);
+  
+  useEffect(() => {
+    setMaxAdsStr(externalMax?.toString() || "");
+    if (externalMax === undefined && externalMin === undefined) {
+      setActivePreset(null);
+    }
+  }, [externalMax, externalMin]);
+
+  const handlePresetClick = (presetId: string) => {
+    setActivePreset(presetId);
+    
+    let newMin: number | undefined;
+    let newMax: number | undefined;
+    
+    switch (presetId) {
+      case "test":
+        newMin = 1;
+        newMax = 10;
+        break;
+      case "scaling":
+        newMin = 10;
+        newMax = 50;
+        break;
+      case "dominants":
+        newMin = 50;
+        newMax = 200;
+        break;
+      case "established":
+        newMin = 200;
+        newMax = undefined;
+        break;
+    }
+    
+    setMinAdsStr(newMin?.toString() || "");
+    setMaxAdsStr(newMax?.toString() || "");
+    
+    // Update parent state immediately
+    if (onMinActiveAdsChange) onMinActiveAdsChange(newMin);
+    if (onMaxActiveAdsChange) onMaxActiveAdsChange(newMax);
+    
+    // Auto-apply when preset is selected - pass values directly to avoid timing issues
+    if (onApply) {
+      onApply({ minActiveAds: newMin, maxActiveAds: newMax });
+    }
+  };
+
+  const handleMinChange = (val: string) => {
+    setMinAdsStr(val);
+    setActivePreset(null);
+    if (onMinActiveAdsChange) {
+      onMinActiveAdsChange(val ? parseInt(val) : undefined);
+    }
+  };
+
+  const handleMaxChange = (val: string) => {
+    setMaxAdsStr(val);
+    setActivePreset(null);
+    if (onMaxActiveAdsChange) {
+      onMaxActiveAdsChange(val ? parseInt(val) : undefined);
+    }
+  };
 
   const presets = [
     {
       id: "test",
       icon: "ri-test-tube-line",
       title: "Test",
-      description: "5 - 10 publicités actives",
+      description: "1 - 10 pubs actives",
     },
     {
       id: "scaling",
-      icon: "ri-rocket-line",
+      icon: "ri-line-chart-line",
       title: "Mise à l'échelle",
-      description: "50 - 100 publicités actives",
+      description: "10 - 50 pubs actives",
     },
     {
-      id: "validation",
-      icon: "ri-checkbox-circle-line",
-      title: "Validation",
-      description: "10 - 50 publicités actives",
+      id: "dominants",
+      icon: "ri-bar-chart-fill",
+      title: "Dominants",
+      description: "50 - 200 pubs actives",
     },
     {
-      id: "confirmed",
-      icon: "ri-check-double-line",
-      title: "Confirmé",
-      description: "100+ publicités actives",
+      id: "established",
+      icon: "ri-building-2-line",
+      title: "Marques établies",
+      description: "200+ pubs actives",
     },
   ];
 
-  const periods = [
-    "Dernières 24h",
-    "Derniers 3 jours",
-    "Derniers 7 jours",
-    "Derniers 30 jours",
-    "Derniers 3 mois",
-    "Derniers 6 mois",
-    "Dernière année"
-  ];
+  const hasValue = minAdsStr !== "" || maxAdsStr !== "";
 
   return (
     <FilterDropdown
-      icon="ri-megaphone-line"
       label="Publicités actives"
-      title="Produits"
-      width="400px"
+      icon="ri-megaphone-line"
       onOpenChange={onOpenChange}
+      isActive={isActive || hasValue}
+      badge={hasValue ? 1 : undefined}
     >
-      <FilterPresetGrid presets={presets} columns={2} />
-      
-      <div className="horizontal-dashed-divider mb-3"></div>
-      
-      <div className="row g-3 mb-3">
-        <div className="col-6">
-          <FilterInputGroup
-            label="Publicités actives"
-            minValue={minActive}
-            maxValue={maxActive}
-            onMinChange={setMinActive}
-            onMaxChange={setMaxActive}
-          />
-        </div>
-        <div className="col-6">
-          <FilterInputGroup
-            label="Publicités totales"
-            minValue={minTotal}
-            maxValue={maxTotal}
-            onMinChange={setMinTotal}
-            onMaxChange={setMaxTotal}
-          />
-        </div>
-      </div>
-      
-      <div className="mb-3">
-        <label className="fs-small text-sub mb-2 d-block fw-500">Période</label>
-        <div className="d-flex flex-wrap gap-2">
-          {periods.map((period) => (
-            <Button 
-              key={period}
-              variant="outline" 
-              size="sm" 
-              className="btn btn-outline-custom-pill rounded-pill"
-              type="button"
-            >
-              {period}
-            </Button>
-          ))}
-        </div>
-      </div>
-      
-      <Button type="button" className="btn btn-primary w-100 apply-filters-btn">
+      <p className="fw-500 mb-2">Publicités actives</p>
+      <p className="fs-small fw-500 mb-2 text-muted">Préréglages</p>
+
+      <FilterPresetGrid 
+        presets={presets} 
+        onPresetClick={handlePresetClick}
+        activePreset={activePreset}
+        columns={2}
+      />
+
+      <div className="border-t border-gray-200 dark:border-gray-700 my-3" />
+
+      <FilterInputGroup
+        label="Nombre de publicités actives"
+        minValue={minAdsStr}
+        maxValue={maxAdsStr}
+        onMinChange={handleMinChange}
+        onMaxChange={handleMaxChange}
+        minPlaceholder="Min"
+        maxPlaceholder="∞"
+      />
+
+      <Button 
+        className="w-100 mt-3" 
+        onClick={() => onApply?.()}
+      >
         Appliquer
       </Button>
     </FilterDropdown>
   );
 }
-

@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
@@ -15,7 +16,9 @@ interface FilterCheckboxListProps {
   onItemsChange: (items: string[]) => void;
   searchPlaceholder?: string;
   showToggleButtons?: boolean;
+  showIncludeExclude?: boolean;
   maxHeight?: string;
+  groupName?: string;
 }
 
 export default function FilterCheckboxList({
@@ -24,8 +27,16 @@ export default function FilterCheckboxList({
   onItemsChange,
   searchPlaceholder = "Rechercher...",
   showToggleButtons = true,
+  showIncludeExclude = false,
   maxHeight = "200px",
+  groupName,
 }: FilterCheckboxListProps) {
+  const [searchTerm, setSearchTerm] = useState("");
+
+  const filteredItems = items.filter(item => 
+    item.label.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   const handleSelectAll = () => {
     onItemsChange(items.map(item => item.id));
   };
@@ -45,18 +56,23 @@ export default function FilterCheckboxList({
   return (
     <div>
       <div className="d-flex align-items-center gap-2 mb-3">
-        <Input
-          type="text"
-          className="form-control"
-          placeholder={searchPlaceholder}
-          style={{ flex: 1 }}
-        />
-        {showToggleButtons && (
-          <div className="d-flex gap-2">
+        <div className="position-relative flex-grow-1">
+          <i className="ri-search-line position-absolute" style={{ left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#99A0AE' }}></i>
+          <Input
+            type="text"
+            className="form-control"
+            placeholder={searchPlaceholder}
+            style={{ paddingLeft: '36px' }}
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
+        {(showToggleButtons || showIncludeExclude) && (
+          <div className="d-flex gap-2 flex-shrink-0">
             <Button 
               variant="link" 
               size="sm" 
-              className="text-primary p-0 fs-small"
+              className="text-primary p-0 fs-small text-nowrap"
               onClick={handleSelectAll}
               type="button"
             >
@@ -65,7 +81,7 @@ export default function FilterCheckboxList({
             <Button 
               variant="link" 
               size="sm" 
-              className="text-primary p-0 fs-small"
+              className="text-primary p-0 fs-small text-nowrap"
               onClick={handleDeselectAll}
               type="button"
             >
@@ -83,23 +99,29 @@ export default function FilterCheckboxList({
           backgroundColor: 'white'
         }}
       >
-        {items.map((item) => (
-          <div key={item.id} className="form-check">
-            <input
-              className="form-check-input small-check"
-              type="checkbox"
-              id={item.id}
-              checked={selectedItems.includes(item.id)}
-              onChange={() => handleToggle(item.id)}
-            />
-            <label className="form-check-label fs-small text-dark" htmlFor={item.id}>
-              {item.icon && <span className="me-2">{item.icon}</span>}
-              {item.label}
-            </label>
+        {filteredItems.map((item) => (
+          <div key={item.id} className="d-flex justify-content-between align-items-center mb-2">
+            <div className="d-flex align-items-center gap-2">
+              {item.icon && <span>{item.icon}</span>}
+              <span className="fs-small fw-500">{item.label}</span>
+            </div>
+            <div className="d-flex">
+              <div className="form-check me-3">
+                <input
+                  className={`form-check-input small-check ${groupName ? `group-${groupName}` : ''}`}
+                  type="checkbox"
+                  id={`${groupName || 'checkbox'}-${item.id}`}
+                  checked={selectedItems.includes(item.id)}
+                  onChange={() => handleToggle(item.id)}
+                />
+              </div>
+            </div>
           </div>
         ))}
+        {filteredItems.length === 0 && (
+          <p className="text-muted fs-small text-center mb-0">Aucun résultat trouvé</p>
+        )}
       </div>
     </div>
   );
 }
-

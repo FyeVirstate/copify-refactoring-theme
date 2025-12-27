@@ -39,6 +39,45 @@ const nicheCategories: NicheCategory[] = [
   },
 ];
 
+interface PresetItem {
+  id: string;
+  icon: string;
+  title: string;
+  description: string;
+  niches: string[];
+}
+
+const presets: PresetItem[] = [
+  {
+    id: "permanent",
+    icon: "ri-check-double-line",
+    title: "Permanent",
+    description: "Fonctionne toujours",
+    niches: ["Santé", "Science"],
+  },
+  {
+    id: "impulse",
+    icon: "ri-flashlight-line",
+    title: "Achats impulsifs",
+    description: "",
+    niches: ["Adulte", "Fumer et vaper"],
+  },
+  {
+    id: "subscription",
+    icon: "ri-loop-left-line",
+    title: "Adapté aux abonnements",
+    description: "",
+    niches: ["Santé", "Science"],
+  },
+  {
+    id: "seasonal",
+    icon: "ri-calendar-check-line",
+    title: "Gagnants saisonniers",
+    description: "",
+    niches: ["Voyage"],
+  },
+];
+
 interface NicheDropdownProps {
   selectedNiches: string[];
   onNichesChange: (niches: string[]) => void;
@@ -52,6 +91,14 @@ export default function NicheDropdown({ selectedNiches, onNichesChange, onOpenCh
   const triggerRef = useRef<HTMLButtonElement>(null);
   const [align, setAlign] = useState<"start" | "end">("start");
   const [isMobile, setIsMobile] = useState(false);
+  const [activePreset, setActivePreset] = useState<string | null>(null);
+
+  // Reset preset when selectedNiches is cleared externally
+  useEffect(() => {
+    if (selectedNiches.length === 0) {
+      setActivePreset(null);
+    }
+  }, [selectedNiches]);
   
   const handleOpenChange = (open: boolean) => {
     setIsOpen(open);
@@ -107,6 +154,30 @@ export default function NicheDropdown({ selectedNiches, onNichesChange, onOpenCh
     } else {
       onNichesChange([...selectedNiches, niche]);
     }
+    setActivePreset(null);
+  };
+
+  const handlePresetClick = (presetId: string, niches: string[]) => {
+    setActivePreset(presetId);
+    onNichesChange(niches);
+    
+    // Auto-apply when preset is selected
+    if (onApply) {
+      setTimeout(() => onApply(), 150);
+    }
+  };
+
+  const handleSelectAll = () => {
+    const allNiches = nicheCategories.flatMap(cat => 
+      [cat.name, ...(cat.subcategories || [])]
+    );
+    onNichesChange(allNiches);
+    setActivePreset(null);
+  };
+
+  const handleDeselectAll = () => {
+    onNichesChange([]);
+    setActivePreset(null);
   };
 
   const filteredCategories = nicheCategories.filter((category) =>
@@ -124,30 +195,150 @@ export default function NicheDropdown({ selectedNiches, onNichesChange, onOpenCh
             type="button" 
             variant="outline"
           >
-            <i className="dropdown-icon ri-ancient-gate-line"></i> Niche
+            <i className="dropdown-icon ri-global-line"></i> Niche
           </Button>
         </DropdownMenuTrigger>
       <DropdownMenuContent
         align={align}
         side="bottom"
-        className="dropdown-menu p-2 text-muted"
-        style={{ width: '300px', maxWidth: 'calc(100vw - 20px)', maxHeight: '400px', overflowY: 'auto' }}
+        className="dropdown-menu p-3"
+        style={{ width: '400px', maxWidth: 'calc(100vw - 20px)' }}
         onClick={(e) => e.stopPropagation()}
         collisionPadding={10}
         sideOffset={4}
       >
-        <Input
-          type="text"
-          className="form-control mb-3"
-          placeholder="Rechercher une niche..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-        />
-        <div className="checkboxes-wrapper mb-3">
+        <h5 className="mb-3 fw-600" style={{ color: '#0E121B', fontSize: '15px' }}>Niches</h5>
+        
+        {/* Presets Grid */}
+        <div className="mb-3">
+          <p className="fs-small text-sub mb-3 fw-500">Préréglages</p>
+          <div 
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(2, 1fr)',
+              gap: '8px'
+            }}
+          >
+            {presets.map((preset) => {
+              const isPresetActive = activePreset === preset.id;
+              return (
+                <button
+                  key={preset.id}
+                  type="button"
+                  className="preset-card w-100 text-start"
+                  onClick={() => handlePresetClick(preset.id, preset.niches)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '10px',
+                    border: isPresetActive ? '2px solid #0E121B' : '1px solid #E1E4EA',
+                    borderRadius: '8px',
+                    backgroundColor: isPresetActive ? '#0E121B' : 'white',
+                    color: isPresetActive ? 'white' : '#525866',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                    minHeight: '52px',
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!isPresetActive) {
+                      e.currentTarget.style.backgroundColor = '#F5F7FA';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!isPresetActive) {
+                      e.currentTarget.style.backgroundColor = 'white';
+                    }
+                  }}
+                >
+                  <i 
+                    className={preset.icon} 
+                    style={{ 
+                      fontSize: '18px', 
+                      color: isPresetActive ? 'white' : '#99A0AE',
+                      flexShrink: 0
+                    }}
+                  ></i>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ 
+                      fontSize: '12.5px', 
+                      fontWeight: '500', 
+                      marginBottom: preset.description ? '2px' : '0',
+                      color: isPresetActive ? 'white' : '#0E121B',
+                      lineHeight: '1.2'
+                    }}>
+                      {preset.title}
+                    </div>
+                    {preset.description && (
+                      <div style={{ 
+                        fontSize: '10.5px', 
+                        fontWeight: '400',
+                        color: isPresetActive ? 'rgba(255, 255, 255, 0.7)' : '#99A0AE',
+                        lineHeight: '1.2'
+                      }}>
+                        {preset.description}
+                      </div>
+                    )}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+        
+        <div className="horizontal-dashed-divider mb-3"></div>
+        
+        {/* Search and Toggle */}
+        <div className="d-flex align-items-center gap-2 mb-3">
+          <Input
+            type="text"
+            className="form-control"
+            placeholder="Rechercher une niche..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            style={{ flex: 1 }}
+          />
+          <div className="d-flex gap-2">
+            <Button 
+              variant="link" 
+              size="sm" 
+              className="text-primary p-0 fs-small"
+              onClick={handleSelectAll}
+              type="button"
+            >
+              Tout incl.
+            </Button>
+            <Button 
+              variant="link" 
+              size="sm" 
+              className="text-primary p-0 fs-small"
+              onClick={handleDeselectAll}
+              type="button"
+            >
+              Tout excl.
+            </Button>
+          </div>
+        </div>
+        
+        {/* Categories list */}
+        <div 
+          className="checkboxes-wrapper p-3 border rounded mb-3" 
+          style={{ maxHeight: '200px', overflowY: 'auto', backgroundColor: 'white' }}
+        >
           {filteredCategories.map((category, index) => (
             <div key={index}>
               <div className="form-check mb-1 d-flex align-items-start justify-content-between">
                 <div className="d-flex align-items-center">
+                  {category.subcategories && category.subcategories.length > 0 && (
+                    <button
+                      type="button"
+                      className="btn btn-sm mt-0 p-0 me-1"
+                      onClick={() => toggleCategory(category.name)}
+                      style={{ fontSize: '10px', lineHeight: '1', color: '#212529', border: 'none', background: 'none' }}
+                    >
+                      <span style={{ color: '#212529' }}>{expandedCategories.includes(category.name) ? '▼' : '▶'}</span>
+                    </button>
+                  )}
                   <input
                     className="form-check-input small-check"
                     type="checkbox"
@@ -155,25 +346,15 @@ export default function NicheDropdown({ selectedNiches, onNichesChange, onOpenCh
                     checked={selectedNiches.includes(category.name)}
                     onChange={() => handleNicheToggle(category.name)}
                   />
-                  <label className="form-check-label fs-small text-dark" htmlFor={`niche-${index}`}>
+                  <label className="form-check-label fs-small text-dark ms-2" htmlFor={`niche-${index}`}>
                     {category.name}
                   </label>
                 </div>
-                {category.subcategories && category.subcategories.length > 0 && (
-                  <button
-                    type="button"
-                    className="btn btn-sm mt-0 p-0"
-                    onClick={() => toggleCategory(category.name)}
-                    style={{ fontSize: '10px', lineHeight: '1', color: '#212529' }}
-                  >
-                    <span style={{ color: '#212529' }}>{expandedCategories.includes(category.name) ? '▼' : '▶'}</span>
-                  </button>
-                )}
               </div>
               
               {/* Subcategories */}
               {category.subcategories && expandedCategories.includes(category.name) && (
-                <div className="ms-3 mb-2">
+                <div className="ms-4 mb-2">
                   {category.subcategories.map((sub, subIndex) => (
                     <div key={subIndex} className="form-check mb-1">
                       <input
@@ -193,6 +374,7 @@ export default function NicheDropdown({ selectedNiches, onNichesChange, onOpenCh
             </div>
           ))}
         </div>
+        
         <Button 
           type="button" 
           className="btn btn-primary w-100 apply-filters-btn"
@@ -201,11 +383,10 @@ export default function NicheDropdown({ selectedNiches, onNichesChange, onOpenCh
             handleOpenChange(false);
           }}
         >
-          Appliquer les filtres
+          Appliquer
         </Button>
       </DropdownMenuContent>
       </DropdownMenu>
     </div>
   );
 }
-
