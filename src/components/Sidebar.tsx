@@ -3,25 +3,9 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { signOut, useSession } from "next-auth/react";
-
-interface UserStats {
-  plan: {
-    identifier: string;
-    title: string;
-    isOnTrial: boolean;
-    isExpired: boolean;
-    trialDaysRemaining: number;
-    isPro: boolean;
-    isBasic: boolean;
-    isUnlimited: boolean;
-  };
-  trackedShops: {
-    used: number;
-    limit: number;
-  };
-}
+import { useStats } from "@/contexts/StatsContext";
 
 interface SidebarProps {
   onNavigate?: () => void;
@@ -42,25 +26,12 @@ export default function Sidebar({ onNavigate, isCollapsed = false, onToggleColla
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const [languageDropdownOpen, setLanguageDropdownOpen] = useState(false);
   const [currentLanguage, setCurrentLanguage] = useState('fr');
-  const [userStats, setUserStats] = useState<UserStats | null>(null);
   const [trialDaysRemaining, setTrialDaysRemaining] = useState<number | null>(null);
   const profileDropdownRef = useRef<HTMLDivElement>(null);
   const languageDropdownRef = useRef<HTMLDivElement>(null);
   
-  // Fetch user stats to determine trial status
-  const fetchUserStats = useCallback(async () => {
-    try {
-      const response = await fetch('/api/user/stats');
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success && data.stats) {
-          setUserStats(data.stats);
-        }
-      }
-    } catch (error) {
-      console.error('Failed to fetch user stats:', error);
-    }
-  }, []);
+  // Use global stats context
+  const { stats: userStats } = useStats();
   
   // Calculate trial days from session user's created_at
   useEffect(() => {
@@ -73,8 +44,7 @@ export default function Sidebar({ onNavigate, isCollapsed = false, onToggleColla
       const daysRemaining = Math.max(0, Math.ceil(hoursRemaining / 24));
       setTrialDaysRemaining(daysRemaining);
     }
-    fetchUserStats();
-  }, [session, fetchUserStats]);
+  }, [session]);
   
   // Determine if we should show trial/expired notice
   const isOnTrial = userStats?.plan?.isOnTrial || userStats?.plan?.identifier === 'trial';

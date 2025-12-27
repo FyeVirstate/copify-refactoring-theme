@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef, use } from "react";
 import Link from "next/link";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { useStats } from "@/contexts/StatsContext";
 import { ComposableMap, Geographies, Geography, ZoomableGroup } from "react-simple-maps";
 
 const geoUrl = "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json";
@@ -294,6 +295,7 @@ country: string | null;
 export default function TrackDetailsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const shopId = parseInt(id);
+  const { refreshStats } = useStats();
   
   const [shopDetails, setShopDetails] = useState<ShopDetails | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -465,6 +467,8 @@ export default function TrackDetailsPage({ params }: { params: Promise<{ id: str
         // Add to tracked shops
         setTrackedShopIds(prev => new Set(prev).add(suggestedShopId));
         addToast('success', `Boutique "${shopUrl}" ajoutée avec succès !`);
+        // Refresh navbar stats
+        refreshStats();
       } else if (data.error?.includes('already')) {
         setTrackedShopIds(prev => new Set(prev).add(suggestedShopId));
         addToast('info', 'Cette boutique est déjà dans votre liste de suivi.');

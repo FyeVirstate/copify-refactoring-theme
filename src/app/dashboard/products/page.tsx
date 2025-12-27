@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import DashboardHeader from "@/components/DashboardHeader";
+import { useStats } from "@/contexts/StatsContext";
 import {
   Table,
   TableBody,
@@ -224,6 +225,7 @@ interface UserStats {
 function ProductsContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { refreshStats } = useStats();
   const [searchText, setSearchText] = useState("");
   const [activePreset, setActivePreset] = useState("");
   const [analyzingShopIds, setAnalyzingShopIds] = useState<Set<number>>(new Set());
@@ -846,6 +848,8 @@ function ProductsContent() {
         // Add to tracked shops set
         setTrackedShopIds(prev => new Set(prev).add(shopId));
         addToast('success', `${shopUrl || 'La boutique'} a été ajouté à la liste de vos boutiques suivies`, shopUrl, shopId);
+        // Refresh navbar stats
+        refreshStats();
       } else if (data.error === 'Already tracking') {
         // Also add to tracked (in case we missed it)
         setTrackedShopIds(prev => new Set(prev).add(shopId));

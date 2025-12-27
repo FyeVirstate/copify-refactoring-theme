@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import DashboardHeader from "@/components/DashboardHeader";
+import { useStats } from "@/contexts/StatsContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -466,6 +467,7 @@ interface ActiveFilter {
 
 export default function AdsPage() {
   const router = useRouter();
+  const { refreshStats } = useStats();
   const [searchText, setSearchText] = useState("");
   const [appliedSearchText, setAppliedSearchText] = useState("");
   const [activePreset, setActivePreset] = useState("");
@@ -746,6 +748,8 @@ export default function AdsPage() {
       if (data.success) {
         setTrackedShopIds(prev => new Set(prev).add(shopId));
         addToast('success', `${shopUrl || 'La boutique'} a été ajouté à vos boutiques suivies`, shopUrl, shopId);
+        // Refresh navbar stats
+        refreshStats();
         return true;
       } else if (data.error === 'Already tracking') {
         setTrackedShopIds(prev => new Set(prev).add(shopId));

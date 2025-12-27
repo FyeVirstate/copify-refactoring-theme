@@ -1,35 +1,6 @@
 "use client";
-import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
-interface UserStats {
-  plan: {
-    identifier: string;
-    title: string;
-    isOnTrial: boolean;
-    isExpired: boolean;
-    trialDaysRemaining: number;
-    isPro: boolean;
-    isBasic: boolean;
-    isUnlimited: boolean;
-  };
-  trackedShops: {
-    used: number;
-    limit: number;
-    isUnlimited: boolean;
-  };
-  productExports: {
-    used: number;
-    limit: number;
-    remaining: number;
-    isUnlimited: boolean;
-  };
-  storeGeneration: {
-    used: number;
-    limit: number;
-    remaining: number;
-    isUnlimited: boolean;
-  };
-}
+import { useStats, UserStats } from "@/contexts/StatsContext";
 interface DashboardHeaderProps {
   title: string;
   subtitle?: string;
@@ -84,30 +55,8 @@ export default function DashboardHeader({
   searchPlaceholder = "Parcourir les mots-clés, marques, produits, catégories...",
   children,
 }: DashboardHeaderProps) {
-  const [stats, setStats] = useState<UserStats | null>(null);
-  const [loading, setLoading] = useState(true);
-  // Fetch stats if either showStats or showLimitedStats is true
-  const shouldFetchStats = showStats || showLimitedStats;
-  useEffect(() => {
-    if (shouldFetchStats) {
-      fetchUserStats();
-    }
-  }, [shouldFetchStats]);
-  const fetchUserStats = async () => {
-    try {
-      const response = await fetch('/api/user/stats');
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success && data.stats) {
-          setStats(data.stats);
-        }
-      }
-    } catch (error) {
-      console.error('Failed to fetch user stats:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Use global stats context
+  const { stats, loading } = useStats();
   // Calculate progress for all stats
   const shopProgress = stats ? calculateProgress(stats.trackedShops.used, stats.trackedShops.limit) : null;
   const exportProgress = stats ? calculateProgress(stats.productExports.used, stats.productExports.limit) : null;

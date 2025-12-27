@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import DashboardHeader from "@/components/DashboardHeader";
+import { useStats } from "@/contexts/StatsContext";
 import MiniChart from "@/components/MiniChart";
 import ProductHoverCard from "@/components/ProductHoverCard";
 import {
@@ -196,6 +197,7 @@ function ShopTableSkeleton({ rows = 5 }: { rows?: number }) {
 
 export default function ShopsPage() {
   const router = useRouter();
+  const { refreshStats } = useStats();
   const [searchText, setSearchText] = useState("");
   const [appliedSearchText, setAppliedSearchText] = useState("");
   const [analyzingShopIds, setAnalyzingShopIds] = useState<Set<number>>(new Set());
@@ -526,6 +528,8 @@ export default function ShopsPage() {
         // Add to tracked shops set
         setTrackedShopIds(prev => new Set(prev).add(shopId));
         addToast('success', `${shopUrl} a été ajouté à la liste de vos boutiques suivies`, shopUrl, shopId);
+        // Refresh navbar stats
+        refreshStats();
       } else if (data.error === 'Already tracking') {
         // Also add to tracked (in case we missed it)
         setTrackedShopIds(prev => new Set(prev).add(shopId));
