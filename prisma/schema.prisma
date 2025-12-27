@@ -258,6 +258,7 @@ model Shop {
   userShops               UserShop[]
   categories              ShopCategory[]
   adsHistory              ShopAdsHistory[]
+  sharedShops             SharedShop[]
   
   @@index([url], map: "idx_shops_url")
   @@index([disabled], map: "shops_disabled_idx")
@@ -854,8 +855,24 @@ model UserShare {
   updatedAt               DateTime? @map("updated_at")
   
   user                    User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sharedShops             SharedShop[]
   
   @@map("user_shares")
+}
+
+model SharedShop {
+  id                      BigInt    @id @default(autoincrement())
+  userShareId             BigInt    @map("user_share_id")
+  shopId                  BigInt    @map("shop_id")
+  
+  createdAt               DateTime? @map("created_at")
+  updatedAt               DateTime? @map("updated_at")
+  
+  userShare               UserShare @relation(fields: [userShareId], references: [id], onDelete: Cascade)
+  shop                    Shop      @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  
+  @@unique([userShareId, shopId])
+  @@map("shared_shops")
 }
 
 model UserResponse {

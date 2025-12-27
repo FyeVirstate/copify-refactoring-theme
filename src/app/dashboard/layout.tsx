@@ -10,14 +10,24 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   useEffect(() => {
-    console.log('Sidebar open state:', sidebarOpen);
-  }, [sidebarOpen]);
+    // Load collapsed state from localStorage on mount
+    const savedCollapsed = localStorage.getItem('sidebarCollapsed');
+    if (savedCollapsed !== null) {
+      setSidebarCollapsed(savedCollapsed === 'true');
+    }
+  }, []);
 
   const toggleSidebar = () => {
-    console.log('Toggle sidebar clicked');
     setSidebarOpen(!sidebarOpen);
+  };
+
+  const toggleSidebarCollapse = () => {
+    const newCollapsed = !sidebarCollapsed;
+    setSidebarCollapsed(newCollapsed);
+    localStorage.setItem('sidebarCollapsed', String(newCollapsed));
   };
 
   return (
@@ -56,18 +66,22 @@ export default function DashboardLayout({
             width: '100%',
             height: '100vh',
             backgroundColor: 'rgba(0, 0, 0, 0.5)',
-            zIndex: 10, // Lower than sidebar (11) and dropdown (999999)
+            zIndex: 10,
           }}
         ></div>
       )}
 
-      <div className="bg-copyfy w-100 dashboard-bg">
+      <div className={`bg-copyfy w-100 dashboard-bg ${sidebarCollapsed ? 'sidebar-is-collapsed' : ''}`}>
         <div className="d-flex dashboard-flex-container">
           {/* Section One - Sidebar */}
           <div 
-            className={`section-one position-fixed pe-0 bg-copyfy ${sidebarOpen ? 'mobile-open' : ''}`}
+            className={`section-one position-fixed pe-0 bg-copyfy ${sidebarOpen ? 'mobile-open' : ''} ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}
           >
-            <Sidebar onNavigate={() => setSidebarOpen(false)} />
+            <Sidebar 
+              onNavigate={() => setSidebarOpen(false)} 
+              isCollapsed={sidebarCollapsed}
+              onToggleCollapse={toggleSidebarCollapse}
+            />
           </div>
           
           {/* Section Two - Main Content */}

@@ -102,6 +102,13 @@ function AnalyzeShopContent() {
   const [showTooltip, setShowTooltip] = useState(false);
   const tableWrapperRef = useRef<HTMLDivElement>(null);
 
+  // Share mode state
+  const [isShareMode, setIsShareMode] = useState(false);
+  const [selectedShopIds, setSelectedShopIds] = useState<number[]>([]);
+  const [shareUrl, setShareUrl] = useState<string | null>(null);
+  const [isSharing, setIsSharing] = useState(false);
+  const [showShareSuccess, setShowShareSuccess] = useState(false);
+
   // TODO: Get from user session/context - for now simulate trial status
   // In production, this would come from: auth session, user context, or API
   const [isOnTrial, setIsOnTrial] = useState(true); // Default to trial for testing
@@ -241,6 +248,83 @@ function AnalyzeShopContent() {
     }
   };
 
+  // Share mode handlers
+  const handleShareButtonClick = () => {
+    if (isShareMode) {
+      // Cancel share mode
+      setIsShareMode(false);
+      setSelectedShopIds([]);
+    } else {
+      // Enter share mode
+      setIsShareMode(true);
+      setSelectedShopIds([]);
+      setShowShareSuccess(false);
+    }
+  };
+
+  const handleShopSelect = (shopId: number) => {
+    setSelectedShopIds(prev => 
+      prev.includes(shopId) 
+        ? prev.filter(id => id !== shopId)
+        : [...prev, shopId]
+    );
+  };
+
+  const handleShareShops = async () => {
+    if (selectedShopIds.length === 0) return;
+    
+    setIsSharing(true);
+    try {
+      const response = await fetch('/api/share', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ shop_ids: selectedShopIds })
+      });
+      
+      const data = await response.json();
+      
+      if (response.ok && data.share_url) {
+        setShareUrl(data.share_url);
+        setShowShareSuccess(true);
+        setIsShareMode(false);
+        setSelectedShopIds([]);
+      } else {
+        setAlertMessage({ type: 'error', message: data.error || 'Erreur lors du partage' });
+      }
+    } catch (error) {
+      setAlertMessage({ type: 'error', message: 'Erreur lors du partage des boutiques' });
+    } finally {
+      setIsSharing(false);
+    }
+  };
+
+  const handleCopyShareLink = async () => {
+    if (!shareUrl) return;
+    
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      // Show brief success feedback
+      const btn = document.getElementById('copyLinkBtn');
+      if (btn) {
+        const originalText = btn.textContent;
+        btn.textContent = '✓';
+        setTimeout(() => {
+          btn.textContent = originalText;
+        }, 1500);
+      }
+    } catch (err) {
+      // Fallback for older browsers
+      const textArea = document.createElement('textarea');
+      textArea.value = shareUrl;
+      textArea.style.position = 'fixed';
+      textArea.style.left = '-999999px';
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+    }
+  };
+
   // Format currency
   const formatCurrency = (amount: number | null | undefined, currency: string | null = "$") => {
     if (amount === null || amount === undefined) return "-";
@@ -274,7 +358,7 @@ function AnalyzeShopContent() {
         showTutorialButton={true}
         onTutorialClick={() => console.log("Tutoriel clicked")}
         showShareButton={true}
-        onShareClick={() => console.log("Partager clicked")}
+        onShareClick={handleShareButtonClick}
         icon="ri-store-3-line"
         iconType="icon"
         showStats={false}
@@ -466,7 +550,8 @@ function AnalyzeShopContent() {
                   )}
                   <Table id="shopListTable" className="table mb-0 table-hover" style={{ tableLayout: 'fixed' }}>
                     <colgroup>
-                      <col style={{ width: '35%' }} />
+                      {isShareMode && <col style={{ width: '40px' }} />}
+                      <col style={{ width: isShareMode ? '33%' : '35%' }} />
                       <col style={{ width: '15%' }} />
                       <col style={{ width: '15%' }} />
                       <col style={{ width: '15%' }} />
@@ -475,6 +560,11 @@ function AnalyzeShopContent() {
                     </colgroup>
                     <TableHeader>
                       <TableRow className="border-0 bg-weak-gray border-bottom">
+                        {isShareMode && (
+                          <TableHead scope="col" className="text-sub fs-small fw-500 border-0 align-middle p-0" style={{ width: '40px' }}>
+                            &nbsp;
+                          </TableHead>
+                        )}
                         <TableHead scope="col" className="text-sub fs-small fw-500 border-0 align-middle">
                           Nom de la boutique
                         </TableHead>
@@ -498,16 +588,33 @@ function AnalyzeShopContent() {
                       {sortedShops.map((tracked) => (
                         <TableRow
                           key={tracked.id}
-                          className="position-relative shop-row clickable"
+                          className={`position-relative shop-row clickable ${isShareMode && selectedShopIds.includes(tracked.shopId) ? 'selected-row' : ''}`}
                           style={{ cursor: 'pointer' }}
                           onClick={(e) => {
                             if ((e.target as HTMLElement).closest('.action-dropdown') || (e.target as HTMLElement).closest('a') || (e.target as HTMLElement).closest('[data-radix-popper-content-wrapper]')) return;
+                            if (isShareMode) {
+                              handleShopSelect(tracked.shopId);
+                              return;
+                            }
                             router.push(`/dashboard/track/${tracked.shopId}`);
                           }}
-                          onMouseEnter={() => setShowTooltip(true)}
+                          onMouseEnter={() => !isShareMode && setShowTooltip(true)}
                           onMouseMove={handleMouseMove}
                           onMouseLeave={() => setShowTooltip(false)}
                         >
+                          {/* Share checkbox column */}
+                          {isShareMode && (
+                            <TableCell className="align-middle border-b-gray py-3 text-center p-0" style={{ width: '40px' }}>
+                              <input
+                                type="checkbox"
+                                className="form-check-input"
+                                checked={selectedShopIds.includes(tracked.shopId)}
+                                onChange={() => handleShopSelect(tracked.shopId)}
+                                onClick={(e) => e.stopPropagation()}
+                                style={{ margin: 0, cursor: 'pointer' }}
+                              />
+                            </TableCell>
+                          )}
                           {/* Shop Name with Screenshot + Logo + Icon */}
                           <TableCell scope="row" className="align-middle border-b-gray py-3">
                             <div className="d-flex align-items-center gap-3">
@@ -744,15 +851,32 @@ function AnalyzeShopContent() {
                     {sortedShops.map((tracked) => (
                       <div 
                         key={tracked.id}
-                        className="shop-card border rounded-3 p-3"
+                        className={`shop-card border rounded-3 p-3 ${isShareMode && selectedShopIds.includes(tracked.shopId) ? 'selected-card' : ''}`}
                         style={{ backgroundColor: '#fff', cursor: 'pointer' }}
                         onClick={(e) => {
                           if ((e.target as HTMLElement).closest('.action-dropdown') || (e.target as HTMLElement).closest('a')) return;
+                          if (isShareMode) {
+                            handleShopSelect(tracked.shopId);
+                            return;
+                          }
                           router.push(`/dashboard/track/${tracked.shopId}`);
                         }}
                       >
                         {/* Header: Screenshot + Shop Info */}
                         <div className="d-flex gap-3 mb-3">
+                          {/* Share Checkbox for Mobile */}
+                          {isShareMode && (
+                            <div className="d-flex align-items-center">
+                              <input
+                                type="checkbox"
+                                className="form-check-input"
+                                checked={selectedShopIds.includes(tracked.shopId)}
+                                onChange={() => handleShopSelect(tracked.shopId)}
+                                onClick={(e) => e.stopPropagation()}
+                                style={{ margin: 0, cursor: 'pointer', width: '20px', height: '20px' }}
+                              />
+                            </div>
+                          )}
                           {/* Screenshot */}
                           <div 
                             style={{ 
@@ -929,6 +1053,117 @@ function AnalyzeShopContent() {
         </div>
       </div>
 
+      {/* Share Mode Toast */}
+      {isShareMode && (
+        <div 
+          style={{
+            position: 'fixed',
+            bottom: '20px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            background: '#1f2937',
+            color: '#fff',
+            padding: '12px 20px',
+            borderRadius: '12px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '16px',
+            zIndex: 1000,
+            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)'
+          }}
+        >
+          <span className="fw-500">
+            Créer une sélection de <span className="text-primary">{selectedShopIds.length}</span>
+          </span>
+          <Button
+            onClick={handleShareShops}
+            disabled={selectedShopIds.length === 0 || isSharing}
+            className="btn btn-outline-light"
+            style={{ 
+              padding: '6px 16px', 
+              fontSize: '13px',
+              opacity: selectedShopIds.length === 0 ? 0.5 : 1 
+            }}
+          >
+            {isSharing ? (
+              <>
+                <span className="spinner-border spinner-border-sm me-2" role="status"></span>
+                Partage...
+              </>
+            ) : (
+              'Partager'
+            )}
+          </Button>
+          <Button
+            onClick={() => { setIsShareMode(false); setSelectedShopIds([]); }}
+            className="btn btn-outline-light"
+            style={{ padding: '6px 16px', fontSize: '13px' }}
+          >
+            Annuler
+          </Button>
+        </div>
+      )}
+
+      {/* Share Success Toast */}
+      {showShareSuccess && shareUrl && (
+        <div 
+          style={{
+            position: 'fixed',
+            bottom: '20px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            background: '#1f2937',
+            color: '#fff',
+            padding: '12px 20px',
+            borderRadius: '12px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+            zIndex: 1000,
+            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)'
+          }}
+        >
+          <i className="ri-link" style={{ fontSize: '18px' }}></i>
+          <span className="fw-500">Lien de partage</span>
+          <input
+            type="text"
+            value={shareUrl}
+            readOnly
+            className="form-control"
+            style={{ 
+              width: '250px', 
+              background: 'rgba(255,255,255,0.1)', 
+              border: '1px solid rgba(255,255,255,0.2)',
+              color: '#fff',
+              fontSize: '13px',
+              padding: '6px 12px'
+            }}
+            onClick={(e) => (e.target as HTMLInputElement).select()}
+          />
+          <Button
+            id="copyLinkBtn"
+            onClick={handleCopyShareLink}
+            className="btn btn-outline-light"
+            style={{ padding: '6px 16px', fontSize: '13px' }}
+          >
+            Copier
+          </Button>
+          <button
+            onClick={() => setShowShareSuccess(false)}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: '#fff',
+              cursor: 'pointer',
+              padding: '4px',
+              marginLeft: '4px'
+            }}
+          >
+            <i className="ri-close-line" style={{ fontSize: '18px' }}></i>
+          </button>
+        </div>
+      )}
+
       <style jsx global>{`
         .bg-warning-light {
           background-color: #fef3c7 !important;
@@ -957,6 +1192,12 @@ function AnalyzeShopContent() {
         .shop-row:hover {
           background-color: #f9fafb;
         }
+        .shop-row.selected-row {
+          background-color: #eff6ff !important;
+        }
+        .shop-row.selected-row:hover {
+          background-color: #dbeafe !important;
+        }
         
         /* Mobile Card Styles */
         .shop-card {
@@ -967,6 +1208,10 @@ function AnalyzeShopContent() {
         }
         .shop-card:active {
           background-color: #f9fafb !important;
+        }
+        .shop-card.selected-card {
+          background-color: #eff6ff !important;
+          border-color: #3b82f6 !important;
         }
         
         /* Mobile Input Adjustments */

@@ -13,8 +13,22 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Copyfy - Outils IA pour E-commerce",
+  title: {
+    default: "Copyfy",
+    template: "Copyfy | %s",
+  },
   description: "Plateforme d'outils IA pour optimiser votre e-commerce",
+  icons: {
+    icon: [
+      { url: "/img/new-favicon/favicon.ico" },
+      { url: "/img/new-favicon/favicon-16x16.png", sizes: "16x16", type: "image/png" },
+      { url: "/img/new-favicon/favicon-32x32.png", sizes: "32x32", type: "image/png" },
+    ],
+    apple: [
+      { url: "/img/new-favicon/apple-touch-icon.png", sizes: "180x180" },
+    ],
+  },
+  manifest: "/img/new-favicon/site.webmanifest",
 };
 
 export default function RootLayout({

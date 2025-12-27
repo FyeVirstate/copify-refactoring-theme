@@ -1,3 +1,9 @@
+import { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Inscription",
+};
+
 export default function AuthLayout({
   children,
 }: {

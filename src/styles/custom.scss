@@ -949,6 +949,69 @@ span.toggle-password,
   top: 0;
   height: 100%;
   z-index: 10;
+  transition: width 0.25s ease;
+  
+  // Collapsed sidebar state
+  &.sidebar-collapsed {
+    width: 80px;
+    
+    .sidebar-logo {
+      display: none;
+    }
+    
+    .language-selector-dropdown {
+      display: none;
+    }
+    
+    // Expand button is always visible in collapsed mode (controlled by React conditional rendering)
+    .sidebar-expand-btn {
+      display: flex !important;
+      align-items: center;
+      justify-content: center;
+      
+      i {
+        font-size: 24px !important;
+        color: #fff !important;
+      }
+    }
+    
+    .nav-link {
+      justify-content: center;
+      padding: 10px 8px !important;
+      
+      .nav-image {
+        margin-right: 0 !important;
+      }
+      
+      .badge {
+        display: none;
+      }
+    }
+    
+    .menu-title {
+      display: none;
+    }
+    
+    // Hide expanded trial notice
+    .trial-notice-wrapper {
+      display: none;
+    }
+    
+    // Show collapsed trial notice
+    .trial-notice-collapsed {
+      display: flex !important;
+    }
+    
+    .profile-trigger-btn {
+      justify-content: center;
+      padding: 8px !important;
+      
+      .text-start,
+      i.ri-arrow-right-s-line {
+        display: none;
+      }
+    }
+  }
   
   @media (max-width: 1199px) {
     width: 280px;
@@ -994,17 +1057,31 @@ span.toggle-password,
   width: calc(100% - 300px);
   padding: 16px 0;
   margin-left: 300px;
+  transition: margin-left 0.25s ease, width 0.25s ease;
   
   @media (max-width: 1199px) {
     width: calc(100% - 280px);
     margin-left: 280px;
   }
-  
-  @media (max-width: 991px) {
-    width: 100% !important;
-    padding: 0 !important;
-    margin-left: 0 !important;
-    margin-top: 70px;
+}
+
+// When sidebar is collapsed (class on parent .dashboard-bg)
+.sidebar-is-collapsed {
+  .section-two {
+    width: calc(100% - 80px);
+    margin-left: 80px;
+    
+    @media (max-width: 1199px) {
+      width: calc(100% - 80px);
+      margin-left: 80px;
+    }
+    
+    @media (max-width: 991px) {
+      width: 100% !important;
+      padding: 0 !important;
+      margin-left: 0 !important;
+      margin-top: 70px;
+    }
   }
 }
 
@@ -3154,6 +3231,238 @@ input[type="radio"] {
   height: 40px;
   border-radius: 50%;
   object-fit: contain;
+}
+
+// Language Selector Styles
+.language-selector-dropdown {
+  position: relative;
+  
+  .language-selector-btn {
+    background-color: rgba(17, 15, 38, 1);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0px 1px 2px 0px rgba(10, 13, 20, 0.03);
+    border-radius: 8px;
+    padding: 4px 6px !important;
+    transition: all 0.2s ease;
+    
+    &:hover, &.active, &:focus {
+      background-color: rgba(31, 41, 55, 0.8);
+      border-color: rgba(107, 114, 128, 0.9);
+    }
+    
+    &:focus {
+      outline: none;
+      box-shadow: none;
+    }
+    
+    i {
+      font-size: 12px;
+      color: rgba(153, 160, 174, 1);
+      transition: transform 0.2s ease;
+    }
+    
+    i.rotate-180 {
+      transform: rotate(180deg);
+    }
+  }
+  
+  .language-dropdown-menu {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    right: auto;
+    min-width: 110px;
+    padding: 8px;
+    background: rgba(17, 24, 39, 0.95) !important;
+    border-radius: 12px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(75, 85, 99, 0.6);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    z-index: 9999;
+    list-style: none;
+    margin: 0;
+    
+    li {
+      list-style: none;
+      
+      .dropdown-item {
+        padding: 8px 12px;
+        border-radius: 8px;
+        font-size: 13px;
+        font-weight: 500;
+        color: #fff;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        border: none;
+        background: none;
+        width: 100%;
+        text-align: left;
+        
+        &:hover {
+          background: rgba(59, 130, 246, 0.2);
+          color: #fff;
+        }
+        
+        &.active {
+          background: rgba(59, 130, 246, 0.3);
+          color: #fff;
+        }
+      }
+    }
+  }
+}
+
+// Sidebar Toggle Button Styles
+.sidebar-toggle-btn {
+  opacity: 1;
+  transition: opacity 0.2s ease;
+  
+  &:hover {
+    opacity: 0.8;
+  }
+  
+  i {
+    font-size: 22px !important;
+    color: #ffffff !important;
+  }
+}
+
+// Sidebar Expand Button Styles  
+.sidebar-expand-btn {
+  opacity: 1;
+  transition: opacity 0.2s ease;
+  
+  &:hover {
+    opacity: 0.8;
+  }
+  
+  i {
+    font-size: 24px !important;
+    color: #ffffff !important;
+  }
+}
+
+// Collapsed Trial Notice
+.trial-notice-collapsed {
+  display: none; // Hidden by default, shown only in collapsed sidebar
+  
+  .trial-days-box {
+    transition: all 0.2s ease;
+    
+    &:hover {
+      border-color: rgba(255, 255, 255, 0.3);
+      background-color: rgba(255, 255, 255, 0.1);
+    }
+  }
+  
+  .btn-upgrade-collapsed {
+    transition: all 0.2s ease;
+    
+    &:hover {
+      background-color: #2563EB !important;
+      transform: scale(1.05);
+    }
+  }
+}
+
+// User Profile Trigger Button Styles
+.profile-trigger-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  
+  &:hover, &.active {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.15);
+  }
+  
+  .profile-avatar {
+    flex-shrink: 0;
+  }
+}
+
+// Profile Dropdown Menu (at bottom)
+.profile-dropdown-menu {
+  padding: 4px;
+  width: 270px;
+  border-radius: 8px;
+  box-shadow: 0px 16px 32px -12px rgba(14, 18, 27, 0.15);
+  border: 1px solid rgba(225, 228, 234, 1);
+  background-color: #fff;
+  list-style: none;
+  z-index: 2147483647 !important;
+  
+  li {
+    list-style: none;
+  }
+  
+  .dropdown-divider {
+    height: 0;
+    margin: 4px 0;
+    border-top: 1px solid rgba(225, 228, 234, 1);
+    opacity: 1;
+  }
+  
+  .dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    color: #333;
+    text-decoration: none;
+    transition: all 0.15s ease;
+    
+    &:hover {
+      background-color: rgba(59, 130, 246, 0.08);
+      color: #3B82F6;
+    }
+    
+    .dropdown-item-icon {
+      width: 18px;
+      height: 18px;
+      object-fit: contain;
+      flex-shrink: 0;
+    }
+    
+    i.dropdown-item-icon {
+      font-size: 18px;
+      width: auto;
+      height: auto;
+    }
+  }
+}
+
+// Collapsed Sidebar Styles
+.sidebar-collapsed {
+  width: 80px !important;
+  
+  .sidebar-logo {
+    display: flex;
+    justify-content: center;
+    
+    img {
+      width: 30px !important;
+    }
+  }
+  
+  .nav-link {
+    justify-content: center;
+    padding: 10px !important;
+    
+    .nav-image {
+      margin-right: 0 !important;
+    }
+  }
+  
+  .menu-title {
+    display: none;
+  }
 }
 
 // Medium screen dropdown text size (around 1550px and below)
