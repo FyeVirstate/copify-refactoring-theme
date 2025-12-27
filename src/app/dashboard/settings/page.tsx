@@ -12,8 +12,11 @@ type Tab = "profile" | "password" | "tarification" | "shopify";
 
 const LANGUAGES = [
   { code: "fr", name: "Français", flag: "🇫🇷" },
-  { code: "en", name: "English", flag: "🇺🇸" },
+  { code: "en", name: "English", flag: "🇬🇧" },
   { code: "es", name: "Español", flag: "🇪🇸" },
+  { code: "de", name: "Deutsch", flag: "🇩🇪" },
+  { code: "it", name: "Italiano", flag: "🇮🇹" },
+  { code: "nl", name: "Nederlands", flag: "🇳🇱" },
 ];
 
 export default function SettingsPage() {
@@ -214,6 +217,7 @@ export default function SettingsPage() {
                         style={{ cursor: "pointer" }}
                       >
                         <span style={{ fontSize: "1.2rem" }}>{selectedLang.flag}</span>
+                        <span>{selectedLang.name}</span>
                         <i className="ri-arrow-down-s-line ms-auto"></i>
                       </button>
                       {langDropdownOpen && (
