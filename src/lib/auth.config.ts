@@ -49,7 +49,7 @@ export const authConfig: NextAuthConfig = {
       const pathname = nextUrl.pathname
       
       // Public routes that don't require authentication
-      const publicRoutes = ['/login', '/register', '/forgot-password', '/reset-password']
+      const publicRoutes = ['/login', '/register', '/forgot-password', '/reset-password', '/share']
       const isPublicRoute = publicRoutes.some(route => pathname.startsWith(route))
       
       // Dashboard routes that require authentication
@@ -59,19 +59,20 @@ export const authConfig: NextAuthConfig = {
       const isApiRoute = pathname.startsWith('/api')
       const isAuthApiRoute = pathname.startsWith('/api/auth')
       const isPublicApiRoute = pathname.startsWith('/api/public')
+      const isShareApiRoute = pathname.startsWith('/api/share/') // Public share API
       
       // Redirect logged out users trying to access dashboard
       if (isDashboardRoute && !isLoggedIn) {
         return false // Will redirect to signIn page
       }
       
-      // Redirect logged in users away from login/register
-      if (isLoggedIn && isPublicRoute) {
+      // Redirect logged in users away from login/register (but not share page)
+      if (isLoggedIn && isPublicRoute && !pathname.startsWith('/share')) {
         return Response.redirect(new URL('/dashboard', nextUrl))
       }
       
-      // Protect API routes (except auth and public routes)
-      if (isApiRoute && !isAuthApiRoute && !isPublicApiRoute && !isLoggedIn) {
+      // Protect API routes (except auth, public, and share routes)
+      if (isApiRoute && !isAuthApiRoute && !isPublicApiRoute && !isShareApiRoute && !isLoggedIn) {
         return false
       }
       
