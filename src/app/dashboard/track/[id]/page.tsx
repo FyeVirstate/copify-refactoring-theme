@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useEffect, useRef, use } from "react";
-import { motion } from "framer-motion";
 import Link from "next/link";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { ComposableMap, Geographies, Geography, ZoomableGroup } from "react-simple-maps";
@@ -930,7 +929,6 @@ export default function TrackDetailsPage({ params }: { params: Promise<{ id: str
                 alignItems: 'center',
                 gap: 12,
                 boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                animation: 'slideIn 0.3s ease-out',
                 backgroundColor: alert.type === 'success' ? '#212529' : (alert.type === 'error' || alert.type === 'limit') ? '#dc3545' : '#ffc107',
               }}
             >
@@ -979,7 +977,7 @@ export default function TrackDetailsPage({ params }: { params: Promise<{ id: str
         </div>
       )}
       
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+      <div  >
         
         {/* ====== HEADER ====== */}
         <div style={{ 
@@ -3188,7 +3186,7 @@ export default function TrackDetailsPage({ params }: { params: Promise<{ id: str
           </div>
 
         </div>
-      </motion.div>
+      </div>
 
       <style jsx>{`
         @media (max-width: 1024px) {

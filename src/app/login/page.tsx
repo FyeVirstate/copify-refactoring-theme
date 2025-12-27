@@ -3,7 +3,6 @@
 import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { motion } from "framer-motion";
 import { signIn } from "next-auth/react";
 
 function LoginContent() {
@@ -53,17 +52,9 @@ function LoginContent() {
 
   return (
     <div className="form-pages position-relative d-flex align-items-center justify-content-center py-5">
-      <motion.div 
-        initial={{ opacity: 0, y: 30 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, ease: "easeOut" }}
-        className="form-box"
+      <div        className="form-box"
       >
-        <motion.div 
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.4, delay: 0.2 }}
-          className="rounded-15 p-4 bg-white"
+        <div          className="rounded-15 p-4 bg-white"
         >
           {/* Logo */}
           <div className="text-center mb-4">
@@ -201,8 +192,8 @@ function LoginContent() {
               )}
             </button>
           </form>
-        </motion.div>
-      </motion.div>
+        </div>
+      </div>
     </div>
   );
 }

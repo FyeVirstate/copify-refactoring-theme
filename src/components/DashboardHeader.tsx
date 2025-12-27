@@ -1,9 +1,6 @@
 "use client";
-
 import { useState, useEffect } from "react";
-import { motion } from "framer-motion";
 import { Input } from "@/components/ui/input";
-
 interface UserStats {
   plan: {
     identifier: string;
@@ -33,7 +30,6 @@ interface UserStats {
     isUnlimited: boolean;
   };
 }
-
 interface DashboardHeaderProps {
   title: string;
   subtitle?: string;
@@ -51,7 +47,6 @@ interface DashboardHeaderProps {
   searchPlaceholder?: string;
   children?: React.ReactNode; // Custom content for right side (e.g., custom stats)
 }
-
 // Calculate SVG circle progress
 function calculateProgress(used: number, limit: number): { 
   dasharray: string; 
@@ -64,7 +59,6 @@ function calculateProgress(used: number, limit: number): {
   const progress = limit > 0 ? Math.min(used / limit, 1) : 0;
   const dashoffset = circumference * (1 - progress);
   const isLimitReached = limit > 0 && used >= limit;
-  
   return {
     dasharray: `${circumference}`,
     dashoffset,
@@ -73,7 +67,6 @@ function calculateProgress(used: number, limit: number): {
     color: isLimitReached ? '#ef4444' : '#0c6cfb', // Red when limit reached, blue otherwise
   };
 }
-
 export default function DashboardHeader({
   title,
   subtitle,
@@ -93,16 +86,13 @@ export default function DashboardHeader({
 }: DashboardHeaderProps) {
   const [stats, setStats] = useState<UserStats | null>(null);
   const [loading, setLoading] = useState(true);
-
   // Fetch stats if either showStats or showLimitedStats is true
   const shouldFetchStats = showStats || showLimitedStats;
-
   useEffect(() => {
     if (shouldFetchStats) {
       fetchUserStats();
     }
   }, [shouldFetchStats]);
-
   const fetchUserStats = async () => {
     try {
       const response = await fetch('/api/user/stats');
@@ -118,17 +108,12 @@ export default function DashboardHeader({
       setLoading(false);
     }
   };
-
   // Calculate progress for all stats
   const shopProgress = stats ? calculateProgress(stats.trackedShops.used, stats.trackedShops.limit) : null;
   const exportProgress = stats ? calculateProgress(stats.productExports.used, stats.productExports.limit) : null;
   const storeProgress = stats ? calculateProgress(stats.storeGeneration.used, stats.storeGeneration.limit) : null;
-
   return (
-    <motion.header 
-      initial={{ opacity: 0, y: -10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, ease: "easeOut" }}
+    <header 
       className="dashboard-header bg-white"
     >
       <div className="d-flex justify-content-between align-items-center flex-nowrap gap-2 gap-md-4">
@@ -148,7 +133,6 @@ export default function DashboardHeader({
             )}
           </div>
         </div>
-
         {/* Middle - Search bar (for shops page) */}
         {showSearch && (
           <div className="flex-grow-1 mx-4 d-none d-lg-block" style={{ maxWidth: '900px', flex: '1' }}>
@@ -175,19 +159,14 @@ export default function DashboardHeader({
             </div>
           </div>
         )}
-
         {/* Right side - Actions */}
         <div className="flex items-center gap-2 gap-md-3 flex-shrink-0">
-          
           {/* Stats - Show usage for all users */}
           {showStats && !loading && stats && (
           <div className="d-none d-md-flex gap-3 gap-xl-4 align-items-center">
             {/* Plan Status Indicator - Show trial days or expired status */}
             {(stats.plan.isOnTrial || stats.plan.isExpired) && (
-              <motion.div 
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.4, delay: 0.1, ease: "easeOut" }}
+              <div 
                 className="d-flex gap-2 align-items-center"
                 style={{ 
                   padding: '6px 12px',
@@ -231,14 +210,10 @@ export default function DashboardHeader({
                     {stats.plan.isExpired ? 'Trial Period' : "d'essai"}
                   </span>
                 </div>
-              </motion.div>
+              </div>
             )}
-
             {/* Boutiques suivies - Progress Circle */}
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.4, delay: 0.2, ease: "easeOut" }}
+            <div 
               className="progress-circle d-flex gap-2 flex-column flex-md-row" 
               data-progress={stats.trackedShops.used} 
               data-total={stats.trackedShops.limit}
@@ -265,14 +240,10 @@ export default function DashboardHeader({
                 <div className="progress-text" style={{ color: shopProgress?.isLimitReached ? '#ef4444' : undefined }}>{shopProgress?.text}</div>
                 <div className="progress-label">Boutiques suivies</div>
               </div>
-            </motion.div>
-
+            </div>
             {/* Produits exportés */}
             {stats.productExports.isUnlimited ? (
-              <motion.div 
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.4, delay: 0.3, ease: "easeOut" }}
+              <div 
                 className="progress-circle-unli d-flex gap-2 flex-column flex-md-row"
               >
                 <div className="progress-circle-wrapper">
@@ -282,12 +253,9 @@ export default function DashboardHeader({
                   <div className="progress-text">∞</div>
                   <div className="progress-label">Produits exportés</div>
                 </div>
-              </motion.div>
+              </div>
             ) : (
-              <motion.div 
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.4, delay: 0.3, ease: "easeOut" }}
+              <div 
                 className="progress-circle d-flex gap-2 flex-column flex-md-row"
                 data-progress={stats.productExports.used}
                 data-total={stats.productExports.limit}
@@ -314,15 +282,11 @@ export default function DashboardHeader({
                   <div className="progress-text" style={{ color: exportProgress?.isLimitReached ? '#ef4444' : undefined }}>{exportProgress?.text}</div>
                   <div className="progress-label">Produits exportés</div>
                 </div>
-              </motion.div>
+              </div>
             )}
-
             {/* Génération de boutique */}
             {stats.storeGeneration.isUnlimited ? (
-              <motion.div 
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.4, delay: 0.4, ease: "easeOut" }}
+              <div 
                 className="progress-circle-unli d-flex gap-2 flex-column flex-md-row"
               >
                 <div className="progress-circle-wrapper">
@@ -332,12 +296,9 @@ export default function DashboardHeader({
                   <div className="progress-text">∞</div>
                   <div className="progress-label">Génération de boutique</div>
                 </div>
-              </motion.div>
+              </div>
             ) : (
-              <motion.div 
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.4, delay: 0.4, ease: "easeOut" }}
+              <div 
                 className="progress-circle d-flex gap-2 flex-column flex-md-row"
                 data-progress={stats.storeGeneration.used}
                 data-total={stats.storeGeneration.limit}
@@ -364,20 +325,16 @@ export default function DashboardHeader({
                   <div className="progress-text" style={{ color: storeProgress?.isLimitReached ? '#ef4444' : undefined }}>{storeProgress?.text}</div>
                   <div className="progress-label">Génération de boutique</div>
                 </div>
-              </motion.div>
+              </div>
             )}
           </div>
           )}
-
           {/* Limited Stats - Only show trial days + shop analyses (for products/shops/ads pages) */}
           {showLimitedStats && !loading && stats && (
           <div className="d-none d-md-flex gap-3 gap-xl-4 align-items-center">
             {/* Plan Status Indicator - Show trial days or expired status */}
             {(stats.plan.isOnTrial || stats.plan.isExpired) && (
-              <motion.div 
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.4, delay: 0.1, ease: "easeOut" }}
+              <div 
                 className="d-flex gap-2 align-items-center"
                 style={{ 
                   padding: '6px 12px',
@@ -421,14 +378,10 @@ export default function DashboardHeader({
                     {stats.plan.isExpired ? "Période d'essai" : "d'essai"}
                   </span>
                 </div>
-              </motion.div>
+              </div>
             )}
-
             {/* Boutiques analysées - Progress Circle */}
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.4, delay: 0.2, ease: "easeOut" }}
+            <div 
               className="progress-circle d-flex gap-2 flex-column flex-md-row" 
               data-progress={stats.trackedShops.used} 
               data-total={stats.trackedShops.limit}
@@ -455,10 +408,9 @@ export default function DashboardHeader({
                 <div className="progress-text" style={{ color: shopProgress?.isLimitReached ? '#ef4444' : undefined }}>{shopProgress?.text}</div>
                 <div className="progress-label">Analyses de boutique</div>
               </div>
-            </motion.div>
+            </div>
           </div>
           )}
-
           {/* Loading state for stats */}
           {(showStats || showLimitedStats) && loading && (
             <div className="d-none d-md-flex gap-3 gap-xl-4">
@@ -475,14 +427,12 @@ export default function DashboardHeader({
               </div>
             </div>
           )}
-
           {/* Custom Children (e.g., saved ads button) */}
           {children && (
             <div className="d-flex flex-shrink-0">
               {children}
             </div>
           )}
-
           {/* Tutorial Button (for specific pages) - shown last on right */}
           {showTutorialButton && onTutorialClick && (
             <div className="d-flex align-items-center justify-content-start justify-content-xxl-end">
@@ -495,7 +445,6 @@ export default function DashboardHeader({
               </button>
             </div>
           )}
-          
           {/* Share Button (for specific pages) */}
           {showShareButton && onShareClick && (
             <div className="d-flex align-items-center justify-content-start justify-content-xxl-end">
@@ -510,6 +459,6 @@ export default function DashboardHeader({
           )}
         </div>
       </div>
-    </motion.header>
+    </header>
   );
 }

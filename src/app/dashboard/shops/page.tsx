@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import DashboardHeader from "@/components/DashboardHeader";
 import MiniChart from "@/components/MiniChart";
@@ -80,16 +79,16 @@ function ToastAlerts({ alerts, onDismiss, onViewShop }: {
 
   return (
     <div className="position-fixed" style={{ top: '20px', left: '50%', transform: 'translateX(-50%)', zIndex: 9999, width: '100%', maxWidth: '600px' }}>
-      <AnimatePresence>
+      
         {alerts.map((alert) => {
           const alertStyles = getAlertStyles(alert.type);
           return (
-            <motion.div
+            <div
               key={alert.id}
-              initial={{ opacity: 0, y: -20, scale: 0.95 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: -20, scale: 0.95 }}
-              transition={{ duration: 0.2 }}
+              
+              
+              
+              
               className="d-flex align-items-center justify-content-between gap-3 mb-2 mx-3"
               style={{
                 padding: '12px 20px',
@@ -135,10 +134,10 @@ function ToastAlerts({ alerts, onDismiss, onViewShop }: {
                   ></button>
                 )}
               </div>
-            </motion.div>
+            </div>
           );
         })}
-      </AnimatePresence>
+      
     </div>
   );
 }
@@ -787,10 +786,7 @@ export default function ShopsPage() {
           
           {/* Trial Alert Banner - Only show for trial users */}
           {userStats?.plan?.isOnTrial && (
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="info-alert-box mb-3"
+            <div              className="info-alert-box mb-3"
               style={{
                 background: 'linear-gradient(90deg, #fef9e7 0%, #fef9e7 100%)',
                 border: '1px solid #f9e79f',
@@ -821,15 +817,11 @@ export default function ShopsPage() {
                   Débloquer l&apos;accès complet
                 </Link>
               </div>
-            </motion.div>
+            </div>
           )}
           
           {/* Search Bar */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, ease: "easeOut" }}
-            className="mb-3 pb-1 d-flex gap-2 pt-2 flex-wrap flex-sm-nowrap mobile-search-row"
+          <div            className="mb-3 pb-1 d-flex gap-2 pt-2 flex-wrap flex-sm-nowrap mobile-search-row"
             style={{ maxWidth: '100%' }}
           >
             <div className="mb-0 form-control-w-icon position-relative d-flex align-items-center" style={{ flex: '1 1 auto', minWidth: 0 }}>
@@ -856,14 +848,10 @@ export default function ShopsPage() {
               ) : null}
               Rechercher
             </Button>
-          </motion.div>
+          </div>
 
           {/* Smart Preset Filters - Laravel Style */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.05, ease: "easeOut" }}
-            className="mb-3"
+          <div            className="mb-3"
           >
             <p className="text-uppercase fs-xs text-light-gray fw-500 mb-2">PRÉRÉGLAGES INTELLIGENTS</p>
             <div className="d-flex align-items-start mb-4" id="filter-box">
@@ -963,13 +951,13 @@ export default function ShopsPage() {
                 </ul>
               </div>
             </div>
-          </motion.div>
+          </div>
 
           {/* Filters */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.1, ease: "easeOut" }}
+          <div
+            
+            
+            
           >
             <p className="text-uppercase fs-xs text-light-gray fw-500 mb-2 mt-1">FILTRES</p>
             <div className="filters-grid mb-4">
@@ -1213,14 +1201,10 @@ export default function ShopsPage() {
             )}
 
             <div className="horizontal-solid-divider mb-4 mt-2"></div>
-          </motion.div>
+          </div>
 
           {/* Results Count and Sort */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.3, ease: "easeOut" }}
-            className="d-flex align-items-center justify-content-between mb-4 mt-3 gap-3 flex-wrap"
+          <div            className="d-flex align-items-center justify-content-between mb-4 mt-3 gap-3 flex-wrap"
           >
             <div className="d-flex align-items-center gap-3">
               <h3 className="fs-small text-sub mb-0">
@@ -1251,7 +1235,7 @@ export default function ShopsPage() {
                 <option value="productsCount">📦 Plus de produits</option>
               </select>
             </div>
-          </motion.div>
+          </div>
 
           {/* Error Message */}
           {error && (
@@ -1261,11 +1245,7 @@ export default function ShopsPage() {
           )}
 
           {/* Shops Table */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.5, ease: "easeOut" }}
-            className="table-view mt-2"
+          <div            className="table-view mt-2"
           >
             {isLoading ? (
               <div className="table-wrapper" style={{ paddingBottom: '100px', overflowX: 'auto' }}>
@@ -1315,7 +1295,6 @@ export default function ShopsPage() {
                       <TableRow
                         key={shop.id}
                         className="shop_item"
-                        style={{ animation: `fadeIn 0.4s ease-out ${0.05 * (index % 20)}s both` }}
                       >
                         {/* Shop Column */}
                         <TableCell scope="row" className="align-middle py-4 border-b-gray">
@@ -1628,7 +1607,7 @@ export default function ShopsPage() {
                 <div ref={loadMoreRef} style={{ height: '20px' }}></div>
               </div>
             )}
-          </motion.div>
+          </div>
         </div>
       </div>
 

@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { motion } from "framer-motion";
 import DashboardHeader from "@/components/DashboardHeader";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -181,10 +180,7 @@ export default function ExportProductsPage() {
           
           {/* Limit Reached Alert - Blue style with unlock button */}
           {credits && credits.remaining <= 0 && !credits.isUnlimited && (
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="mx-auto mb-4"
+            <div              className="mx-auto mb-4"
               style={{ maxWidth: '900px' }}
             >
               <div 
@@ -216,15 +212,12 @@ export default function ExportProductsPage() {
                   Débloquer l'accès complet
                 </a>
               </div>
-            </motion.div>
+            </div>
           )}
 
           {/* Error Message - Red style - Only show if NOT a limit error (limit error is shown in blue alert above) */}
           {error && !error.includes('limite') && !error.includes('Limite') && (
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="mx-auto mb-4"
+            <div              className="mx-auto mb-4"
               style={{ maxWidth: '900px' }}
             >
               <div 
@@ -248,15 +241,11 @@ export default function ExportProductsPage() {
                   style={{ fontSize: '10px' }}
               ></button>
               </div>
-            </motion.div>
+            </div>
           )}
 
           {/* Hero Section */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, ease: "easeOut" }}
-            className="text-center mx-auto"
+          <div            className="text-center mx-auto"
             style={{ maxWidth: '900px', marginTop: '40px', marginBottom: '50px' }}
           >
             <h2 className="fw-400 mb-3" style={{ fontSize: 'clamp(20px, 5vw, 26px)', color: '#0E121B' }}>
@@ -271,14 +260,10 @@ export default function ExportProductsPage() {
               <br />
               (images, titre, descriptions) en .csv
             </p>
-          </motion.div>
+          </div>
 
           {/* Input Section */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.1, ease: "easeOut" }}
-            className="export-product-input-wrapper mx-auto"
+          <div            className="export-product-input-wrapper mx-auto"
           >
             {/* Main Input Row */}
           <div className="export-product-input-section">
@@ -449,14 +434,10 @@ export default function ExportProductsPage() {
                 <span style={{ fontSize: '12px', color: '#6B7280' }}>Vous pourrez sélectionner les produits que vous souhaitez</span>
             </div>
           </div>
-          </motion.div>
+          </div>
 
           {/* Export History Section */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.3, ease: "easeOut" }}
-            className="mx-auto mt-5"
+          <div            className="mx-auto mt-5"
             style={{ maxWidth: '900px' }}
           >
             <h3 className="fs-lg fw-600 mb-3">Historique d'Export</h3>
@@ -947,7 +928,7 @@ export default function ExportProductsPage() {
                 </TableBody>
               </Table>
             </div>
-          </motion.div>
+          </div>
         </div>
       </div>
     </>

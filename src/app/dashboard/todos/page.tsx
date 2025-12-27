@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
 import DashboardHeader from "@/components/DashboardHeader";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -96,10 +95,7 @@ export default function TodosPage() {
       <div className="bg-weak-50 home-content-wrapper">
         <div className="container py-4" style={{ maxWidth: 800 }}>
           {/* Header Card */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="card mb-4"
+          <div            className="card mb-4"
           >
             <div className="card-body">
               <div className="d-flex align-items-center justify-content-between mb-4">
@@ -149,7 +145,7 @@ export default function TodosPage() {
                 </Button>
               </form>
             </div>
-          </motion.div>
+          </div>
 
           {/* Filter Tabs */}
           <div className="mb-3">
@@ -189,10 +185,7 @@ export default function TodosPage() {
               </div>
             </div>
           ) : filteredTodos.length === 0 ? (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="text-center py-5"
+            <div              className="text-center py-5"
             >
               <i className="ri-checkbox-circle-line fs-1 text-muted mb-3 d-block"></i>
               <h5>
@@ -205,16 +198,16 @@ export default function TodosPage() {
               <p className="text-muted">
                 {filter === 'all' && "Ajoutez votre première tâche ci-dessus."}
               </p>
-            </motion.div>
+            </div>
           ) : (
             <div className="d-flex flex-column gap-2">
-              <AnimatePresence>
+              
                 {filteredTodos.map((todo) => (
-                  <motion.div
+                  <div
                     key={todo.id}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: 20 }}
+                    
+                    
+                    
                     layout
                     className={`card ${todo.isCompleted ? 'bg-light' : ''}`}
                   >
@@ -267,9 +260,9 @@ export default function TodosPage() {
                         </button>
                       </div>
                     </div>
-                  </motion.div>
+                  </div>
                 ))}
-              </AnimatePresence>
+              
             </div>
           )}
 

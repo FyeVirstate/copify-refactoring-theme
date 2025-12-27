@@ -3,7 +3,6 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { motion, AnimatePresence } from "framer-motion";
 import DashboardHeader from "@/components/DashboardHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -73,16 +72,16 @@ function ToastAlerts({ alerts, onDismiss, onViewShop }: {
 
   return (
     <div className="position-fixed" style={{ top: '20px', left: '50%', transform: 'translateX(-50%)', zIndex: 9999, width: '100%', maxWidth: '600px' }}>
-      <AnimatePresence>
+      
         {alerts.map((alert) => {
           const alertStyles = getAlertStyles(alert.type);
           return (
-            <motion.div
+            <div
               key={alert.id}
-              initial={{ opacity: 0, y: -20, scale: 0.95 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: -20, scale: 0.95 }}
-              transition={{ duration: 0.2 }}
+              
+              
+              
+              
               className="d-flex align-items-center justify-content-between gap-3 mb-2 mx-3"
               style={{
                 padding: '12px 20px',
@@ -128,10 +127,10 @@ function ToastAlerts({ alerts, onDismiss, onViewShop }: {
                   ></button>
                 )}
               </div>
-            </motion.div>
+            </div>
           );
         })}
-      </AnimatePresence>
+      
     </div>
   );
 }
@@ -267,7 +266,7 @@ const AdCard = React.memo(function AdCard({ ad, index, isTracked: initialIsTrack
   };
 
   return (
-    <div className="post-wrapper border-gray-thin position-relative bg-white p-0 rounded" style={{ animation: `fadeIn 0.4s ease-out ${0.03 * (index % 12)}s both` }}>
+    <div className="post-wrapper border-gray-thin position-relative bg-white p-0 rounded">
       {/* Header */}
       <div className="d-flex justify-content-between align-items-start gap-3 p-3 border-bottom">
         <div className="d-flex gap-2">
@@ -941,7 +940,7 @@ export default function AdsPage() {
           </div>
 
           {/* Presets */}
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
+          <div   >
             <p className="text-uppercase fs-xs text-light-gray fw-500 mb-2">PRÉRÉGLAGES INTELLIGENTS</p>
             <div className="d-flex align-items-start mb-4" id="filter-box">
               <div className="d-flex w-100 overflow-auto me-4 filter-tag-box">
@@ -973,10 +972,10 @@ export default function AdsPage() {
                 </ul>
               </div>
             </div>
-          </motion.div>
+          </div>
 
           {/* Filters Grid */}
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: 0.1 }}>
+          <div   >
             <p className="text-uppercase fs-xs text-light-gray fw-500 mb-2 mt-1">FILTRES</p>
             <div className="filters-grid mb-3">
               {/* Filtres spécifiques aux publicités */}
@@ -1260,14 +1259,10 @@ export default function AdsPage() {
             )}
 
             <div className="horizontal-solid-divider mb-4 mt-2"></div>
-          </motion.div>
+          </div>
 
           {/* EU Transparency Toggle - On its own line */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, delay: 0.15 }}
-            className="mb-3"
+          <div            className="mb-3"
           >
             <div className="d-flex gap-1 align-items-center justify-content-start mb-0">
               <div className="form-check form-switch">
@@ -1285,14 +1280,10 @@ export default function AdsPage() {
                 <span className="badge bg-light-info ms-1 fw-500 text-info-color" style={{ fontSize: '10px', padding: '3px 6px' }}>NEW</span>
               </label>
             </div>
-          </motion.div>
+          </div>
 
           {/* Results & Sort */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, delay: 0.2 }}
-            className="d-flex align-items-center justify-content-between mb-4 gap-3 flex-wrap"
+          <div            className="d-flex align-items-center justify-content-between mb-4 gap-3 flex-wrap"
           >
               <h3 className="fs-small text-sub mb-0">
                 <span className="py-2 px-3 bg-weak-50 rounded" style={{ lineHeight: '36px' }}>
@@ -1315,13 +1306,13 @@ export default function AdsPage() {
                 ))}
               </select>
             </div>
-          </motion.div>
+          </div>
 
           {/* Error */}
           {error && <div className="alert alert-danger mb-4">{error}</div>}
 
           {/* Ads Grid - CSS Grid for 3 columns */}
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }}>
+          <div   >
             {isLoading ? (
               <div className="ads-grid-container">
                 {Array.from({ length: 9 }).map((_, i) => <AdCardSkeleton key={i} />)}
@@ -1361,30 +1352,22 @@ export default function AdsPage() {
                 </div>
               </>
             )}
-          </motion.div>
+          </div>
         </div>
       </div>
 
       {/* Saved Ads Drawer */}
-      <AnimatePresence>
-        {savedAdsDrawerOpen && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="position-fixed"
-              style={{ top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 9998 }}
-              onClick={() => setSavedAdsDrawerOpen(false)}
-            />
-            <motion.div
-              initial={{ x: '100%' }}
-              animate={{ x: 0 }}
-              exit={{ x: '100%' }}
-              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="position-fixed bg-white"
-              style={{ top: 0, right: 0, bottom: 0, width: '450px', maxWidth: '100vw', zIndex: 9999, boxShadow: '-4px 0 20px rgba(0,0,0,0.1)', overflowY: 'auto' }}
-            >
+      {savedAdsDrawerOpen && (
+        <>
+          <div
+            className="position-fixed"
+            style={{ top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 9998 }}
+            onClick={() => setSavedAdsDrawerOpen(false)}
+          />
+          <div
+            className="position-fixed bg-white"
+            style={{ top: 0, right: 0, bottom: 0, width: '450px', maxWidth: '100vw', zIndex: 9999, boxShadow: '-4px 0 20px rgba(0,0,0,0.1)', overflowY: 'auto' }}
+          >
               <div className="p-4">
                 <div className="d-flex justify-content-between align-items-center mb-4">
                   <h5 className="mb-0 d-flex align-items-center gap-2">
@@ -1514,16 +1497,11 @@ export default function AdsPage() {
                   </div>
                 )}
               </div>
-            </motion.div>
-              </>
-            )}
-      </AnimatePresence>
+          </div>
+        </>
+      )}
 
       <style jsx global>{`
-        @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(10px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
         @keyframes shimmer {
           0% { background-position: -200% 0; }
           100% { background-position: 200% 0; }

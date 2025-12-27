@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { motion } from "framer-motion";
 import DashboardHeader from "@/components/DashboardHeader";
 import { Button } from "@/components/ui/button";
 import {
@@ -85,11 +84,7 @@ export default function InvoicesPage() {
       <DashboardHeader title="Factures" />
 
       <div className="bg-weak-50 home-content-wrapper">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="bg-white rounded-15 data-view"
+        <div          className="bg-white rounded-15 data-view"
         >
           {/* Header */}
           <div className="dashboard-header d-flex justify-content-between align-items-center gap-4">
@@ -202,7 +197,7 @@ export default function InvoicesPage() {
               </>
             )}
           </div>
-        </motion.div>
+        </div>
       </div>
     </>
   );

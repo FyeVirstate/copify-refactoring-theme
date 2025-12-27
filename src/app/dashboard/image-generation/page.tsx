@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { motion } from "framer-motion";
 import DashboardHeader from "@/components/DashboardHeader";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -141,10 +140,7 @@ export default function ImageGenerationPage() {
       <div className="bg-weak-50 home-content-wrapper">
         <div className="container py-4">
           {/* Credits Banner */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="alert alert-info d-flex align-items-center justify-content-between mb-4"
+          <div            className="alert alert-info d-flex align-items-center justify-content-between mb-4"
           >
             <div>
               <i className="ri-image-add-line me-2"></i>
@@ -155,15 +151,12 @@ export default function ImageGenerationPage() {
                 Obtenir plus de crédits
               </a>
             )}
-          </motion.div>
+          </div>
 
           <div className="row g-4">
             {/* Generation Form */}
             <div className="col-lg-5">
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="card sticky-top"
+              <div                className="card sticky-top"
                 style={{ top: 20 }}
               >
                 <div className="card-header">
@@ -264,15 +257,15 @@ export default function ImageGenerationPage() {
                     </Button>
                   </form>
                 </div>
-              </motion.div>
+              </div>
             </div>
 
             {/* History */}
             <div className="col-lg-7">
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 }}
+              <div
+                
+                
+                
               >
                 <h5 className="mb-3">
                   <i className="ri-history-line me-2"></i>
@@ -292,11 +285,11 @@ export default function ImageGenerationPage() {
                 ) : (
                   <div className="row g-3">
                     {generatedImages.map((image, index) => (
-                      <motion.div
+                      <div
                         key={image.id}
-                        initial={{ opacity: 0, scale: 0.9 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ delay: index * 0.05 }}
+                        
+                        
+                        
                         className="col-6"
                       >
                         <div className="card h-100">
@@ -365,11 +358,11 @@ export default function ImageGenerationPage() {
                             </div>
                           </div>
                         </div>
-                      </motion.div>
+                      </div>
                     ))}
                   </div>
                 )}
-              </motion.div>
+              </div>
             </div>
           </div>
         </div>

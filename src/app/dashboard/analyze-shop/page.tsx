@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { motion } from "framer-motion";
 import Link from "next/link";
 import DashboardHeader from "@/components/DashboardHeader";
 import {
@@ -66,10 +65,7 @@ function AlertBox({ type, message, onClose }: {
   const style = styles[type];
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: -10 }}
-      animate={{ opacity: 1, y: 0 }}
-      className={`alert-box ${style.bg} ${style.border} d-flex align-items-center justify-content-between px-3 py-2 mb-3`}
+    <div      className={`alert-box ${style.bg} ${style.border} d-flex align-items-center justify-content-between px-3 py-2 mb-3`}
       style={{ borderRadius: '8px', borderLeft: '4px solid' }}
     >
       <div className="d-flex align-items-center gap-2">
@@ -84,7 +80,7 @@ function AlertBox({ type, message, onClose }: {
           Débloquer l&apos;accès complet
         </Link>
       )}
-    </motion.div>
+    </div>
   );
 }
 
@@ -385,11 +381,7 @@ function AnalyzeShopContent() {
           )}
 
           {/* Input Section - Responsive */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, ease: "easeOut" }}
-            className="mb-4 pb-1 pt-2"
+          <div            className="mb-4 pb-1 pt-2"
           >
             <div className="d-flex gap-3 align-items-center flex-wrap">
               {/* Search Input - Full width on mobile */}
@@ -473,14 +465,10 @@ function AnalyzeShopContent() {
                 </div>
               </div>
             </div>
-          </motion.div>
+          </div>
 
           {/* Sort Section */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.1, ease: "easeOut" }}
-            className="d-flex justify-content-between align-items-center mb-3"
+          <div            className="d-flex justify-content-between align-items-center mb-3"
           >
             <h2 className="fs-normal fw-600 mb-0">Boutiques suivies</h2>
             <div className="d-flex align-items-center gap-2">
@@ -495,14 +483,10 @@ function AnalyzeShopContent() {
                 <option value="revenue_asc">Revenus croissants</option>
               </select>
             </div>
-          </motion.div>
+          </div>
 
           {/* Table */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.2, ease: "easeOut" }}
-            className="table-view mt-2"
+          <div            className="table-view mt-2"
           >
             {isLoading ? (
               <div className="text-center py-5">
@@ -1049,7 +1033,7 @@ function AnalyzeShopContent() {
                 </div>
               </>
             )}
-          </motion.div>
+          </div>
         </div>
       </div>
 

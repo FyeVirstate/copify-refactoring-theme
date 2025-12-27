@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { motion, AnimatePresence } from "framer-motion";
 import DashboardHeader from "@/components/DashboardHeader";
 
 // Video data interfaces
@@ -346,11 +345,11 @@ export default function CoursesPage() {
             <div className="col-lg-8">
               <div ref={videoContainerRef}>
                 {/* Main Video Container */}
-                <motion.div 
+                <div 
                   ref={videoContainerRef}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.4 }}
+                  
+                  
+                  
                   className="video-container"
                 >
                   {currentVideo && (
@@ -363,23 +362,23 @@ export default function CoursesPage() {
                       className="wistia-iframe"
                     />
                   )}
-                </motion.div>
+                </div>
 
                 {/* Video Info */}
-                <motion.div 
+                <div 
                   className="video-info"
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.4, delay: 0.1 }}
+                  
+                  
+                  
                 >
-                  <AnimatePresence mode="wait">
+                  
                     {currentVideo && (
-                      <motion.div
+                      <div
                         key={currentVideo.videoId}
-                        initial={{ opacity: 0, y: 5 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -5 }}
-                        transition={{ duration: 0.2 }}
+                        
+                        
+                        
+                        
                       >
                         <h2 className="video-title">{currentVideo.title}</h2>
                         {currentVideo.details && (
@@ -391,20 +390,20 @@ export default function CoursesPage() {
                         {currentVideo.description && !currentVideo.details && (
                           <p className="video-description">{currentVideo.description}</p>
                         )}
-                      </motion.div>
+                      </div>
                     )}
-                  </AnimatePresence>
-                </motion.div>
+                  
+                </div>
 
                 {/* Live Coaching Banner - Show only for coaching videos */}
-                <AnimatePresence>
+                
                   {activeCategory === 'coaching' && (
-                    <motion.div 
+                    <div 
                       className="live-coaching-banner"
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: 'auto' }}
-                      exit={{ opacity: 0, height: 0 }}
-                      transition={{ duration: 0.3 }}
+                      
+                      
+                      
+                      
                     >
                       <div className="row align-items-center g-3">
                         <div className="col-md-5">
@@ -434,19 +433,19 @@ export default function CoursesPage() {
                           </div>
                         </div>
                       </div>
-                    </motion.div>
+                    </div>
                   )}
-                </AnimatePresence>
+                
               </div>
             </div>
 
             {/* Right Column - Playlist */}
             <div className="col-lg-4">
-              <motion.div 
+              <div 
                 className="playlist-container"
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.4, delay: 0.2 }}
+                
+                
+                
               >
                 {/* Category Tabs */}
                 <div className="playlist-tabs">
@@ -466,24 +465,24 @@ export default function CoursesPage() {
 
                 {/* Videos List */}
                 <div className="videos-list">
-                  <AnimatePresence mode="wait">
-                    <motion.div
+                  
+                    <div
                       key={activeCategory}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
-                      transition={{ duration: 0.2 }}
+                      
+                      
+                      
+                      
                     >
                       {getCurrentVideos().map((video, index) => (
-                        <motion.div
+                        <div
                           key={video.videoId}
                           className={`video-item ${currentVideo?.videoId === video.videoId ? 'active' : ''}`}
                           onClick={() => handleVideoSelect(video)}
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ duration: 0.2, delay: index * 0.03 }}
-                          whileHover={{ scale: 1.01 }}
-                          whileTap={{ scale: 0.99 }}
+                          
+                          
+                          
+                          
+                          
                         >
                           <div className="video-thumbnail">
                             <img 
@@ -505,12 +504,12 @@ export default function CoursesPage() {
                               </span>
                             )}
                           </div>
-                        </motion.div>
+                        </div>
                       ))}
-                    </motion.div>
-                  </AnimatePresence>
+                    </div>
+                  
                 </div>
-              </motion.div>
+              </div>
             </div>
           </div>
         </div>

@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
-import { motion } from "framer-motion";
 import DashboardHeader from "@/components/DashboardHeader";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -104,11 +103,7 @@ export default function AIShopPage() {
         showStats={false}
       >
         {/* Shop Generation Credits */}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.8 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.4, delay: 0.2, ease: "easeOut" }}
-          className="progress-circle d-flex gap-2 flex-row"
+        <div          className="progress-circle d-flex gap-2 flex-row"
         >
           <div className="progress-circle-wrapper">
             {credits === null ? (
@@ -123,7 +118,7 @@ export default function AIShopPage() {
             <div className="progress-text">{credits === -1 ? '∞' : credits ?? '...'}</div>
             <div className="progress-label">Génération de boutique</div>
           </div>
-        </motion.div>
+        </div>
       </DashboardHeader>
 
       <div className="bg-white home-content-wrapper">
@@ -131,10 +126,7 @@ export default function AIShopPage() {
           
           {/* Error Message */}
           {error && (
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="alert alert-warning mx-auto mb-4 d-flex justify-content-between align-items-center"
+            <div              className="alert alert-warning mx-auto mb-4 d-flex justify-content-between align-items-center"
               style={{ maxWidth: '900px' }}
             >
               <span>{error}</span>
@@ -143,15 +135,11 @@ export default function AIShopPage() {
                 className="btn-close" 
                 onClick={() => setError(null)}
               ></button>
-            </motion.div>
+            </div>
           )}
 
           {/* Hero Section */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, ease: "easeOut" }}
-            className="text-center mx-auto"
+          <div            className="text-center mx-auto"
             style={{ maxWidth: '900px', marginTop: '40px', marginBottom: '50px' }}
           >
             <h2 className="fw-400 mb-3" style={{ fontSize: 'clamp(20px, 5vw, 26px)', color: '#0E121B' }}>
@@ -174,14 +162,10 @@ export default function AIShopPage() {
               <span className="export-aliexpress-gradient">AliExpress</span> ou{' '}
               <span className="export-shopify-gradient">Amazon</span> ci-dessous, générez et personnalisez.
             </p>
-          </motion.div>
+          </div>
 
           {/* Input Section */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.1, ease: "easeOut" }}
-            className="ai-shop-input-wrapper mx-auto"
+          <div            className="ai-shop-input-wrapper mx-auto"
           >
             <div className="ai-shop-input-section">
               {/* URL Input */}
@@ -241,14 +225,10 @@ export default function AIShopPage() {
                 {' '}dans les paramètres pour utiliser cette fonctionnalité.
               </div>
             )}
-          </motion.div>
+          </div>
 
           {/* History Section */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.2, ease: "easeOut" }}
-            className="table-view mx-auto mt-5"
+          <div            className="table-view mx-auto mt-5"
             style={{ maxWidth: '1200px' }}
           >
             <h3 className="fs-normal fw-600 mb-4">Historique</h3>
@@ -362,7 +342,7 @@ export default function AIShopPage() {
                 </TableBody>
               </Table>
             </div>
-          </motion.div>
+          </div>
         </div>
       </div>
     </>

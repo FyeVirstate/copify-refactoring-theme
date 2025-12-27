@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { motion } from "framer-motion";
 import DashboardHeader from "@/components/DashboardHeader";
 import { Button } from "@/components/ui/button";
 import { useBilling } from "@/lib/hooks/use-billing";
@@ -146,10 +145,7 @@ export default function PlansPage() {
       <div className="bg-weak-50 home-content-wrapper">
         <div className="container py-4">
           {/* Header */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-center mb-5"
+          <div            className="text-center mb-5"
           >
             <h2 className="mb-2">Choisissez votre plan</h2>
             <p className="text-muted mb-4">
@@ -176,7 +172,7 @@ export default function PlansPage() {
                 <span className="badge bg-success ms-2">-20%</span>
               </button>
             </div>
-          </motion.div>
+          </div>
 
           {/* Plans Grid */}
           {isLoading ? (
@@ -188,11 +184,11 @@ export default function PlansPage() {
           ) : (
             <div className="row g-4 justify-content-center">
               {displayPlans.map((plan, index) => (
-                <motion.div
+                <div
                   key={plan.id || index}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.1 }}
+                  
+                  
+                  
                   className="col-12 col-md-6 col-lg-4"
                 >
                   <div
@@ -263,17 +259,13 @@ export default function PlansPage() {
                       </div>
                     </div>
                   </div>
-                </motion.div>
+                </div>
               ))}
             </div>
           )}
 
           {/* Features Comparison */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 }}
-            className="mt-5"
+          <div            className="mt-5"
           >
             <h4 className="text-center mb-4">Comparaison des fonctionnalités</h4>
             <div className="table-responsive">
@@ -330,14 +322,10 @@ export default function PlansPage() {
                 </tbody>
               </table>
             </div>
-          </motion.div>
+          </div>
 
           {/* FAQ */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.5 }}
-            className="mt-5"
+          <div            className="mt-5"
           >
             <h4 className="text-center mb-4">Questions fréquentes</h4>
             <div className="accordion" id="faqAccordion">
@@ -393,7 +381,7 @@ export default function PlansPage() {
                 </div>
               </div>
             </div>
-          </motion.div>
+          </div>
         </div>
       </div>
     </>

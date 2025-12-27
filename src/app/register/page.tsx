@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { motion } from "framer-motion";
 import { signIn } from "next-auth/react";
 
 export default function RegisterPage() {
@@ -88,17 +87,9 @@ export default function RegisterPage() {
 
   return (
     <div className="form-pages position-relative d-flex align-items-center justify-content-center py-5">
-      <motion.div 
-        initial={{ opacity: 0, y: 30 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, ease: "easeOut" }}
-        className="form-box"
+      <div        className="form-box"
       >
-        <motion.div 
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.4, delay: 0.2 }}
-          className="rounded-15 p-4 bg-white"
+        <div          className="rounded-15 p-4 bg-white"
         >
           {/* Logo */}
           <div className="text-center mb-4">
@@ -265,8 +256,8 @@ export default function RegisterPage() {
               )}
             </button>
           </form>
-        </motion.div>
-      </motion.div>
+        </div>
+      </div>
     </div>
   );
 }

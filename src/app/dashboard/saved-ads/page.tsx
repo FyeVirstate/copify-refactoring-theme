@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { motion } from "framer-motion";
 import DashboardHeader from "@/components/DashboardHeader";
 import { Button } from "@/components/ui/button";
 import { useAds } from "@/lib/hooks/use-ads";
@@ -74,11 +73,7 @@ export default function SavedAdsPage() {
       <DashboardHeader title="Publicités sauvegardées" />
 
       <div className="bg-weak-50 home-content-wrapper">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="bg-white rounded-15 data-view"
+        <div          className="bg-white rounded-15 data-view"
         >
           {/* Header */}
           <div className="dashboard-header d-flex justify-content-between align-items-center gap-4">
@@ -134,11 +129,11 @@ export default function SavedAdsPage() {
               <>
                 <div className="row g-4">
                   {savedAds.map((ad, index) => (
-                    <motion.div
+                    <div
                       key={ad.id}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.05 }}
+                      
+                      
+                      
                       className="col-12 col-md-6 col-lg-4"
                     >
                       <div className="card h-100 ad-card">
@@ -248,7 +243,7 @@ export default function SavedAdsPage() {
                           </div>
                         </div>
                       </div>
-                    </motion.div>
+                    </div>
                   ))}
                 </div>
 
@@ -276,7 +271,7 @@ export default function SavedAdsPage() {
               </>
             )}
           </div>
-        </motion.div>
+        </div>
       </div>
     </>
   );

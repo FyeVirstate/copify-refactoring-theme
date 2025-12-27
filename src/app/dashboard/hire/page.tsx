@@ -1,6 +1,5 @@
 "use client";
 
-import { motion } from "framer-motion";
 import DashboardHeader from "@/components/DashboardHeader";
 
 export default function HireCreatorPage() {
@@ -40,11 +39,7 @@ export default function HireCreatorPage() {
       <div className="bg-white home-content-wrapper">
         <div className="container-fluid px-2 px-md-4 py-5">
           {/* Main Content */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, ease: "easeOut" }}
-            className="text-center mx-auto"
+          <div            className="text-center mx-auto"
             style={{ maxWidth: '1100px', paddingBottom: '60px' }}
           >
             {/* Main Title */}
@@ -59,11 +54,11 @@ export default function HireCreatorPage() {
             {/* Videos Grid */}
             <div className="d-flex justify-content-center gap-3 flex-wrap mb-4 hire-video-grid">
               {videos.map((video, index) => (
-                <motion.div
+                <div
                   key={video.id}
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.4, delay: 0.1 + (index * 0.1), ease: "easeOut" }}
+                  
+                  
+                  
                   style={{ maxWidth: '220px', width: '100%' }}
                 >
                   <div 
@@ -88,7 +83,7 @@ export default function HireCreatorPage() {
                       <source src={video.url} type="video/mp4" />
                     </video>
                   </div>
-                </motion.div>
+                </div>
               ))}
             </div>
 
@@ -124,11 +119,7 @@ export default function HireCreatorPage() {
 
               <div className="row mb-3 stepper-wrapper position-relative">
                 <div className="col-md-4">
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.5, delay: 0.2, ease: "easeOut" }}
-                    className="step-card text-center mx-auto"
+                  <div                    className="step-card text-center mx-auto"
                   >
                     <div 
                       className="circled-icon"
@@ -150,15 +141,11 @@ export default function HireCreatorPage() {
                     <p className="text-center small fw-500 mb-0">
                       <span style={{ color: '#0C6CFB' }}>Sélectionnez le format</span> ( Images, Vidéos, Carrousel )
                     </p>
-                  </motion.div>
+                  </div>
                 </div>
 
                 <div className="col-md-4">
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.5, delay: 0.3, ease: "easeOut" }}
-                    className="step-card text-center mx-auto"
+                  <div                    className="step-card text-center mx-auto"
                   >
                     <div 
                       className="circled-icon"
@@ -180,15 +167,11 @@ export default function HireCreatorPage() {
                     <p className="text-center small fw-500 mb-0">
                       <span style={{ color: '#0C6CFB' }}>Transmettez le briefing</span> Votre texte, votre Offre Marketing, toutes demande spécifiques
                     </p>
-                  </motion.div>
+                  </div>
                 </div>
 
                 <div className="col-md-4">
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.5, delay: 0.4, ease: "easeOut" }}
-                    className="step-card text-center mx-auto"
+                  <div                    className="step-card text-center mx-auto"
                   >
                     <div 
                       className="circled-icon"
@@ -210,17 +193,13 @@ export default function HireCreatorPage() {
                     <p className="text-center small fw-500 mb-0">
                       <span style={{ color: '#0C6CFB' }}>Valider et payer</span> ( Une prévisualisation sera envoyer avant l&apos;envoie définitif )
                     </p>
-                  </motion.div>
+                  </div>
                 </div>
               </div>
             </div>
 
             {/* CTA Button - Centered & Large */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.5, ease: "easeOut" }}
-              className="d-flex justify-content-center mt-3"
+            <div              className="d-flex justify-content-center mt-3"
             >
               <button
                 onClick={handleOrderCreatives}
@@ -233,8 +212,8 @@ export default function HireCreatorPage() {
               >
                 Je veux commander des créatives
               </button>
-            </motion.div>
-          </motion.div>
+            </div>
+          </div>
         </div>
       </div>
     </>

@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { motion } from "framer-motion";
 import Link from "next/link";
 import DashboardHeader from "@/components/DashboardHeader";
 import { Button } from "@/components/ui/button";
@@ -111,10 +110,7 @@ export default function AliexpressSearchPage() {
           
           {/* Error Message */}
           {error && (
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="alert alert-warning mx-auto mb-4 d-flex justify-content-between align-items-center"
+            <div              className="alert alert-warning mx-auto mb-4 d-flex justify-content-between align-items-center"
               style={{ maxWidth: '900px' }}
             >
               <span>{error}</span>
@@ -123,16 +119,12 @@ export default function AliexpressSearchPage() {
                 className="btn-close" 
                 onClick={() => setError(null)}
               ></button>
-            </motion.div>
+            </div>
           )}
 
           {searchResults.length === 0 ? (
             // Search Form
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, ease: "easeOut" }}
-              className="d-flex align-items-center justify-content-center"
+            <div              className="d-flex align-items-center justify-content-center"
               style={{ minHeight: 'calc(100vh - 350px)' }}
             >
               <div className="aliexpress-search-container" style={{ maxWidth: '900px', width: '100%', padding: '40px 20px' }}>
@@ -250,13 +242,10 @@ export default function AliexpressSearchPage() {
                   )}
                 </Button>
               </div>
-            </motion.div>
+            </div>
           ) : (
             // Search Results
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="mx-auto"
+            <div              className="mx-auto"
               style={{ maxWidth: '1200px' }}
             >
               <div className="d-flex justify-content-between align-items-center mb-4">
@@ -274,11 +263,11 @@ export default function AliexpressSearchPage() {
 
               <div className="row g-4">
                 {searchResults.map((product, index) => (
-                  <motion.div
+                  <div
                     key={product.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.05 }}
+                    
+                    
+                    
                     className="col-md-6 col-lg-4"
                   >
                     <div className="card h-100">
@@ -344,10 +333,10 @@ export default function AliexpressSearchPage() {
                         </div>
                       </div>
                     </div>
-                  </motion.div>
+                  </div>
                 ))}
               </div>
-            </motion.div>
+            </div>
           )}
         </div>
       </div>

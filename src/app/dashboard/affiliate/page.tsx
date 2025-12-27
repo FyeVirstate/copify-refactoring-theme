@@ -1,9 +1,6 @@
 "use client";
-
 import { useState, useEffect } from "react";
-import { motion } from "framer-motion";
 import DashboardHeader from "@/components/DashboardHeader";
-
 interface AffiliateData {
   isPromoter: boolean;
   signupUrl?: string;
@@ -15,12 +12,10 @@ interface AffiliateData {
   };
   error?: string;
 }
-
 export default function AffiliatePage() {
   const [affiliateData, setAffiliateData] = useState<AffiliateData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
   useEffect(() => {
     const fetchAffiliateData = async () => {
       try {
@@ -37,10 +32,8 @@ export default function AffiliatePage() {
         setLoading(false);
       }
     };
-
     fetchAffiliateData();
   }, []);
-
   if (loading) {
     return (
       <>
@@ -60,7 +53,6 @@ export default function AffiliatePage() {
       </>
     );
   }
-
   if (error) {
     return (
       <>
@@ -80,7 +72,6 @@ export default function AffiliatePage() {
       </>
     );
   }
-
   // If user is already a promoter, show the dashboard
   if (affiliateData?.isPromoter && affiliateData.dashboardUrl) {
     return (
@@ -92,10 +83,7 @@ export default function AffiliatePage() {
           showStats={false}
         />
         <div className="bg-weak-50">
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, ease: "easeOut" }}
+          <div 
             className="p-2 w-max-width-xl mx-auto"
           >
             <iframe
@@ -107,12 +95,11 @@ export default function AffiliatePage() {
               style={{ borderRadius: '12px' }}
               title="Tableau de bord affilié"
             />
-          </motion.div>
+          </div>
         </div>
       </>
     );
   }
-
   // If user is not a promoter, show the signup page
   return (
     <>
@@ -123,40 +110,27 @@ export default function AffiliatePage() {
         showStats={false}
       />
       <div className="bg-weak-50">
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, ease: "easeOut" }}
+        <div 
           className="p-3 p-md-4 w-max-width-xl mx-auto"
         >
           {/* Header Section */}
           <div className="text-center mb-4">
-            <motion.h1 
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.1, ease: "easeOut" }}
+            <h1 
               className="fs-2 fw-bold mb-3"
               style={{ color: '#1a1a2e' }}
             >
               Complétez votre inscription d&apos;affilié
-            </motion.h1>
-            <motion.p 
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.2, ease: "easeOut" }}
+            </h1>
+            <p 
               className="text-muted mx-auto"
               style={{ maxWidth: '800px', fontSize: '1.05rem', lineHeight: '1.6' }}
             >
               Pour accéder au tableau de bord d&apos;affiliation, vous devez remplir le formulaire d&apos;inscription d&apos;affilié ci-dessous. 
               Cela nous aidera à mieux comprendre vos stratégies marketing et à vous offrir la meilleure expérience d&apos;affiliation possible.
-            </motion.p>
+            </p>
           </div>
-
           {/* Main Content - Two Columns */}
-          <motion.div 
-            initial={{ opacity: 0, scale: 0.98 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.6, delay: 0.3, ease: "easeOut" }}
+          <div 
             className="affiliate-signup-container"
             style={{
               display: 'grid',
@@ -196,12 +170,8 @@ export default function AffiliatePage() {
                   pointerEvents: 'none',
                 }}
               />
-              
               {/* Logo */}
-              <motion.div 
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.5, delay: 0.4, ease: "easeOut" }}
+              <div 
                 className="affiliate-logo"
                 style={{ position: 'relative', zIndex: 1 }}
               >
@@ -221,13 +191,9 @@ export default function AffiliatePage() {
                     copyfy
                   </span>
                 </div>
-              </motion.div>
-
+              </div>
               {/* Welcome Text */}
-              <motion.div 
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.5, ease: "easeOut" }}
+              <div 
                 className="affiliate-welcome-text"
                 style={{ position: 'relative', zIndex: 1, marginTop: '2rem' }}
               >
@@ -243,13 +209,9 @@ export default function AffiliatePage() {
                   Bienvenue sur le<br />
                   programme Copyfy 30% à vie
                 </h2>
-              </motion.div>
-
+              </div>
               {/* 3D Isometric Blocks Illustration */}
-              <motion.div 
-                initial={{ opacity: 0, y: 30 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.7, delay: 0.6, ease: "easeOut" }}
+              <div 
                 className="affiliate-illustration"
                 style={{ 
                   position: 'relative', 
@@ -272,21 +234,18 @@ export default function AffiliatePage() {
                     <path d="M60 80L100 105L140 80L100 55L60 80Z" fill="#00F5C4"/>
                     <path d="M100 105L100 155L140 130L140 80L100 105Z" fill="#00B894"/>
                   </g>
-                  
                   {/* Second Block (Middle) */}
                   <g opacity="0.9">
                     <path d="M110 50L110 100L150 125L150 75L110 50Z" fill="#74B9FF"/>
                     <path d="M110 50L150 75L190 50L150 25L110 50Z" fill="#A8D8FF"/>
                     <path d="M150 75L150 125L190 100L190 50L150 75Z" fill="#0984E3"/>
                   </g>
-                  
                   {/* Third Block (Front right) */}
                   <g opacity="0.95">
                     <path d="M160 90L160 140L200 165L200 115L160 90Z" fill="#74B9FF"/>
                     <path d="M160 90L200 115L240 90L200 65L160 90Z" fill="#A8D8FF"/>
                     <path d="M200 115L200 165L240 140L240 90L200 115Z" fill="#0984E3"/>
                   </g>
-                  
                   {/* Small decorative block */}
                   <g opacity="0.7">
                     <path d="M200 40L200 70L225 85L225 55L200 40Z" fill="#00D4AA"/>
@@ -294,9 +253,8 @@ export default function AffiliatePage() {
                     <path d="M225 55L225 85L250 70L250 40L225 55Z" fill="#00B894"/>
                   </g>
                 </svg>
-              </motion.div>
+              </div>
             </div>
-
             {/* Right Side - Iframe Form */}
             <div 
               className="affiliate-form-section"
@@ -320,13 +278,9 @@ export default function AffiliatePage() {
                 />
               )}
             </div>
-          </motion.div>
-
+          </div>
           {/* Additional Info Section */}
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.7, ease: "easeOut" }}
+          <div 
             className="mt-5"
           >
             <div className="row g-4">
@@ -357,7 +311,6 @@ export default function AffiliatePage() {
                   </p>
                 </div>
               </div>
-
               {/* Benefit Card 2 */}
               <div className="col-md-4">
                 <div 
@@ -385,7 +338,6 @@ export default function AffiliatePage() {
                   </p>
                 </div>
               </div>
-
               {/* Benefit Card 3 */}
               <div className="col-md-4">
                 <div 
@@ -414,10 +366,9 @@ export default function AffiliatePage() {
                 </div>
               </div>
             </div>
-          </motion.div>
-        </motion.div>
+          </div>
+        </div>
       </div>
-
       <style jsx>{`
         @media (max-width: 768px) {
           .affiliate-signup-container {
@@ -435,4 +386,3 @@ export default function AffiliatePage() {
     </>
   );
 }
-

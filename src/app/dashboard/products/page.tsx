@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { motion, AnimatePresence } from "framer-motion";
 import DashboardHeader from "@/components/DashboardHeader";
 import {
   Table,
@@ -148,16 +147,16 @@ function ToastAlerts({ alerts, onDismiss, onViewShop }: {
 
   return (
     <div className="position-fixed" style={{ top: '20px', left: '50%', transform: 'translateX(-50%)', zIndex: 9999, width: '100%', maxWidth: '600px' }}>
-      <AnimatePresence>
+      
         {alerts.map((alert) => {
           const alertStyles = getAlertStyles(alert.type);
           return (
-          <motion.div
+          <div
             key={alert.id}
-            initial={{ opacity: 0, y: -20, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -20, scale: 0.95 }}
-            transition={{ duration: 0.2 }}
+            
+            
+            
+            
             className="d-flex align-items-center justify-content-between gap-3 mb-2 mx-3"
             style={{
               padding: '12px 20px',
@@ -203,10 +202,10 @@ function ToastAlerts({ alerts, onDismiss, onViewShop }: {
                 ></button>
               )}
             </div>
-          </motion.div>
+          </div>
           );
         })}
-      </AnimatePresence>
+      
     </div>
   );
 }
@@ -933,11 +932,7 @@ function ProductsContent() {
           )}
 
           {/* Search Bar */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, ease: "easeOut" }}
-            className="mb-3 pb-1 d-flex gap-2 pt-2 flex-wrap flex-sm-nowrap mobile-search-row"
+          <div            className="mb-3 pb-1 d-flex gap-2 pt-2 flex-wrap flex-sm-nowrap mobile-search-row"
             style={{ maxWidth: '100%' }}
           >
             <div className="mb-0 form-control-w-icon position-relative d-flex align-items-center" style={{ flex: '1 1 auto', minWidth: 0 }}>
@@ -964,14 +959,10 @@ function ProductsContent() {
               ) : null}
               Rechercher
             </Button>
-          </motion.div>
+          </div>
 
           {/* Smart Preset Filters */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.1, ease: "easeOut" }}
-          >
+          <div>
             <p className="text-uppercase fs-xs text-light-gray fw-500 mb-2">PRÉRÉGLAGES INTELLIGENTS</p>
             <div className="d-flex align-items-start mb-4" id="filter-box">
               <div className="d-flex w-100 overflow-auto me-4 filter-tag-box">
@@ -1292,14 +1283,10 @@ function ProductsContent() {
 
             {/* Divider after Filters */}
             <div className="horizontal-solid-divider mb-4 mt-2"></div>
-          </motion.div>
+          </div>
 
           {/* Results Count and Sort */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.3, ease: "easeOut" }}
-            className="d-flex align-items-center justify-content-between mb-4 mt-3 gap-3 flex-wrap"
+          <div            className="d-flex align-items-center justify-content-between mb-4 mt-3 gap-3 flex-wrap"
           >
             <div className="d-flex align-items-center gap-3">
               <h3 className="fs-small text-sub mb-0">
@@ -1328,7 +1315,7 @@ function ProductsContent() {
                 ))}
               </select>
             </div>
-          </motion.div>
+          </div>
 
           {/* Error Message */}
           {error && (
@@ -1338,11 +1325,7 @@ function ProductsContent() {
           )}
 
           {/* Products Table */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.5, ease: "easeOut" }}
-            className="table-view mt-2"
+          <div            className="table-view mt-2"
           >
             {isLoading ? (
               <ProductTableSkeleton rows={10} />
@@ -1390,9 +1373,6 @@ function ProductsContent() {
                         <TableRow
                           key={product.id}
                           className="product_items"
-                          style={{
-                            animation: `fadeIn 0.4s ease-out ${0.1 + (0.05 * index)}s both`,
-                          }}
                         >
                           {/* Product Column */}
                           <TableCell scope="row" className="align-middle py-3 border-b-gray">
@@ -1634,7 +1614,7 @@ function ProductsContent() {
                 </div>
               </div>
             )}
-          </motion.div>
+          </div>
 
         </div>
       </div>

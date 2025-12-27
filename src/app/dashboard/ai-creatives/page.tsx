@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { motion } from "framer-motion";
 import DashboardHeader from "@/components/DashboardHeader";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -37,11 +36,7 @@ export default function AICreativesPage() {
         showStats={false}
       >
         {/* Custom Stats - Video Generation Credits */}
-        <motion.div 
-          initial={{ opacity: 0, scale: 0.8 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.4, delay: 0.2, ease: "easeOut" }}
-          className="progress-circle d-flex gap-2 flex-row" 
+        <div          className="progress-circle d-flex gap-2 flex-row" 
           data-progress="2" 
           data-total="2"
         >
@@ -63,18 +58,14 @@ export default function AICreativesPage() {
             <div className="progress-text">2/2</div>
             <div className="progress-label">Crédits de Génération de Vidéo</div>
           </div>
-        </motion.div>
+        </div>
       </DashboardHeader>
 
       <div className="bg-white home-content-wrapper">
         <div className="container-fluid px-2 px-md-4 py-5">
           
           {/* Hero Section */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, ease: "easeOut" }}
-            className="ai-creative-hero-section text-center mx-auto mt-20"
+          <div            className="ai-creative-hero-section text-center mx-auto mt-20"
             style={{ maxWidth: '500px', marginBottom: '60px' }}
           >
             <h2 className="fw-500 " style={{ fontSize: 'clamp(20px, 5vw, 24px)', color: '#0E121B' }}>
@@ -85,14 +76,10 @@ export default function AICreativesPage() {
               Collez le lien de votre page produit ci-dessous et obtenez 1 vidéo
               publicitaires pour Meta/Tiktok
             </p>
-          </motion.div>
+          </div>
 
           {/* Input Section - Outside of text container for full width */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.1, ease: "easeOut" }}
-            className="ai-creative-input-section mx-auto"
+          <div            className="ai-creative-input-section mx-auto"
           >
             <Input
               type="text"
@@ -122,25 +109,21 @@ export default function AICreativesPage() {
               <i className="ri-sparkling-line me-2"></i>
               Générer
             </Button>
-          </motion.div>
+          </div>
 
           {/* Videos Section - Wider container */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.3, ease: "easeOut" }}
-            className="ai-creative-videos-section mx-auto"
+          <div            className="ai-creative-videos-section mx-auto"
           >
             <h2 className="fs-normal fw-600 mb-4">Vos Vidéos Créatives</h2>
 
             {mockVideos.length > 0 ? (
               <div className="ai-creative-videos-grid">
                 {mockVideos.map((video, index) => (
-                  <motion.div
+                  <div
                     key={video.id}
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ duration: 0.4, delay: 0.4 + (0.1 * index), ease: "easeOut" }}
+                    
+                    
+                    
                     className="ai-creative-video-card bg-white rounded-8 border-gray overflow-hidden"
                   >
                     {/* Video Preview */}
@@ -174,7 +157,7 @@ export default function AICreativesPage() {
                       </div>
                       <p className="fs-xs text-sub mb-0">{video.createdAt}</p>
                     </div>
-                  </motion.div>
+                  </div>
                 ))}
               </div>
             ) : (
@@ -188,7 +171,7 @@ export default function AICreativesPage() {
                 </p>
               </div>
             )}
-          </motion.div>
+          </div>
         </div>
       </div>
     </>
