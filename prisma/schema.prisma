@@ -101,11 +101,13 @@ model blacklist_shops {
 }
 
 model category {
-  id        BigInt    @id @default(autoincrement())
-  name      Json
-  parentId  BigInt?   @map("parent_id")
-  createdAt DateTime? @map("created_at")
-  updatedAt DateTime? @map("updated_at")
+  id             BigInt         @id @default(autoincrement())
+  name           Json
+  parentId       BigInt?        @map("parent_id")
+  createdAt      DateTime?      @map("created_at")
+  updatedAt      DateTime?      @map("updated_at")
+
+  shopCategories shopCategory[]
 
   @@map("categories")
 }
@@ -637,17 +639,20 @@ model productExport {
   @@map("product_exports")
 }
 
-model product_images {
-  id         BigInt    @id @default(autoincrement())
-  product_id BigInt
-  src        String
-  width      Int
-  height     Int
-  position   Int
-  created_at DateTime?
-  updated_at DateTime?
+model productImage {
+  id        BigInt    @id @default(autoincrement())
+  productId BigInt    @map("product_id")
+  src       String
+  width     Int
+  height    Int
+  position  Int
+  createdAt DateTime? @map("created_at")
+  updatedAt DateTime? @map("updated_at")
 
-  @@index([product_id], map: "product_images_product_id_index")
+  product   product   @relation(fields: [productId], references: [id])
+
+  @@index([productId], map: "product_images_product_id_index")
+  @@map("product_images")
 }
 
 model product_options {
@@ -662,48 +667,56 @@ model product_options {
   @@index([product_id], map: "product_options_product_id_index")
 }
 
-model product_variants {
-  id                BigInt    @id @default(autoincrement())
-  product_id        BigInt
-  variant_id        BigInt
-  title             String    @db.VarChar(255)
-  option1           String?
-  option2           String?
-  option3           String?
-  sku               String?
-  requires_shipping Boolean   @default(true)
-  taxable           Boolean   @default(false)
-  price             Decimal   @db.Decimal(20, 10)
-  grams             BigInt    @default(0)
-  created_at        DateTime? @db.Timestamp(0)
-  updated_at        DateTime? @db.Timestamp(0)
+model productVariant {
+  id               BigInt    @id @default(autoincrement())
+  productId        BigInt    @map("product_id")
+  variantId        BigInt    @map("variant_id")
+  title            String    @db.VarChar(255)
+  option1          String?
+  option2          String?
+  option3          String?
+  sku              String?
+  requiresShipping Boolean   @default(true) @map("requires_shipping")
+  taxable          Boolean   @default(false)
+  price            Decimal   @db.Decimal(20, 10)
+  grams            BigInt    @default(0)
+  createdAt        DateTime? @map("created_at") @db.Timestamp(0)
+  updatedAt        DateTime? @map("updated_at") @db.Timestamp(0)
+
+  product          product   @relation(fields: [productId], references: [id])
 
   @@index([price], map: "product_variants_price_index")
-  @@index([product_id], map: "product_variants_product_id_index")
-  @@index([variant_id], map: "product_variants_variant_id_index")
+  @@index([productId], map: "product_variants_product_id_index")
+  @@index([variantId], map: "product_variants_variant_id_index")
+  @@map("product_variants")
 }
 
-model products {
-  id           BigInt    @id @default(autoincrement())
-  shop_id      BigInt
-  product_id   BigInt
-  title        String    @db.VarChar(255)
-  best_product Boolean   @default(false)
-  handle       String    @db.VarChar(255)
-  body_html    String?
-  published_at DateTime? @db.Timestamp(0)
-  vendor       String?   @db.VarChar(255)
-  product_type String?   @db.VarChar(255)
-  tags         Json?     @db.Json
-  created_at   DateTime? @db.Timestamp(0)
-  updated_at   DateTime? @db.Timestamp(0)
-  sort         Int?
+model product {
+  id          BigInt    @id @default(autoincrement())
+  shopId      BigInt    @map("shop_id")
+  productId   BigInt    @map("product_id")
+  title       String    @db.VarChar(255)
+  bestProduct Boolean   @default(false) @map("best_product")
+  handle      String    @db.VarChar(255)
+  bodyHtml    String?   @map("body_html")
+  publishedAt DateTime? @map("published_at") @db.Timestamp(0)
+  vendor      String?   @db.VarChar(255)
+  productType String?   @map("product_type") @db.VarChar(255)
+  tags        Json?     @db.Json
+  createdAt   DateTime? @map("created_at") @db.Timestamp(0)
+  updatedAt   DateTime? @map("updated_at") @db.Timestamp(0)
+  sort        Int?
 
-  @@unique([shop_id, product_id], map: "products_unique_shop_id_product_id")
-  @@index([created_at], map: "idx_products_created_at")
-  @@index([best_product], map: "products_best_product_index")
-  @@index([product_id], map: "products_product_id_index")
-  @@index([shop_id], map: "products_shop_id_index")
+  shop        shop             @relation(fields: [shopId], references: [id])
+  variants    productVariant[]
+  images      productImage[]
+
+  @@unique([shopId, productId], map: "products_unique_shop_id_product_id")
+  @@index([createdAt], map: "idx_products_created_at")
+  @@index([bestProduct], map: "products_best_product_index")
+  @@index([productId], map: "products_product_id_index")
+  @@index([shopId], map: "products_shop_id_index")
+  @@map("products")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -1093,6 +1106,8 @@ model shop {
   appsLastSyncedAt    DateTime? @map("apps_last_synced_at") @db.Timestamp(0)
 
   userShops           userShop[]
+  products            product[]
+  categories          shopCategory[]
 
   @@index([createdAt], map: "idx_shops_created_at")
   @@index([url], map: "idx_shops_url")
@@ -1116,15 +1131,19 @@ model shops_ads_active_history {
   @@index([shop_id])
 }
 
-model shops_categories {
-  id          BigInt    @id @default(autoincrement())
-  category_id BigInt
-  shop_id     BigInt
-  created_at  DateTime? @db.Timestamp(0)
-  updated_at  DateTime? @db.Timestamp(0)
+model shopCategory {
+  id         BigInt    @id @default(autoincrement())
+  categoryId BigInt    @map("category_id")
+  shopId     BigInt    @map("shop_id")
+  createdAt  DateTime? @map("created_at") @db.Timestamp(0)
+  updatedAt  DateTime? @map("updated_at") @db.Timestamp(0)
 
-  @@index([category_id], map: "shops_categories_category_id_index")
-  @@index([shop_id], map: "shops_categories_shop_id_index")
+  category   category  @relation(fields: [categoryId], references: [id])
+  shop       shop      @relation(fields: [shopId], references: [id])
+
+  @@index([categoryId], map: "shops_categories_category_id_index")
+  @@index([shopId], map: "shops_categories_shop_id_index")
+  @@map("shops_categories")
 }
 
 model shops_fb_pages {
