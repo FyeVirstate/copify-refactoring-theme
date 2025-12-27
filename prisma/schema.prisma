@@ -575,29 +575,31 @@ model permissions {
   @@unique([name, guard_name], map: "permissions_name_guard_name_unique")
 }
 
-model plans {
-  id                     BigInt    @id @default(autoincrement())
-  title                  String
-  price                  Float
-  day_free_trial         Int       @default(0)
-  info                   String?
-  identifier             String
-  stripe_id              String
-  stripe_id_en           String
-  leaderboard_shop       Int
-  limit_shop_tracker     Int
-  limit_shop_exporter    Int
-  limit_product_exporter Int
-  top_shops_count        Int?
-  top_products_count     Int?
-  created_at             DateTime?
-  updated_at             DateTime?
-  limit_generate_product Int       @default(0)
-  limit_import_theme     Int       @default(0)
-  top_ads_count          Int?
-  max_licenses           Int       @default(1)
-  limit_video_generation Int       @default(0)
-  limit_image_generation Int       @default(0)
+model plan {
+  id                   BigInt    @id @default(autoincrement())
+  title                String
+  price                Float
+  dayFreeTrial         Int       @default(0) @map("day_free_trial")
+  info                 String?
+  identifier           String
+  stripeId             String    @map("stripe_id")
+  stripeIdEn           String    @map("stripe_id_en")
+  leaderboardShop      Int       @map("leaderboard_shop")
+  limitShopTracker     Int       @map("limit_shop_tracker")
+  limitShopExporter    Int       @map("limit_shop_exporter")
+  limitProductExporter Int       @map("limit_product_exporter")
+  topShopsCount        Int?      @map("top_shops_count")
+  topProductsCount     Int?      @map("top_products_count")
+  createdAt            DateTime? @map("created_at")
+  updatedAt            DateTime? @map("updated_at")
+  limitGenerateProduct Int       @default(0) @map("limit_generate_product")
+  limitImportTheme     Int       @default(0) @map("limit_import_theme")
+  topAdsCount          Int?      @map("top_ads_count")
+  maxLicenses          Int       @default(1) @map("max_licenses")
+  limitVideoGeneration Int       @default(0) @map("limit_video_generation")
+  limitImageGeneration Int       @default(0) @map("limit_image_generation")
+
+  @@map("plans")
 }
 
 model product_discovers {
@@ -1189,21 +1191,24 @@ model subscription_items {
   @@index([stripe_id])
 }
 
-model subscriptions {
-  id            BigInt    @id @default(autoincrement())
-  user_id       BigInt
-  name          String    @db.VarChar(255)
-  stripe_id     String    @db.VarChar(255)
-  stripe_status String    @db.VarChar(255)
-  stripe_plan   String?   @db.VarChar(255)
-  quantity      Int?
-  discount      String?   @db.VarChar(255)
-  trial_ends_at DateTime? @db.Timestamp(6)
-  ends_at       DateTime? @db.Timestamp(6)
-  created_at    DateTime? @db.Timestamp(6)
-  updated_at    DateTime? @db.Timestamp(6)
+model subscription {
+  id          BigInt    @id @default(autoincrement())
+  userId      BigInt    @map("user_id")
+  name        String    @db.VarChar(255)
+  stripeId    String    @map("stripe_id") @db.VarChar(255)
+  stripeStatus String   @map("stripe_status") @db.VarChar(255)
+  stripePlan  String?   @map("stripe_plan") @db.VarChar(255)
+  quantity    Int?
+  discount    String?   @db.VarChar(255)
+  trialEndsAt DateTime? @map("trial_ends_at") @db.Timestamp(6)
+  endsAt      DateTime? @map("ends_at") @db.Timestamp(6)
+  createdAt   DateTime? @map("created_at") @db.Timestamp(6)
+  updatedAt   DateTime? @map("updated_at") @db.Timestamp(6)
 
-  @@index([user_id, stripe_status])
+  user        user      @relation(fields: [userId], references: [id])
+
+  @@index([userId, stripeStatus], map: "subscriptions_user_id_stripe_status_idx")
+  @@map("subscriptions")
 }
 
 model suggested_products {
@@ -1464,53 +1469,56 @@ model user_uploaded_images {
   @@index([user_id, used_in_video], map: "user_uploaded_images_user_id_used_in_video_index")
 }
 
-model users {
-  id                       BigInt    @id @default(autoincrement())
-  name                     String    @db.VarChar(255)
-  email                    String    @unique(map: "users_email_idx") @db.VarChar(255)
-  shopify_domain           String?   @db.VarChar(255)
-  shopify_access_token     String?   @db.VarChar(255)
-  email_verified_at        DateTime? @db.Timestamp(6)
-  verify_token             String?   @db.VarChar(255)
-  password                 String    @db.VarChar(255)
-  backup_code              String    @db.VarChar(255)
-  remember_token           String?   @db.VarChar(100)
-  cancel_token             String    @db.VarChar(255)
-  balance_shop_exporter    Int       @default(0)
-  balance_product_exporter Int       @default(0)
-  already_seen_video       Int       @default(0) @db.SmallInt
-  isAdmin                  Int       @default(0)
-  isBanned                 Int       @default(0)
-  created_at               DateTime? @db.Timestamp(6)
-  updated_at               DateTime? @db.Timestamp(6)
-  start_offer_date         DateTime? @db.Timestamp(6)
-  stripe_id                String?   @db.VarChar(255)
-  card_brand               String?   @db.VarChar(255)
-  card_last_four           String?   @db.VarChar(4)
-  trial_ends_at            DateTime? @db.Timestamp(6)
-  card_holder              String?   @db.VarChar(255)
-  type                     String    @default("email") @db.VarChar(255)
-  last_login               DateTime? @db.Timestamp(6)
-  deleted_at               DateTime? @db.Timestamp(6)
-  lang                     String    @default("fr") @db.VarChar(5)
-  balance_generate_product Int       @default(0)
-  balance_import_theme     Int       @default(0)
-  viewed_competitor_ads    Boolean   @default(false)
-  main_theme_id            String?   @db.VarChar(255)
-  shopify_setup_completed  Boolean   @default(false)
-  utm_source               String?   @db.VarChar(255)
-  magic_link_token         String?   @db.VarChar(255)
-  magic_link_expires_at    DateTime? @db.Timestamp(0)
-  shopify_domain_linked_at DateTime? @db.Timestamp(0)
-  balance_video_generation Int       @default(0)
-  balance_image_generation Int       @default(0)
-  last_yearly_credit_at    DateTime? @db.Timestamp(0)
-  next_credit_renewal_at   DateTime? @db.Timestamp(0)
-  challenge_registered_at  DateTime? @db.Timestamp(0)
-  q4_banner_dismissed      Boolean   @default(false)
-  bf_banner_dismissed      Boolean   @default(false)
+model user {
+  id                     BigInt    @id @default(autoincrement())
+  name                   String    @db.VarChar(255)
+  email                  String    @unique(map: "users_email_idx") @db.VarChar(255)
+  shopifyDomain          String?   @map("shopify_domain") @db.VarChar(255)
+  shopifyAccessToken     String?   @map("shopify_access_token") @db.VarChar(255)
+  emailVerifiedAt        DateTime? @map("email_verified_at") @db.Timestamp(6)
+  verifyToken            String?   @map("verify_token") @db.VarChar(255)
+  password               String    @db.VarChar(255)
+  backupCode             String    @map("backup_code") @db.VarChar(255)
+  rememberToken          String?   @map("remember_token") @db.VarChar(100)
+  cancelToken            String    @map("cancel_token") @db.VarChar(255)
+  balanceShopExporter    Int       @default(0) @map("balance_shop_exporter")
+  balanceProductExporter Int       @default(0) @map("balance_product_exporter")
+  alreadySeenVideo       Int       @default(0) @map("already_seen_video") @db.SmallInt
+  isAdmin                Int       @default(0)
+  isBanned               Int       @default(0)
+  createdAt              DateTime? @map("created_at") @db.Timestamp(6)
+  updatedAt              DateTime? @map("updated_at") @db.Timestamp(6)
+  startOfferDate         DateTime? @map("start_offer_date") @db.Timestamp(6)
+  stripeId               String?   @map("stripe_id") @db.VarChar(255)
+  cardBrand              String?   @map("card_brand") @db.VarChar(255)
+  cardLastFour           String?   @map("card_last_four") @db.VarChar(4)
+  trialEndsAt            DateTime? @map("trial_ends_at") @db.Timestamp(6)
+  cardHolder             String?   @map("card_holder") @db.VarChar(255)
+  type                   String    @default("email") @db.VarChar(255)
+  lastLogin              DateTime? @map("last_login") @db.Timestamp(6)
+  deletedAt              DateTime? @map("deleted_at") @db.Timestamp(6)
+  lang                   String    @default("fr") @db.VarChar(5)
+  balanceGenerateProduct Int       @default(0) @map("balance_generate_product")
+  balanceImportTheme     Int       @default(0) @map("balance_import_theme")
+  viewedCompetitorAds    Boolean   @default(false) @map("viewed_competitor_ads")
+  mainThemeId            String?   @map("main_theme_id") @db.VarChar(255)
+  shopifySetupCompleted  Boolean   @default(false) @map("shopify_setup_completed")
+  utmSource              String?   @map("utm_source") @db.VarChar(255)
+  magicLinkToken         String?   @map("magic_link_token") @db.VarChar(255)
+  magicLinkExpiresAt     DateTime? @map("magic_link_expires_at") @db.Timestamp(0)
+  shopifyDomainLinkedAt  DateTime? @map("shopify_domain_linked_at") @db.Timestamp(0)
+  balanceVideoGeneration Int       @default(0) @map("balance_video_generation")
+  balanceImageGeneration Int       @default(0) @map("balance_image_generation")
+  lastYearlyCreditAt     DateTime? @map("last_yearly_credit_at") @db.Timestamp(0)
+  nextCreditRenewalAt    DateTime? @map("next_credit_renewal_at") @db.Timestamp(0)
+  challengeRegisteredAt  DateTime? @map("challenge_registered_at") @db.Timestamp(0)
+  q4BannerDismissed      Boolean   @default(false) @map("q4_banner_dismissed")
+  bfBannerDismissed      Boolean   @default(false) @map("bf_banner_dismissed")
 
-  @@index([created_at], map: "idx_users_created_at")
-  @@index([next_credit_renewal_at], map: "users_next_credit_renewal_at_index")
-  @@index([stripe_id])
+  subscriptions          subscription[]
+
+  @@index([createdAt], map: "idx_users_created_at")
+  @@index([nextCreditRenewalAt], map: "users_next_credit_renewal_at_index")
+  @@index([stripeId], map: "users_stripe_id_idx")
+  @@map("users")
 }
