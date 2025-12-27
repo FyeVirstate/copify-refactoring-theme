@@ -1108,6 +1108,7 @@ model shop {
   userShops           userShop[]
   products            product[]
   categories          shopCategory[]
+  traffic             traffic[]
 
   @@index([createdAt], map: "idx_shops_created_at")
   @@index([url], map: "idx_shops_url")
@@ -1423,6 +1424,8 @@ model traffic {
   visitsShare          Decimal? @map("visits_share") @db.Decimal(5, 2)
   avgPrice             Decimal? @map("avg_price") @db.Decimal(8, 2)
   social               Json?    @db.Json
+
+  shop                 shop?    @relation(fields: [shopId], references: [id])
 
   @@index([createdAt], map: "idx_traffic_created_at")
   @@index([estimatedOrder], map: "idx_traffic_estimated_order")
