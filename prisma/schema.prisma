@@ -1468,7 +1468,7 @@ model user_searches {
 
 model userShare {
   id        BigInt    @id @default(autoincrement())
-  userId    BigInt    @map("user_id")
+  userId    BigInt    @unique @map("user_id")
   shareUuid String    @unique(map: "user_shares_share_uuid_unique") @map("share_uuid") @db.VarChar(6)
   createdAt DateTime? @map("created_at") @db.Timestamp(0)
   updatedAt DateTime? @map("updated_at") @db.Timestamp(0)
