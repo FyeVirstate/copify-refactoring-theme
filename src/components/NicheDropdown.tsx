@@ -161,9 +161,12 @@ export default function NicheDropdown({ selectedNiches, onNichesChange, onOpenCh
     setActivePreset(presetId);
     onNichesChange(niches);
     
-    // Auto-apply when preset is selected
+    // Auto-apply when preset is selected and close dropdown
     if (onApply) {
-      setTimeout(() => onApply(), 150);
+      setTimeout(() => {
+        onApply();
+        handleOpenChange(false); // Close dropdown after applying preset
+      }, 150);
     }
   };
 

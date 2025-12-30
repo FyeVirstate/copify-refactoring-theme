@@ -1,10 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import FilterDropdown from "./FilterDropdown";
+import FilterDropdown, { useFilterDropdown, FilterApplyButton } from "./FilterDropdown";
 import FilterPresetGrid from "./FilterPresetGrid";
 import FilterInputGroup from "./FilterInputGroup";
-import { Button } from "@/components/ui/button";
 
 const useIsMobile = () => {
   const [isMobile, setIsMobile] = useState(false);
@@ -27,21 +26,18 @@ interface MonthlyOrdersFilterProps {
   isActive?: boolean;
 }
 
-export default function MonthlyOrdersFilter({ 
+function MonthlyOrdersFilterContent({ 
   minOrders: externalMin,
   maxOrders: externalMax,
   onMinOrdersChange,
   onMaxOrdersChange,
-  onOpenChange, 
-  onApply, 
-  isActive 
-}: MonthlyOrdersFilterProps) {
-  const isMobile = useIsMobile();
+  onApply,
+}: Omit<MonthlyOrdersFilterProps, 'onOpenChange' | 'isActive'>) {
   const [minOrdersStr, setMinOrdersStr] = useState(externalMin?.toString() || "");
   const [maxOrdersStr, setMaxOrdersStr] = useState(externalMax?.toString() || "");
   const [activePreset, setActivePreset] = useState<string | null>(null);
+  const dropdownContext = useFilterDropdown();
 
-  // Sync with external values and reset preset when values are cleared
   useEffect(() => {
     setMinOrdersStr(externalMin?.toString() || "");
     if (externalMin === undefined) {
@@ -84,14 +80,14 @@ export default function MonthlyOrdersFilter({
     setMinOrdersStr(newMin?.toString() || "");
     setMaxOrdersStr(newMax?.toString() || "");
     
-    // Update parent state immediately
     if (onMinOrdersChange) onMinOrdersChange(newMin);
     if (onMaxOrdersChange) onMaxOrdersChange(newMax);
     
-    // Auto-apply when preset is selected - pass values directly to avoid timing issues
     if (onApply) {
       onApply({ minOrders: newMin, maxOrders: newMax });
     }
+    
+    dropdownContext?.closeDropdown();
   };
 
   const handleMinChange = (val: string) => {
@@ -137,17 +133,8 @@ export default function MonthlyOrdersFilter({
     },
   ];
 
-  const hasValue = minOrdersStr !== "" || maxOrdersStr !== "";
-
   return (
-    <FilterDropdown
-      label={isMobile ? "Commandes" : "Commandes mensuelles"}
-      icon="ri-shopping-cart-line"
-      onOpenChange={onOpenChange}
-      isActive={isActive || hasValue}
-      badge={hasValue ? 1 : undefined}
-      alignEndAtWidth={1200}
-    >
+    <>
       <p className="fw-500 mb-2">Commandes mensuelles</p>
       <p className="fs-small fw-500 mb-2 text-muted">Préréglages</p>
 
@@ -170,12 +157,39 @@ export default function MonthlyOrdersFilter({
         maxPlaceholder="∞"
       />
       
-      <Button 
-        className="w-100 mt-3" 
-        onClick={() => onApply?.()}
-      >
-        Appliquer
-      </Button>
+      <FilterApplyButton onClick={() => onApply?.()} />
+    </>
+  );
+}
+
+export default function MonthlyOrdersFilter({ 
+  minOrders: externalMin,
+  maxOrders: externalMax,
+  onMinOrdersChange,
+  onMaxOrdersChange,
+  onOpenChange, 
+  onApply, 
+  isActive 
+}: MonthlyOrdersFilterProps) {
+  const isMobile = useIsMobile();
+  const hasValue = externalMin !== undefined || externalMax !== undefined;
+
+  return (
+    <FilterDropdown
+      label={isMobile ? "Commandes" : "Commandes mensuelles"}
+      icon="ri-shopping-cart-line"
+      onOpenChange={onOpenChange}
+      isActive={isActive || hasValue}
+      badge={hasValue ? 1 : undefined}
+      alignEndAtWidth={1200}
+    >
+      <MonthlyOrdersFilterContent
+        minOrders={externalMin}
+        maxOrders={externalMax}
+        onMinOrdersChange={onMinOrdersChange}
+        onMaxOrdersChange={onMaxOrdersChange}
+        onApply={onApply}
+      />
     </FilterDropdown>
   );
 }

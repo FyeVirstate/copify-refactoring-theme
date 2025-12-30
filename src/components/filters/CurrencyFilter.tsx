@@ -1,8 +1,7 @@
 "use client";
 
-import FilterDropdown from "./FilterDropdown";
+import FilterDropdown, { FilterApplyButton } from "./FilterDropdown";
 import FilterCheckboxList from "./FilterCheckboxList";
-import { Button } from "@/components/ui/button";
 import Image from "next/image";
 
 interface CurrencyFilterProps {
@@ -94,12 +93,9 @@ export default function CurrencyFilter({
         groupName="currencyCheckboxes"
       />
       
-      <Button 
-        className="w-100 mt-3" 
-        onClick={() => onApply?.()}
-      >
+      <FilterApplyButton onClick={() => onApply?.()}>
         Appliquer
-      </Button>
+      </FilterApplyButton>
     </FilterDropdown>
   );
 }

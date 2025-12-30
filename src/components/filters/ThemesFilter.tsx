@@ -1,10 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import FilterDropdown from "./FilterDropdown";
+import FilterDropdown, { FilterApplyButton } from "./FilterDropdown";
 import FilterPresetGrid from "./FilterPresetGrid";
 import FilterCheckboxList from "./FilterCheckboxList";
-import { Button } from "@/components/ui/button";
 
 interface ThemesFilterProps {
   selectedThemes: string[];
@@ -126,12 +125,9 @@ export default function ThemesFilter({
         groupName="themeCheckboxes"
       />
       
-      <Button 
-        className="w-100 mt-3" 
-        onClick={() => onApply?.()}
-      >
+      <FilterApplyButton onClick={() => onApply?.()}>
         Appliquer
-      </Button>
+      </FilterApplyButton>
     </FilterDropdown>
   );
 }

@@ -1,9 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import FilterDropdown from "./FilterDropdown";
+import FilterDropdown, { FilterApplyButton } from "./FilterDropdown";
 import FilterCheckboxList from "./FilterCheckboxList";
-import { Button } from "@/components/ui/button";
 import Image from "next/image";
 
 interface SocialNetworksFilterProps {
@@ -69,12 +68,9 @@ export default function SocialNetworksFilter({
         groupName="socialNetworksCheckboxes"
       />
 
-      <Button 
-        className="w-100 mt-3" 
-        onClick={() => onApply?.()}
-      >
+      <FilterApplyButton onClick={() => onApply?.()}>
         Appliquer
-      </Button>
+      </FilterApplyButton>
     </FilterDropdown>
   );
 }

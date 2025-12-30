@@ -64,17 +64,20 @@ export default function FilterCheckboxList({
               top: '50%', 
               transform: 'translateY(-50%)', 
               color: '#99A0AE',
-              zIndex: 1,
+              zIndex: 2,
               pointerEvents: 'none'
             }}
           ></i>
-        <Input
-          type="text"
-          className="form-control"
-          placeholder={searchPlaceholder}
+          <Input
+            type="text"
+            className="form-control"
+            placeholder={searchPlaceholder}
             style={{ 
               paddingLeft: '40px',
-              textIndent: '0px'
+              textIndent: '0px',
+              position: 'relative',
+              zIndex: 1,
+              backgroundColor: 'white'
             }}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}

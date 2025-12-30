@@ -1,8 +1,7 @@
 "use client";
 
-import FilterDropdown from "./FilterDropdown";
+import FilterDropdown, { FilterApplyButton } from "./FilterDropdown";
 import FilterCheckboxList from "./FilterCheckboxList";
-import { Button } from "@/components/ui/button";
 
 interface DomainFilterProps {
   selectedDomains: string[];
@@ -67,12 +66,9 @@ export default function DomainFilter({
         groupName="domainCheckboxes"
       />
 
-      <Button 
-        className="w-100 mt-3" 
-        onClick={() => onApply?.()}
-      >
+      <FilterApplyButton onClick={() => onApply?.()}>
         Appliquer
-      </Button>
+      </FilterApplyButton>
     </FilterDropdown>
   );
 }

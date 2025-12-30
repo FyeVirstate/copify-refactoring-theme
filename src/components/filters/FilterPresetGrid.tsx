@@ -1,6 +1,7 @@
 "use client";
 
 import { ReactNode, CSSProperties } from "react";
+import { useFilterDropdown } from "./FilterDropdown";
 
 interface PresetItem {
   id: string;
@@ -19,6 +20,7 @@ interface FilterPresetGridProps {
   onPresetClick?: (presetId: string) => void;
   activePreset?: string | null;
   showTitle?: boolean;
+  closeOnSelect?: boolean; // Auto-close dropdown when preset is selected
 }
 
 export default function FilterPresetGrid({ 
@@ -27,12 +29,18 @@ export default function FilterPresetGrid({
   columns = 2,
   onPresetClick,
   activePreset,
-  showTitle = false
+  showTitle = false,
+  closeOnSelect = true
 }: FilterPresetGridProps) {
+  const filterDropdown = useFilterDropdown();
 
   const handlePresetClick = (presetId: string, onClick?: () => void) => {
     onPresetClick?.(presetId);
     onClick?.();
+    // Auto-close dropdown when preset is selected
+    if (closeOnSelect) {
+      filterDropdown?.closeDropdown();
+    }
   };
 
   return (

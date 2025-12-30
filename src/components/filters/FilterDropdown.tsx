@@ -1,12 +1,44 @@
 "use client";
 
-import { ReactNode, useRef, useState, useEffect } from "react";
+import { ReactNode, useRef, useState, useEffect, createContext, useContext } from "react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+
+// Context to allow children to close the dropdown
+const FilterDropdownContext = createContext<{ closeDropdown: () => void } | null>(null);
+
+// Hook for children to close the dropdown
+export function useFilterDropdown() {
+  return useContext(FilterDropdownContext);
+}
+
+// Apply button that auto-closes the dropdown
+export function FilterApplyButton({ 
+  onClick, 
+  children = "Appliquer",
+  className = "w-100 mt-3"
+}: { 
+  onClick?: () => void; 
+  children?: React.ReactNode;
+  className?: string;
+}) {
+  const context = useFilterDropdown();
+  
+  const handleClick = () => {
+    onClick?.();
+    context?.closeDropdown();
+  };
+  
+  return (
+    <Button className={className} onClick={handleClick}>
+      {children}
+    </Button>
+  );
+}
 
 interface FilterDropdownProps {
   icon: string;
@@ -38,6 +70,19 @@ export default function FilterDropdown({
   const [alignOffset, setAlignOffset] = useState(0);
   const [isMobile, setIsMobile] = useState(false);
   const [viewportWidth, setViewportWidth] = useState(0);
+  const [isOpen, setIsOpen] = useState(false);
+
+  // Close dropdown function
+  const closeDropdown = () => {
+    setIsOpen(false);
+    onOpenChange?.(false);
+  };
+
+  // Handle open change
+  const handleOpenChange = (open: boolean) => {
+    setIsOpen(open);
+    onOpenChange?.(open);
+  };
 
   useEffect(() => {
     const checkViewport = () => {
@@ -92,55 +137,57 @@ export default function FilterDropdown({
   const shouldOpenLeft = forceAlignEnd || (alignEndAtWidth && viewportWidth <= alignEndAtWidth && !isMobile);
 
   return (
-    <div className="dropdown dropdown-filter">
-      <DropdownMenu modal={false} onOpenChange={onOpenChange}>
-        <DropdownMenuTrigger asChild>
-          <Button 
-            ref={triggerRef}
-            className={`btn dropdown-btn dropdown-toggle ${isActive ? 'filter-active' : ''}`}
-            type="button" 
-            variant="outline"
+    <FilterDropdownContext.Provider value={{ closeDropdown }}>
+      <div className="dropdown dropdown-filter">
+        <DropdownMenu modal={false} open={isOpen} onOpenChange={handleOpenChange}>
+          <DropdownMenuTrigger asChild>
+            <Button 
+              ref={triggerRef}
+              className={`btn dropdown-btn dropdown-toggle ${isActive ? 'filter-active' : ''}`}
+              type="button" 
+              variant="outline"
+            >
+              <i className={`dropdown-icon ${icon}`}></i> {label}
+              {badge !== undefined && badge > 0 && (
+                <span 
+                  className="filter-rounded-tag ms-1"
+                  style={{
+                    backgroundColor: '#0E121B',
+                    color: 'white',
+                    borderRadius: '10px',
+                    padding: '2px 8px',
+                    fontSize: '11px',
+                    fontWeight: '500',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    minWidth: '20px'
+                  }}
+                >
+                  {badge}
+                </span>
+              )}
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent 
+            align={align}
+            alignOffset={alignOffset}
+            side="bottom"
+            className="dropdown-menu p-3" 
+            style={{ 
+              width: isMobile ? 'calc(100vw - 32px)' : width, 
+              maxWidth: 'calc(100vw - 20px)'
+            }} 
+            onClick={(e) => e.stopPropagation()}
+            collisionPadding={isMobile ? 16 : (shouldOpenLeft ? 0 : 16)}
+            sideOffset={4}
+            avoidCollisions={isMobile || !shouldOpenLeft}
           >
-            <i className={`dropdown-icon ${icon}`}></i> {label}
-            {badge !== undefined && badge > 0 && (
-              <span 
-                className="filter-rounded-tag ms-1"
-                style={{
-                  backgroundColor: '#0E121B',
-                  color: 'white',
-                  borderRadius: '10px',
-                  padding: '2px 8px',
-                  fontSize: '11px',
-                  fontWeight: '500',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  minWidth: '20px'
-                }}
-              >
-                {badge}
-              </span>
-            )}
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent 
-          align={align}
-          alignOffset={alignOffset}
-          side="bottom"
-          className="dropdown-menu p-3" 
-          style={{ 
-            width: isMobile ? 'calc(100vw - 32px)' : width, 
-            maxWidth: 'calc(100vw - 20px)'
-          }} 
-          onClick={(e) => e.stopPropagation()}
-          collisionPadding={isMobile ? 16 : (shouldOpenLeft ? 0 : 16)}
-          sideOffset={4}
-          avoidCollisions={isMobile || !shouldOpenLeft}
-        >
-          {title && <h5 className="mb-3 fw-600" style={{ color: '#0E121B', fontSize: '15px' }}>{title}</h5>}
-          {children}
-        </DropdownMenuContent>
-      </DropdownMenu>
-    </div>
+            {title && <h5 className="mb-3 fw-600" style={{ color: '#0E121B', fontSize: '15px' }}>{title}</h5>}
+            {children}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+    </FilterDropdownContext.Provider>
   );
 }

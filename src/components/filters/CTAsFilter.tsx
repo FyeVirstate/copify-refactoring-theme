@@ -1,8 +1,7 @@
 "use client";
 
-import FilterDropdown from "./FilterDropdown";
+import FilterDropdown, { FilterApplyButton } from "./FilterDropdown";
 import FilterCheckboxList from "./FilterCheckboxList";
-import { Button } from "@/components/ui/button";
 
 interface CTAsFilterProps {
   selectedCTAs: string[];
@@ -35,12 +34,6 @@ export default function CTAsFilter({
     { id: "NO_BUTTON", label: "No Button" },
   ];
 
-  const handleApply = () => {
-    if (onApply) {
-      onApply();
-    }
-  };
-
   return (
     <FilterDropdown
       icon="ri-mouse-line"
@@ -58,13 +51,9 @@ export default function CTAsFilter({
         showToggleButtons={false}
       />
       
-      <Button 
-        type="button" 
-        className="btn btn-primary w-100 apply-filters-btn mt-3"
-        onClick={handleApply}
-      >
+      <FilterApplyButton onClick={() => onApply?.()}>
         Appliquer les filtres
-      </Button>
+      </FilterApplyButton>
     </FilterDropdown>
   );
 }

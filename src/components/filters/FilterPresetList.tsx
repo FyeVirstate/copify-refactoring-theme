@@ -1,6 +1,7 @@
 "use client";
 
 import { ReactNode, useState } from "react";
+import { useFilterDropdown } from "./FilterDropdown";
 
 interface PresetItem {
   id: string;
@@ -14,17 +15,24 @@ interface PresetItem {
 interface FilterPresetListProps {
   title?: string;
   presets: PresetItem[];
+  closeOnSelect?: boolean; // Auto-close dropdown when preset is selected
 }
 
 export default function FilterPresetList({ 
   title = "Préréglages", 
-  presets
+  presets,
+  closeOnSelect = true
 }: FilterPresetListProps) {
   const [activePreset, setActivePreset] = useState<string | null>(null);
+  const filterDropdown = useFilterDropdown();
 
   const handlePresetClick = (presetId: string, onClick?: () => void) => {
     setActivePreset(presetId);
     onClick?.();
+    // Auto-close dropdown when preset is selected
+    if (closeOnSelect) {
+      filterDropdown?.closeDropdown();
+    }
   };
 
   return (

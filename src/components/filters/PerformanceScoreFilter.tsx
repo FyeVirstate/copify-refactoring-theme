@@ -1,8 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import FilterDropdown from "./FilterDropdown";
-import { Button } from "@/components/ui/button";
+import FilterDropdown, { FilterApplyButton } from "./FilterDropdown";
 
 interface PerformanceScoreFilterProps {
   onOpenChange?: (open: boolean) => void;
@@ -125,13 +124,9 @@ export default function PerformanceScoreFilter({ onOpenChange, onApply, isActive
         })}
       </div>
       
-      <Button 
-        type="button" 
-        className="btn btn-primary w-100 apply-filters-btn"
-        onClick={handleApply}
-      >
+      <FilterApplyButton onClick={handleApply}>
         Appliquer les filtres
-      </Button>
+      </FilterApplyButton>
     </FilterDropdown>
   );
 }

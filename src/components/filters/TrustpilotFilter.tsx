@@ -1,10 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import FilterDropdown from "./FilterDropdown";
+import FilterDropdown, { FilterApplyButton } from "./FilterDropdown";
 import FilterPresetGrid from "./FilterPresetGrid";
 import FilterInputGroup from "./FilterInputGroup";
-import { Button } from "@/components/ui/button";
 
 interface TrustpilotFilterProps {
   minRating?: number;
@@ -191,12 +190,9 @@ export default function TrustpilotFilter({
         </div>
       </div>
       
-      <Button 
-        className="w-100 mt-3" 
-        onClick={() => onApply?.()}
-      >
+      <FilterApplyButton onClick={() => onApply?.()}>
         Appliquer
-      </Button>
+      </FilterApplyButton>
     </FilterDropdown>
   );
 }

@@ -1,10 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import FilterDropdown from "./FilterDropdown";
+import FilterDropdown, { useFilterDropdown, FilterApplyButton } from "./FilterDropdown";
 import FilterPresetGrid from "./FilterPresetGrid";
 import FilterCheckboxList from "./FilterCheckboxList";
-import { Button } from "@/components/ui/button";
 
 interface ApplicationsFilterProps {
   selectedApplications: string[];
@@ -52,17 +51,17 @@ const PRESET_CATEGORIES = {
   emails: ["Email marketing", "Email", "Marketing automation", "Newsletters"],
 };
 
-export default function ApplicationsFilter({ 
+// Inner component that uses the dropdown context
+function ApplicationsFilterContent({ 
   selectedApplications, 
   onApplicationsChange,
-  onOpenChange,
   onApply,
-  isActive = false
-}: ApplicationsFilterProps) {
+}: Omit<ApplicationsFilterProps, 'onOpenChange' | 'isActive'>) {
   const [activePreset, setActivePreset] = useState<string | null>(null);
-  const [applications, setApplications] = useState<{ id: string; label: string; icon?: string }[]>(fallbackApplications);
+  const [applications, setApplications] = useState<{ id: string; label: string; icon?: React.ReactNode }[]>(fallbackApplications);
   const [appsData, setAppsData] = useState<AppData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const dropdownContext = useFilterDropdown();
 
   // Reset preset when selectedApplications is cleared externally
   useEffect(() => {
@@ -102,7 +101,6 @@ export default function ApplicationsFilter({
         }
       } catch (error) {
         console.error("Failed to fetch apps:", error);
-        // Keep using fallback applications
       } finally {
         setIsLoading(false);
       }
@@ -114,7 +112,6 @@ export default function ApplicationsFilter({
   const handlePresetClick = (presetId: string) => {
     const categories = PRESET_CATEGORIES[presetId as keyof typeof PRESET_CATEGORIES] || [];
     
-    // Filter apps that have any of the preset categories
     const matchingApps = appsData.filter((app) =>
       app.categories.some((cat) =>
         categories.some((presetCat) =>
@@ -126,10 +123,8 @@ export default function ApplicationsFilter({
     let newApps: string[];
     
     if (matchingApps.length > 0) {
-      // Use apps from database matching the category
       newApps = matchingApps.map((app) => app.name);
     } else {
-      // Fallback to hardcoded list if no database apps match
       switch (presetId) {
         case "reviews":
           newApps = ["Judge.me", "Loox", "Yotpo", "Stamped", "Okendo"];
@@ -148,10 +143,12 @@ export default function ApplicationsFilter({
     setActivePreset(presetId);
     onApplicationsChange(newApps);
     
-    // Auto-apply when preset is selected - pass values directly to avoid timing issues
     if (onApply) {
       onApply({ apps: newApps.join(',') });
     }
+    
+    // Close dropdown after preset selection
+    dropdownContext?.closeDropdown();
   };
 
   const presets = [
@@ -176,13 +173,7 @@ export default function ApplicationsFilter({
   ];
 
   return (
-    <FilterDropdown
-      label="Applications"
-      icon="ri-apps-line"
-      onOpenChange={onOpenChange}
-      isActive={isActive || selectedApplications.length > 0}
-      badge={selectedApplications.length > 0 ? selectedApplications.length : undefined}
-    >
+    <>
       <p className="fw-500 mb-2">Applications</p>
       <p className="fs-small fw-500 mb-2 text-muted">Préréglages</p>
 
@@ -201,9 +192,9 @@ export default function ApplicationsFilter({
           <span className="ml-2 text-sm text-muted-foreground">Chargement...</span>
         </div>
       ) : (
-      <FilterCheckboxList
-        items={applications}
-        selectedItems={selectedApplications}
+        <FilterCheckboxList
+          items={applications}
+          selectedItems={selectedApplications}
           onItemsChange={(items) => {
             setActivePreset(null);
             onApplicationsChange(items);
@@ -211,15 +202,34 @@ export default function ApplicationsFilter({
           searchPlaceholder="Rechercher des applications..."
           showIncludeExclude={true}
           groupName="appsCheckboxes"
-      />
+        />
       )}
       
-      <Button 
-        className="w-100 mt-3" 
-        onClick={() => onApply?.()}
-      >
-        Appliquer
-      </Button>
+      <FilterApplyButton onClick={() => onApply?.()} />
+    </>
+  );
+}
+
+export default function ApplicationsFilter({ 
+  selectedApplications, 
+  onApplicationsChange,
+  onOpenChange,
+  onApply,
+  isActive = false
+}: ApplicationsFilterProps) {
+  return (
+    <FilterDropdown
+      label="Applications"
+      icon="ri-apps-line"
+      onOpenChange={onOpenChange}
+      isActive={isActive || selectedApplications.length > 0}
+      badge={selectedApplications.length > 0 ? selectedApplications.length : undefined}
+    >
+      <ApplicationsFilterContent
+        selectedApplications={selectedApplications}
+        onApplicationsChange={onApplicationsChange}
+        onApply={onApply}
+      />
     </FilterDropdown>
   );
 }

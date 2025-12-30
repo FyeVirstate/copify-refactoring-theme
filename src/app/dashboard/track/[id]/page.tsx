@@ -124,7 +124,7 @@ const MapViewComponent: React.FC<MapViewProps> = ({ countries, defaultCountry, g
             {hoveredCountry.name}
           </span>
           {hoveredCountry.hasData ? (
-            <span style={{ fontSize: 14, color: '#6B7280' }}>{hoveredCountry.value}%</span>
+            <span style={{ fontSize: 14, color: '#6B7280' }}>{Math.round(hoveredCountry.value)}%</span>
           ) : (
             <span style={{ fontSize: 12, color: '#9CA3AF', fontStyle: 'italic' }}>No data</span>
           )}
@@ -1453,7 +1453,7 @@ export default function TrackDetailsPage({ params }: { params: Promise<{ id: str
                                     fontSize="18"
                                     fontWeight="600"
                                   >
-                                    {hoveredTrafficSource.value.toFixed(1)}%
+                                    {Math.round(hoveredTrafficSource.value)}%
                                   </text>
                                   <text
                                     x={center}
@@ -1494,7 +1494,7 @@ export default function TrackDetailsPage({ params }: { params: Promise<{ id: str
                                     borderRadius: '50%', 
                                     background: hoveredTrafficSource.color 
                                   }} />
-                                  <span>{hoveredTrafficSource.name}: {hoveredTrafficSource.value.toFixed(1)}%</span>
+                                  <span>{hoveredTrafficSource.name}: {Math.round(hoveredTrafficSource.value)}%</span>
                                 </div>
                               </div>
                             )}
@@ -1535,7 +1535,7 @@ export default function TrackDetailsPage({ params }: { params: Promise<{ id: str
                             }} />
                             <span style={{ fontSize: 13, color: '#374151' }}>{s.name}</span>
                           </div>
-                          <span style={{ fontSize: 13, fontWeight: 500, color: '#111827' }}>{s.value.toFixed(1)}%</span>
+                          <span style={{ fontSize: 13, fontWeight: 500, color: '#111827' }}>{Math.round(s.value)}%</span>
                         </div>
                       ))}
                     </div>
@@ -1562,7 +1562,7 @@ export default function TrackDetailsPage({ params }: { params: Promise<{ id: str
                           }} />
                           <span style={{ fontSize: 13, color: '#374151' }}>{s.name}</span>
                         </div>
-                        <span style={{ fontSize: 13, fontWeight: 500, color: '#111827' }}>{s.value}%</span>
+                        <span style={{ fontSize: 13, fontWeight: 500, color: '#111827' }}>{Math.round(s.value)}%</span>
                       </div>
                     ))}
                   </div>

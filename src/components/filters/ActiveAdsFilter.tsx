@@ -1,10 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import FilterDropdown from "./FilterDropdown";
+import FilterDropdown, { useFilterDropdown, FilterApplyButton } from "./FilterDropdown";
 import FilterPresetGrid from "./FilterPresetGrid";
 import FilterInputGroup from "./FilterInputGroup";
-import { Button } from "@/components/ui/button";
 
 interface ActiveAdsFilterProps {
   minActiveAds?: number;
@@ -16,20 +15,18 @@ interface ActiveAdsFilterProps {
   isActive?: boolean;
 }
 
-export default function ActiveAdsFilter({ 
+function ActiveAdsFilterContent({ 
   minActiveAds: externalMin,
   maxActiveAds: externalMax,
   onMinActiveAdsChange,
   onMaxActiveAdsChange,
-  onOpenChange, 
-  onApply, 
-  isActive 
-}: ActiveAdsFilterProps) {
+  onApply,
+}: Omit<ActiveAdsFilterProps, 'onOpenChange' | 'isActive'>) {
   const [minAdsStr, setMinAdsStr] = useState(externalMin?.toString() || "");
   const [maxAdsStr, setMaxAdsStr] = useState(externalMax?.toString() || "");
   const [activePreset, setActivePreset] = useState<string | null>(null);
+  const dropdownContext = useFilterDropdown();
 
-  // Sync with external values and reset preset when values are cleared
   useEffect(() => {
     setMinAdsStr(externalMin?.toString() || "");
     if (externalMin === undefined) {
@@ -72,14 +69,14 @@ export default function ActiveAdsFilter({
     setMinAdsStr(newMin?.toString() || "");
     setMaxAdsStr(newMax?.toString() || "");
     
-    // Update parent state immediately
     if (onMinActiveAdsChange) onMinActiveAdsChange(newMin);
     if (onMaxActiveAdsChange) onMaxActiveAdsChange(newMax);
     
-    // Auto-apply when preset is selected - pass values directly to avoid timing issues
     if (onApply) {
       onApply({ minActiveAds: newMin, maxActiveAds: newMax });
     }
+    
+    dropdownContext?.closeDropdown();
   };
 
   const handleMinChange = (val: string) => {
@@ -125,17 +122,8 @@ export default function ActiveAdsFilter({
     },
   ];
 
-  const hasValue = minAdsStr !== "" || maxAdsStr !== "";
-
   return (
-    <FilterDropdown
-      label="Publicités actives"
-      icon="ri-megaphone-line"
-      onOpenChange={onOpenChange}
-      isActive={isActive || hasValue}
-      badge={hasValue ? 1 : undefined}
-      alignEndAtWidth={1200}
-    >
+    <>
       <p className="fw-500 mb-2">Publicités actives</p>
       <p className="fs-small fw-500 mb-2 text-muted">Préréglages</p>
 
@@ -148,7 +136,7 @@ export default function ActiveAdsFilter({
       
       <div className="border-t border-gray-200 dark:border-gray-700 my-3" />
 
-          <FilterInputGroup
+      <FilterInputGroup
         label="Nombre de publicités actives"
         minValue={minAdsStr}
         maxValue={maxAdsStr}
@@ -158,12 +146,38 @@ export default function ActiveAdsFilter({
         maxPlaceholder="∞"
       />
 
-            <Button 
-        className="w-100 mt-3" 
-        onClick={() => onApply?.()}
-      >
-        Appliquer
-      </Button>
+      <FilterApplyButton onClick={() => onApply?.()} />
+    </>
+  );
+}
+
+export default function ActiveAdsFilter({ 
+  minActiveAds: externalMin,
+  maxActiveAds: externalMax,
+  onMinActiveAdsChange,
+  onMaxActiveAdsChange,
+  onOpenChange, 
+  onApply, 
+  isActive 
+}: ActiveAdsFilterProps) {
+  const hasValue = externalMin !== undefined || externalMax !== undefined;
+
+  return (
+    <FilterDropdown
+      label="Publicités actives"
+      icon="ri-megaphone-line"
+      onOpenChange={onOpenChange}
+      isActive={isActive || hasValue}
+      badge={hasValue ? 1 : undefined}
+      alignEndAtWidth={1200}
+    >
+      <ActiveAdsFilterContent
+        minActiveAds={externalMin}
+        maxActiveAds={externalMax}
+        onMinActiveAdsChange={onMinActiveAdsChange}
+        onMaxActiveAdsChange={onMaxActiveAdsChange}
+        onApply={onApply}
+      />
     </FilterDropdown>
   );
 }

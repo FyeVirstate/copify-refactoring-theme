@@ -1,10 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import FilterDropdown from "./FilterDropdown";
+import FilterDropdown, { useFilterDropdown, FilterApplyButton } from "./FilterDropdown";
 import FilterPresetGrid from "./FilterPresetGrid";
 import FilterInputGroup from "./FilterInputGroup";
-import { Button } from "@/components/ui/button";
 
 interface MonthlyVisitsFilterProps {
   minTraffic?: number;
@@ -16,20 +15,18 @@ interface MonthlyVisitsFilterProps {
   isActive?: boolean;
 }
 
-export default function MonthlyVisitsFilter({ 
+function MonthlyVisitsFilterContent({ 
   minTraffic: externalMin,
   maxTraffic: externalMax,
   onMinTrafficChange,
   onMaxTrafficChange,
-  onOpenChange, 
-  onApply, 
-  isActive 
-}: MonthlyVisitsFilterProps) {
+  onApply,
+}: Omit<MonthlyVisitsFilterProps, 'onOpenChange' | 'isActive'>) {
   const [minVisitsStr, setMinVisitsStr] = useState(externalMin?.toString() || "");
   const [maxVisitsStr, setMaxVisitsStr] = useState(externalMax?.toString() || "");
   const [activePreset, setActivePreset] = useState<string | null>(null);
+  const dropdownContext = useFilterDropdown();
 
-  // Sync with external values and reset preset when values are cleared
   useEffect(() => {
     setMinVisitsStr(externalMin?.toString() || "");
     if (externalMin === undefined) {
@@ -72,14 +69,14 @@ export default function MonthlyVisitsFilter({
     setMinVisitsStr(newMin?.toString() || "");
     setMaxVisitsStr(newMax?.toString() || "");
     
-    // Update parent state immediately
     if (onMinTrafficChange) onMinTrafficChange(newMin);
     if (onMaxTrafficChange) onMaxTrafficChange(newMax);
     
-    // Auto-apply when preset is selected - pass values directly to avoid timing issues
     if (onApply) {
       onApply({ minTraffic: newMin, maxTraffic: newMax });
     }
+    
+    dropdownContext?.closeDropdown();
   };
 
   const handleMinChange = (val: string) => {
@@ -125,17 +122,8 @@ export default function MonthlyVisitsFilter({
     },
   ];
 
-  const hasValue = minVisitsStr !== "" || maxVisitsStr !== "";
-
   return (
-    <FilterDropdown
-      label="Visites mensuelles"
-      icon="ri-group-line"
-      onOpenChange={onOpenChange}
-      isActive={isActive || hasValue}
-      badge={hasValue ? 1 : undefined}
-      alignEndAtWidth={992}
-    >
+    <>
       <p className="fw-500 mb-2">Visites mensuelles</p>
       <p className="fs-small fw-500 mb-2 text-muted">Préréglages</p>
 
@@ -158,12 +146,38 @@ export default function MonthlyVisitsFilter({
         maxPlaceholder="∞"
       />
       
-      <Button 
-        className="w-100 mt-3" 
-        onClick={() => onApply?.()}
-      >
-        Appliquer
-      </Button>
+      <FilterApplyButton onClick={() => onApply?.()} />
+    </>
+  );
+}
+
+export default function MonthlyVisitsFilter({ 
+  minTraffic: externalMin,
+  maxTraffic: externalMax,
+  onMinTrafficChange,
+  onMaxTrafficChange,
+  onOpenChange, 
+  onApply, 
+  isActive 
+}: MonthlyVisitsFilterProps) {
+  const hasValue = externalMin !== undefined || externalMax !== undefined;
+
+  return (
+    <FilterDropdown
+      label="Visites mensuelles"
+      icon="ri-group-line"
+      onOpenChange={onOpenChange}
+      isActive={isActive || hasValue}
+      badge={hasValue ? 1 : undefined}
+      alignEndAtWidth={992}
+    >
+      <MonthlyVisitsFilterContent
+        minTraffic={externalMin}
+        maxTraffic={externalMax}
+        onMinTrafficChange={onMinTrafficChange}
+        onMaxTrafficChange={onMaxTrafficChange}
+        onApply={onApply}
+      />
     </FilterDropdown>
   );
 }

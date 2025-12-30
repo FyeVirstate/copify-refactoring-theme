@@ -1,10 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import FilterDropdown from "./FilterDropdown";
+import FilterDropdown, { useFilterDropdown, FilterApplyButton } from "./FilterDropdown";
 import FilterPresetGrid from "./FilterPresetGrid";
 import FilterInputGroup from "./FilterInputGroup";
-import { Button } from "@/components/ui/button";
 
 interface DailyRevenueFilterProps {
   minRevenue?: number;
@@ -16,23 +15,22 @@ interface DailyRevenueFilterProps {
   isActive?: boolean;
 }
 
-export default function DailyRevenueFilter({ 
+// Inner component that uses the dropdown context
+function DailyRevenueFilterContent({
   minRevenue: externalMin,
   maxRevenue: externalMax,
   onMinRevenueChange,
   onMaxRevenueChange,
-  onOpenChange, 
-  onApply, 
-  isActive 
-}: DailyRevenueFilterProps) {
+  onApply,
+}: Omit<DailyRevenueFilterProps, 'onOpenChange' | 'isActive'>) {
   const [minRevenueStr, setMinRevenueStr] = useState(externalMin?.toString() || "");
   const [maxRevenueStr, setMaxRevenueStr] = useState(externalMax?.toString() || "");
   const [activePreset, setActivePreset] = useState<string | null>(null);
+  const dropdownContext = useFilterDropdown();
 
   // Sync with external values and reset preset when values are cleared
   useEffect(() => {
     setMinRevenueStr(externalMin?.toString() || "");
-    // Reset preset if external value is cleared
     if (externalMin === undefined) {
       setActivePreset(null);
     }
@@ -40,7 +38,6 @@ export default function DailyRevenueFilter({
   
   useEffect(() => {
     setMaxRevenueStr(externalMax?.toString() || "");
-    // Reset preset if external value is cleared
     if (externalMax === undefined && externalMin === undefined) {
       setActivePreset(null);
     }
@@ -74,14 +71,15 @@ export default function DailyRevenueFilter({
     setMinRevenueStr(newMin?.toString() || "");
     setMaxRevenueStr(newMax?.toString() || "");
     
-    // Update parent state immediately
     if (onMinRevenueChange) onMinRevenueChange(newMin);
     if (onMaxRevenueChange) onMaxRevenueChange(newMax);
     
-    // Auto-apply when preset is selected - pass values directly to avoid timing issues
     if (onApply) {
       onApply({ minRevenue: newMin, maxRevenue: newMax });
     }
+    
+    // Close dropdown after preset selection
+    dropdownContext?.closeDropdown();
   };
 
   const handleMinChange = (val: string) => {
@@ -127,17 +125,8 @@ export default function DailyRevenueFilter({
     },
   ];
 
-  const hasValue = minRevenueStr !== "" || maxRevenueStr !== "";
-
   return (
-    <FilterDropdown
-      label="Revenu quotidien"
-      icon="ri-money-dollar-circle-line"
-      onOpenChange={onOpenChange}
-      isActive={isActive || hasValue}
-      badge={hasValue ? 1 : undefined}
-      alignEndAtWidth={992}
-    >
+    <>
       <p className="fw-500 mb-2">Revenu quotidien</p>
       <p className="fs-small fw-500 mb-2 text-muted">Préréglages</p>
 
@@ -161,12 +150,38 @@ export default function DailyRevenueFilter({
         prefix="$"
       />
       
-      <Button 
-        className="w-100 mt-3" 
-        onClick={() => onApply?.()}
-      >
-        Appliquer
-      </Button>
+      <FilterApplyButton onClick={() => onApply?.()} />
+    </>
+  );
+}
+
+export default function DailyRevenueFilter({ 
+  minRevenue: externalMin,
+  maxRevenue: externalMax,
+  onMinRevenueChange,
+  onMaxRevenueChange,
+  onOpenChange, 
+  onApply, 
+  isActive 
+}: DailyRevenueFilterProps) {
+  const hasValue = externalMin !== undefined || externalMax !== undefined;
+
+  return (
+    <FilterDropdown
+      label="Revenu quotidien"
+      icon="ri-money-dollar-circle-line"
+      onOpenChange={onOpenChange}
+      isActive={isActive || hasValue}
+      badge={hasValue ? 1 : undefined}
+      alignEndAtWidth={992}
+    >
+      <DailyRevenueFilterContent
+        minRevenue={externalMin}
+        maxRevenue={externalMax}
+        onMinRevenueChange={onMinRevenueChange}
+        onMaxRevenueChange={onMaxRevenueChange}
+        onApply={onApply}
+      />
     </FilterDropdown>
   );
 }

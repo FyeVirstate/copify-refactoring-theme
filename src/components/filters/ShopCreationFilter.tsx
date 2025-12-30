@@ -39,6 +39,7 @@ export default function ShopCreationFilter({
   };
   const [date, setDate] = useState<DateRange | undefined>();
   const [activePreset, setActivePreset] = useState<string | null>(null);
+  const [isOpen, setIsOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const [align, setAlign] = useState<"start" | "end">("start");
   const [alignOffset, setAlignOffset] = useState(0);
@@ -94,6 +95,7 @@ export default function ShopCreationFilter({
   const shouldOpenLeft = !isMobile && viewportWidth <= ALIGN_END_AT_WIDTH;
 
   const handleOpenChange = (open: boolean) => {
+    setIsOpen(open);
     onOpenChange?.(open);
   };
 
@@ -142,6 +144,7 @@ export default function ShopCreationFilter({
     } else {
       onApply?.();
     }
+    setIsOpen(false);
     onOpenChange?.(false);
   };
 
@@ -159,7 +162,7 @@ export default function ShopCreationFilter({
 
   return (
     <div className="dropdown dropdown-filter">
-      <DropdownMenu modal={false} onOpenChange={handleOpenChange}>
+      <DropdownMenu modal={false} open={isOpen} onOpenChange={handleOpenChange}>
         <DropdownMenuTrigger asChild>
           <Button 
             ref={triggerRef}

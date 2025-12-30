@@ -132,7 +132,7 @@ function AnalyzeShopContent() {
 
   // Fetch tracked shops on mount
   useEffect(() => {
-    fetchTrackedShops();
+    fetchTrackedShops(1, 100); // Fetch up to 100 shops to display all tracked shops
   }, [fetchTrackedShops]);
 
   // Validate Shopify URL
@@ -509,7 +509,7 @@ function AnalyzeShopContent() {
                 <div 
                   ref={tableWrapperRef}
                   className="border position-relative d-none d-lg-block" 
-                  style={{ borderRadius: '6px', overflow: 'hidden' }}
+                  style={{ borderRadius: '6px', overflow: 'hidden', maxHeight: 'calc(100vh - 320px)', overflowY: 'auto' }}
                 >
                   {/* Mouse-following tooltip */}
                   {showTooltip && (
@@ -830,7 +830,7 @@ function AnalyzeShopContent() {
                 </div>
 
                 {/* Mobile Card View */}
-                <div className="d-lg-none">
+                <div className="d-lg-none" style={{ maxHeight: 'calc(100vh - 320px)', overflowY: 'auto' }}>
                   <div className="d-flex flex-column gap-3">
                     {sortedShops.map((tracked) => (
                       <div 

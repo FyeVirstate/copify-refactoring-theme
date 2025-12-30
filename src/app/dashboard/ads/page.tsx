@@ -30,7 +30,7 @@ import {
   ProductsFilter,
 } from "@/components/filters";
 import NicheDropdown from "@/components/NicheDropdown";
-import FilterDropdown from "@/components/filters/FilterDropdown";
+import FilterDropdown, { FilterApplyButton } from "@/components/filters/FilterDropdown";
 import { useAds, AdsFilters } from "@/lib/hooks/use-ads";
 
 // Interface for user stats
@@ -1002,7 +1002,7 @@ export default function AdsPage() {
                     <label className="form-check-label fs-small" htmlFor="mediaVideo">Vidéo</label>
                   </div>
                 </div>
-                <Button type="button" className="btn btn-primary w-100 apply-filters-btn" onClick={handleApplyFilters}>Appliquer les filtres</Button>
+                <FilterApplyButton onClick={handleApplyFilters}>Appliquer les filtres</FilterApplyButton>
               </FilterDropdown>
               
               {/* Statut Publicité - Radio style */}
@@ -1021,7 +1021,7 @@ export default function AdsPage() {
                     <label className="form-check-label fs-small" htmlFor="statusInactive">Inactif</label>
                   </div>
                 </div>
-                <Button type="button" className="btn btn-primary w-100 apply-filters-btn" onClick={handleApplyFilters}>Appliquer les filtres</Button>
+                <FilterApplyButton onClick={handleApplyFilters}>Appliquer les filtres</FilterApplyButton>
               </FilterDropdown>
 
               {/* Filtres communs avec Top Boutiques/Produits */}
