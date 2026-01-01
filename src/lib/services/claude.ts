@@ -12,11 +12,13 @@ const API_URL = 'https://api.anthropic.com/v1/messages'
 const API_VERSION = '2023-06-01'
 
 // Model fallback order (from most capable to fastest)
+// Using valid Claude model names as of 2024
 const MODELS = [
   'claude-sonnet-4-5-20250929',
   'claude-opus-4-1-20250805',
   'claude-sonnet-4-20250514',
   'claude-3-5-sonnet-20241022',
+  'claude-3-sonnet-20240229',
   'claude-3-haiku-20240307'
 ]
 
@@ -83,7 +85,8 @@ export class ClaudeAIService {
         })
 
         if (!response.ok) {
-          console.error(`Claude API error with model ${model}: ${response.status}`)
+          const errorBody = await response.text();
+          console.error(`Claude API error with model ${model}: ${response.status} - ${errorBody.substring(0, 500)}`);
           continue
         }
 

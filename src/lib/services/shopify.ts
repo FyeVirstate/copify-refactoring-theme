@@ -257,3 +257,198 @@ export function verifyWebhookSignature(
     Buffer.from(calculatedSignature)
   )
 }
+
+/**
+ * Extended Shopify Service for AI Store Creation
+ * Handles theme uploads, asset management, and product template creation
+ */
+export class ShopifyThemeService extends ShopifyService {
+  
+  /**
+   * Get the active (main) theme
+   */
+  async getActiveTheme(): Promise<{ theme: any } | null> {
+    const { themes } = await this.getThemes()
+    const activeTheme = themes.find((t: any) => t.role === 'main')
+    return activeTheme ? { theme: activeTheme } : null
+  }
+
+  /**
+   * Upload a theme from ZIP URL
+   */
+  async uploadThemeFromZip(
+    themeName: string,
+    zipUrl: string,
+    role: 'main' | 'unpublished' = 'unpublished'
+  ): Promise<{ theme: any }> {
+    return this.createTheme(themeName, zipUrl)
+  }
+
+  /**
+   * Update theme asset (file)
+   */
+  async updateThemeAsset(
+    themeId: number,
+    assetKey: string,
+    content: string
+  ): Promise<{ asset: any }> {
+    return this.request(`/themes/${themeId}/assets.json`, {
+      method: 'PUT',
+      body: {
+        asset: {
+          key: assetKey,
+          value: content,
+        },
+      },
+    })
+  }
+
+  /**
+   * Upload theme asset with base64 attachment (for binary files)
+   */
+  async uploadThemeAssetBase64(
+    themeId: number,
+    assetKey: string,
+    base64Content: string
+  ): Promise<{ asset: any }> {
+    return this.request(`/themes/${themeId}/assets.json`, {
+      method: 'PUT',
+      body: {
+        asset: {
+          key: assetKey,
+          attachment: base64Content,
+        },
+      },
+    })
+  }
+
+  /**
+   * Get theme asset
+   */
+  async getThemeAsset(themeId: number, assetKey: string): Promise<{ asset: any }> {
+    return this.request(`/themes/${themeId}/assets.json?asset[key]=${encodeURIComponent(assetKey)}`)
+  }
+
+  /**
+   * List all theme assets
+   */
+  async listThemeAssets(themeId: number): Promise<{ assets: any[] }> {
+    return this.request(`/themes/${themeId}/assets.json`)
+  }
+
+  /**
+   * Delete theme asset
+   */
+  async deleteThemeAsset(themeId: number, assetKey: string): Promise<void> {
+    await this.request(`/themes/${themeId}/assets.json?asset[key]=${encodeURIComponent(assetKey)}`, {
+      method: 'DELETE',
+    })
+  }
+
+  /**
+   * Publish a theme (set as main)
+   */
+  async publishTheme(themeId: number): Promise<{ theme: any }> {
+    return this.request(`/themes/${themeId}.json`, {
+      method: 'PUT',
+      body: {
+        theme: {
+          id: themeId,
+          role: 'main',
+        },
+      },
+    })
+  }
+
+  /**
+   * Add a product template to a theme
+   */
+  async addProductTemplate(
+    themeId: number,
+    templateName: string,
+    templateContent: object
+  ): Promise<{ asset: any }> {
+    const assetKey = `templates/product.${templateName}.json`
+    return this.updateThemeAsset(themeId, assetKey, JSON.stringify(templateContent, null, 2))
+  }
+
+  /**
+   * Add a section to a theme
+   */
+  async addSection(
+    themeId: number,
+    sectionName: string,
+    sectionContent: string
+  ): Promise<{ asset: any }> {
+    const assetKey = `sections/${sectionName}.liquid`
+    return this.updateThemeAsset(themeId, assetKey, sectionContent)
+  }
+
+  /**
+   * Update config/settings_data.json
+   */
+  async updateSettingsData(
+    themeId: number,
+    settingsData: object
+  ): Promise<{ asset: any }> {
+    return this.updateThemeAsset(themeId, 'config/settings_data.json', JSON.stringify(settingsData, null, 2))
+  }
+
+  /**
+   * Get current settings_data.json
+   */
+  async getSettingsData(themeId: number): Promise<object> {
+    const { asset } = await this.getThemeAsset(themeId, 'config/settings_data.json')
+    return JSON.parse(asset.value)
+  }
+
+  /**
+   * Batch upload multiple theme files
+   * Groups files by type and uploads in proper order (sections, templates, config)
+   */
+  async batchUploadThemeFiles(
+    themeId: number,
+    files: Array<{ key: string; content: string; isBinary?: boolean }>
+  ): Promise<{ uploaded: number; errors: string[] }> {
+    const errors: string[] = []
+    let uploaded = 0
+
+    // Sort files by upload order: sections first, then templates, then config
+    const sortOrder = ['sections/', 'snippets/', 'layout/', 'assets/', 'locales/', 'templates/', 'config/']
+    
+    const sortedFiles = [...files].sort((a, b) => {
+      const orderA = sortOrder.findIndex(prefix => a.key.startsWith(prefix))
+      const orderB = sortOrder.findIndex(prefix => b.key.startsWith(prefix))
+      return (orderA === -1 ? 999 : orderA) - (orderB === -1 ? 999 : orderB)
+    })
+
+    for (const file of sortedFiles) {
+      try {
+        if (file.isBinary) {
+          await this.uploadThemeAssetBase64(themeId, file.key, file.content)
+        } else {
+          await this.updateThemeAsset(themeId, file.key, file.content)
+        }
+        uploaded++
+      } catch (error) {
+        errors.push(`Failed to upload ${file.key}: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      }
+    }
+
+    return { uploaded, errors }
+  }
+
+  /**
+   * Create product with custom template
+   */
+  async createProductWithTemplate(
+    productData: any,
+    templateSuffix?: string
+  ): Promise<{ product: ShopifyProduct }> {
+    const data = {
+      ...productData,
+      ...(templateSuffix && { template_suffix: templateSuffix }),
+    }
+    return this.createProduct(data)
+  }
+}

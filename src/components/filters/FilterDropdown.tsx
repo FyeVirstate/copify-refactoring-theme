@@ -138,56 +138,56 @@ export default function FilterDropdown({
 
   return (
     <FilterDropdownContext.Provider value={{ closeDropdown }}>
-      <div className="dropdown dropdown-filter">
+    <div className="dropdown dropdown-filter">
         <DropdownMenu modal={false} open={isOpen} onOpenChange={handleOpenChange}>
-          <DropdownMenuTrigger asChild>
-            <Button 
-              ref={triggerRef}
-              className={`btn dropdown-btn dropdown-toggle ${isActive ? 'filter-active' : ''}`}
-              type="button" 
-              variant="outline"
-            >
-              <i className={`dropdown-icon ${icon}`}></i> {label}
-              {badge !== undefined && badge > 0 && (
-                <span 
-                  className="filter-rounded-tag ms-1"
-                  style={{
-                    backgroundColor: '#0E121B',
-                    color: 'white',
-                    borderRadius: '10px',
-                    padding: '2px 8px',
-                    fontSize: '11px',
-                    fontWeight: '500',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    minWidth: '20px'
-                  }}
-                >
-                  {badge}
-                </span>
-              )}
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent 
-            align={align}
-            alignOffset={alignOffset}
-            side="bottom"
-            className="dropdown-menu p-3" 
-            style={{ 
-              width: isMobile ? 'calc(100vw - 32px)' : width, 
-              maxWidth: 'calc(100vw - 20px)'
-            }} 
-            onClick={(e) => e.stopPropagation()}
-            collisionPadding={isMobile ? 16 : (shouldOpenLeft ? 0 : 16)}
-            sideOffset={4}
-            avoidCollisions={isMobile || !shouldOpenLeft}
+        <DropdownMenuTrigger asChild>
+          <Button 
+            ref={triggerRef}
+            className={`btn dropdown-btn dropdown-toggle ${isActive ? 'filter-active' : ''}`}
+            type="button" 
+            variant="outline"
           >
-            {title && <h5 className="mb-3 fw-600" style={{ color: '#0E121B', fontSize: '15px' }}>{title}</h5>}
-            {children}
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
+            <i className={`dropdown-icon ${icon}`}></i> {label}
+            {badge !== undefined && badge > 0 && (
+              <span 
+                className="filter-rounded-tag ms-1"
+                style={{
+                  backgroundColor: '#0E121B',
+                  color: 'white',
+                  borderRadius: '10px',
+                  padding: '2px 8px',
+                  fontSize: '11px',
+                  fontWeight: '500',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  minWidth: '20px'
+                }}
+              >
+                {badge}
+              </span>
+            )}
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent 
+          align={align}
+          alignOffset={alignOffset}
+          side="bottom"
+          className="dropdown-menu p-3" 
+          style={{ 
+            width: isMobile ? 'calc(100vw - 32px)' : width, 
+            maxWidth: 'calc(100vw - 20px)'
+          }} 
+          onClick={(e) => e.stopPropagation()}
+          collisionPadding={isMobile ? 16 : (shouldOpenLeft ? 0 : 16)}
+          sideOffset={4}
+          avoidCollisions={isMobile || !shouldOpenLeft}
+        >
+          {title && <h5 className="mb-3 fw-600" style={{ color: '#0E121B', fontSize: '15px' }}>{title}</h5>}
+          {children}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
     </FilterDropdownContext.Provider>
   );
 }

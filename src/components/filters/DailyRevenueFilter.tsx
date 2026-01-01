@@ -21,7 +21,7 @@ function DailyRevenueFilterContent({
   maxRevenue: externalMax,
   onMinRevenueChange,
   onMaxRevenueChange,
-  onApply,
+  onApply, 
 }: Omit<DailyRevenueFilterProps, 'onOpenChange' | 'isActive'>) {
   const [minRevenueStr, setMinRevenueStr] = useState(externalMin?.toString() || "");
   const [maxRevenueStr, setMaxRevenueStr] = useState(externalMax?.toString() || "");

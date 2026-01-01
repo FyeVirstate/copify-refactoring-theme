@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import DashboardHeader from "@/components/DashboardHeader";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -13,8 +14,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { useAI } from "@/lib/hooks/use-ai";
+import { useStats } from "@/contexts/StatsContext";
 
+// Types
 interface GeneratedShop {
   id: number;
   title: string;
@@ -22,78 +24,1397 @@ interface GeneratedShop {
   image: string;
   language: string;
   type: string;
+  source: string;
+  category: string | null;
   status: 'pending' | 'processing' | 'completed' | 'failed';
   shopifyUrl?: string;
   createdAt: string;
 }
 
-export default function AIShopPage() {
-  const { data: session } = useSession();
-  const [productUrl, setProductUrl] = useState("");
-  const [selectedLanguage, setSelectedLanguage] = useState("en");
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [generationHistory, setGenerationHistory] = useState<GeneratedShop[]>([]);
-  const [credits, setCredits] = useState<number | null>(null);
+// Loading stages configuration
+const LOADING_STAGES = [
+  { id: 1, text: 'Récupération du produit...', textEn: 'Fetching product data...' },
+  { id: 2, text: 'Génération du contenu IA...', textEn: 'Generating AI content...' },
+  { id: 3, text: 'Création de la boutique...', textEn: 'Creating store...' },
+  { id: 4, text: 'Finalisation...', textEn: 'Finalizing...' },
+];
 
-  const { getCredits } = useAI();
+interface AIContent {
+  // Basic product info
+  title: string;
+  description: string;
+  price: string;
+  compareAtPrice?: string;
+  images: string[];
+  store_name?: string;
+  
+  // Hero Section (img-with-txt)
+  mainCatchyText?: string;
+  subMainCatchyText?: string;
+  features?: string[];
+  reviewRating?: string;
+  reviewCount?: string;
+  guarantees?: string[];
+  landingPageImage?: string;
+  
+  // Product Info Section (featured-product)
+  header?: string;
+  subheading?: string;
+  featureHeader?: string;
+  deliveryInformation?: string;
+  howItWorks?: string;
+  instructions?: string;
+  productFeatures?: { title: string; text: string }[];
+  
+  // Benefits Section (pdp-benefits)
+  benefitsHeading?: string;
+  benefitsParagraph?: string;
+  benefits?: { icon?: string; title?: string; text: string }[];
+  benefitsImage?: string;
+  whatMakesUsDifferentText?: string;
+  
+  // Clinical/Statistics Section (pdp-statistics-column)
+  persuasiveContent?: {
+    header?: string;
+    paragraph?: string;
+    image?: string;
+  };
+  clinicalResults?: { percentage: string; description: string }[];
+  statisticsImage?: string;
+  
+  // Timeline Section (timeline-points)
+  timelineHeading?: string;
+  timeline?: { timeframe: string; description: string }[];
+  timelineImage?: string;
+  
+  // Comparison Section (pdp-comparison-table)
+  comparison?: {
+    heading?: string;
+    subheading?: string;
+    our_name?: string;
+    others_name?: string;
+    features?: { feature: string; us: boolean; others: boolean }[];
+  };
+  comparisonImage?: string;
+  
+  // FAQ Section (image-faq)
+  faq?: { question: string; answer: string }[];
+  faqHeading?: string;
+  faqImage?: string;
+  
+  // Reviews/Testimonials Section (product-reviews)
+  testimonials?: { name?: string; author?: string; review?: string; text?: string; header?: string; rating?: number }[];
+  
+  // Announcement Bar
+  specialOffer?: string;
+  
+  // Video Grid Section
+  videoGrid?: {
+    heading?: string;
+    subheading?: string;
+  };
+  
+  // Image with Text Section
+  imageWithText?: {
+    header?: string;
+    text?: string;
+  };
+  imageWithTextImage?: string;
+  
+  // Newsletter Section
+  newsletterHeading?: string;
+  newsletterText?: string;
+  
+  // Styles
+  font_family_input?: string;
+  primary_color_picker?: string;
+  tertiary_color_picker?: string;
+  primary_rgbcolor_picker?: string;
+  tertiary_rgbcolor_picker?: string;
+}
 
-  // Load credits and history on mount
-  useEffect(() => {
-    loadCredits();
-    loadHistory();
-  }, []);
+// Step indicator component with animations
+function StepIndicator({ 
+  currentStep, 
+  steps 
+}: { 
+  currentStep: number; 
+  steps: { id: number; icon: string; label: string }[] 
+}) {
+  return (
+    <ul className="nav nav-pills-rounded align-items-center gap-2 justify-content-center mb-0 d-none d-lg-flex">
+      {steps.map((step, index) => (
+        <li key={step.id} className="d-flex align-items-center">
+          {index > 0 && (
+            <i 
+              className="ri-arrow-right-s-line mx-2" 
+              style={{ color: '#99a0ae', fontSize: '16px' }}
+            ></i>
+          )}
+          <button
+            type="button"
+            className={`nav-link fw-500 d-flex align-items-center transition-all ${
+              currentStep === step.id ? 'active' : ''
+            } ${currentStep > step.id ? 'completed' : ''}`}
+            disabled={currentStep < step.id}
+            style={{
+              opacity: currentStep < step.id ? 0.5 : 1,
+              cursor: currentStep < step.id ? 'not-allowed' : 'pointer',
+              padding: '8px 16px',
+              borderRadius: '8px',
+              transition: 'all 0.3s ease',
+              backgroundColor: currentStep === step.id ? '#335cff' : currentStep > step.id ? '#e8f4ff' : 'transparent',
+              color: currentStep === step.id ? '#fff' : currentStep > step.id ? '#335cff' : '#525866',
+              border: 'none',
+            }}
+          >
+            <i className={`${step.icon} me-2`} style={{ fontSize: '14px' }}></i>
+            <span className="fs-small">{step.id}. {step.label}</span>
+          </button>
+        </li>
+      ))}
+    </ul>
+  );
+}
 
-  const loadCredits = async () => {
-    try {
-      const creditsData = await getCredits();
-      setCredits(creditsData.generateProduct);
-    } catch (err) {
-      console.error("Failed to load credits:", err);
+// Mobile step header
+function MobileStepHeader({ 
+  currentStep, 
+  steps,
+  onBack,
+  onNext,
+  canGoBack,
+  canGoNext,
+  isLoading
+}: { 
+  currentStep: number;
+  steps: { id: number; icon: string; label: string }[];
+  onBack: () => void;
+  onNext: () => void;
+  canGoBack: boolean;
+  canGoNext: boolean;
+  isLoading: boolean;
+}) {
+  const currentStepData = steps.find(s => s.id === currentStep);
+  
+  return (
+    <div className="mobile-step-header d-lg-none">
+      <div className="d-flex align-items-center justify-content-between px-3 py-2">
+        <div className="d-flex align-items-center gap-2">
+          <button 
+            type="button" 
+            className="btn btn-sm btn-secondary"
+            onClick={onBack}
+            disabled={!canGoBack}
+            style={{ minWidth: '40px' }}
+          >
+            <i className="ri-arrow-left-line"></i>
+          </button>
+          <div className="mobile-step-title">
+            <span className="fw-500">{currentStepData?.label || ''}</span>
+          </div>
+        </div>
+        <button 
+          type="button" 
+          className="btn btn-sm btn-primary"
+          onClick={onNext}
+          disabled={!canGoNext || isLoading}
+        >
+          {isLoading ? (
+            <span className="spinner-border spinner-border-sm" role="status"></span>
+          ) : currentStep === 4 ? (
+            <>Publier <i className="ri-arrow-right-line ms-1"></i></>
+          ) : (
+            <>Suivant <i className="ri-arrow-right-line ms-1"></i></>
+          )}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// Image selection component with animations
+function ImageSelector({ 
+  images, 
+  selectedImages, 
+  onSelect,
+  disabled
+}: { 
+  images: string[]; 
+  selectedImages: string[];
+  onSelect: (images: string[]) => void;
+  disabled?: boolean;
+}) {
+  const toggleImage = (img: string) => {
+    if (disabled) return;
+    if (selectedImages.includes(img)) {
+      onSelect(selectedImages.filter(i => i !== img));
+    } else {
+      onSelect([...selectedImages, img]);
     }
   };
 
-  const loadHistory = async () => {
-    // TODO: Implement API endpoint for shop generation history
-    // For now, using placeholder
-    setGenerationHistory([]);
+  return (
+    <div className="image-grid-list row g-3">
+      {images.map((img, idx) => (
+        <div key={idx} className="col-6 col-md-4 col-lg-3">
+          <div 
+            className={`image-card position-relative ${selectedImages.includes(img) ? 'selected' : ''}`}
+            onClick={() => toggleImage(img)}
+            style={{ 
+              cursor: disabled ? 'not-allowed' : 'pointer',
+              opacity: disabled ? 0.6 : 1,
+            }}
+          >
+            <div 
+              className="custom-image-radio"
+              style={{
+                border: selectedImages.includes(img) ? '2px solid #335cff' : '1px solid #e1e4ea',
+                borderRadius: '12px',
+                overflow: 'hidden',
+                aspectRatio: '1',
+                transition: 'all 0.2s ease',
+                transform: selectedImages.includes(img) ? 'scale(1)' : 'scale(0.98)',
+              }}
+            >
+              <img 
+                src={img} 
+                alt={`Product ${idx + 1}`}
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = '/img_not_found.png';
+                }}
+              />
+              {selectedImages.includes(img) && (
+                <div 
+                  className="position-absolute"
+                  style={{
+                    top: '8px',
+                    right: '8px',
+                    width: '24px',
+                    height: '24px',
+                    borderRadius: '50%',
+                    backgroundColor: '#335cff',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    animation: 'scaleIn 0.2s ease',
+                  }}
+                >
+                  <i className="ri-check-line text-white" style={{ fontSize: '14px' }}></i>
+                </div>
+              )}
+            </div>
+            <div 
+              className="position-absolute text-center"
+              style={{ 
+                bottom: '8px', 
+                left: '50%', 
+                transform: 'translateX(-50%)',
+                backgroundColor: 'rgba(14,18,27,0.6)',
+                backdropFilter: 'blur(4px)',
+                borderRadius: '4px',
+                padding: '2px 8px',
+                fontSize: '11px',
+                color: '#fff',
+              }}
+            >
+              {idx + 1}
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// Calculate SVG circle progress
+function calculateProgress(used: number, limit: number): { 
+  dasharray: string; 
+  dashoffset: number; 
+  text: string;
+  isLimitReached: boolean;
+  color: string;
+} {
+  const circumference = 2 * Math.PI * 12;
+  const progress = limit > 0 ? Math.min(used / limit, 1) : 0;
+  const dashoffset = circumference * (1 - progress);
+  const isLimitReached = limit > 0 && used >= limit;
+  return {
+    dasharray: `${circumference}`,
+    dashoffset,
+    text: `${used}/${limit}`,
+    isLimitReached,
+    color: isLimitReached ? '#ef4444' : '#0c6cfb',
+  };
+}
+
+// AI Input Field with Regenerate Button
+function AIInputField({
+  type = 'text',
+  value,
+  onChange,
+  placeholder,
+  label,
+  labelIcon,
+  fieldName,
+  onRegenerate,
+  rows = 3,
+  className = '',
+}: {
+  type?: 'text' | 'textarea' | 'number';
+  value: string | number;
+  onChange: (value: string) => void;
+  placeholder?: string;
+  label?: string;
+  labelIcon?: string;
+  fieldName: string;
+  onRegenerate?: (fieldName: string, currentValue: string) => Promise<string>;
+  rows?: number;
+  className?: string;
+}) {
+  const [isRegenerating, setIsRegenerating] = useState(false);
+
+  const handleRegenerate = async () => {
+    if (!onRegenerate || isRegenerating) return;
+    setIsRegenerating(true);
+    try {
+      const newValue = await onRegenerate(fieldName, String(value));
+      if (newValue) {
+        onChange(newValue);
+      }
+    } catch (error) {
+      console.error('Failed to regenerate field:', error);
+    } finally {
+      setIsRegenerating(false);
+    }
   };
 
+  return (
+    <div className={`mb-3 ${className}`}>
+      {label && (
+        <label className="form-label text-dark fw-500 mb-1 fs-small">
+          {labelIcon && <i className={`${labelIcon} me-1 text-muted`}></i>}
+          {label}
+        </label>
+      )}
+      <div className="input-with-ai-btn">
+        {type === 'textarea' ? (
+          <textarea
+            className="form-control form-control-w-side-button"
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder={placeholder}
+            rows={rows}
+          />
+        ) : (
+          <input
+            type={type}
+            className="form-control form-control-w-side-button"
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder={placeholder}
+          />
+        )}
+        {onRegenerate && (
+          <button
+            type="button"
+            className={`regenerate-field-btn ${isRegenerating ? 'loading' : ''}`}
+            onClick={handleRegenerate}
+            disabled={isRegenerating}
+            title="Régénérer avec IA"
+          >
+            <i className="ri-sparkling-line fs-5 regenerate-loading-icon"></i>
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Loading Animation Component with particles and progress
+function GenerationLoader({
+  isVisible,
+  productUrl,
+  progress,
+  currentStage,
+}: {
+  isVisible: boolean;
+  productUrl: string;
+  progress: number;
+  currentStage: number;
+}) {
+  if (!isVisible) return null;
+
+  // Generate random dust particles
+  const dustParticles = useMemo(() => {
+    const particles = [];
+    // Center area particles
+    for (let i = 0; i < 20; i++) {
+      particles.push({
+        top: `${35 + Math.random() * 30}%`,
+        left: `${35 + Math.random() * 30}%`,
+        size: Math.random() * 4 + 1,
+      });
+    }
+    // Mid-range particles
+    for (let i = 0; i < 10; i++) {
+      particles.push({
+        top: `${25 + Math.random() * 50}%`,
+        left: `${20 + Math.random() * 60}%`,
+        size: Math.random() * 3 + 1,
+      });
+    }
+    // Outer particles
+    for (let i = 0; i < 15; i++) {
+      particles.push({
+        top: `${10 + Math.random() * 80}%`,
+        left: `${10 + Math.random() * 80}%`,
+        size: Math.random() * 2 + 1,
+      });
+    }
+    return particles;
+  }, []);
+
+  return (
+    <div className="generation-loader position-relative mx-auto" style={{ maxWidth: '510px', marginTop: '80px' }}>
+      {/* Floating spark icon */}
+      <div className="position-absolute floating-spark-icon">
+        <span className="primary-gradient-color-2 sparkling-icon">
+          <i className="ri-sparkling-2-fill"></i>
+        </span>
+      </div>
+
+      <p 
+        className="mb-3 fw-500 text-center"
+        style={{
+          fontSize: '1.5rem',
+          background: 'linear-gradient(90deg, #476CFF, #0C6CFB, #a897ff)',
+          WebkitBackgroundClip: 'text',
+          WebkitTextFillColor: 'transparent',
+          backgroundClip: 'text',
+        }}
+      >
+        Génération en cours...
+      </p>
+
+      {/* URL Input Display */}
+      <div className="mb-0 w-100">
+        <div className="input-w-left-icon mb-3 position-relative">
+          <span className="position-absolute" style={{ left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#99a0ae' }}>
+            <i className="ri-link"></i>
+          </span>
+          <input 
+            type="text" 
+            className="form-control" 
+            style={{ paddingLeft: '38px', backgroundColor: '#f6f8fa' }}
+            disabled 
+            value={productUrl.length > 60 ? productUrl.substring(0, 60) + '...' : productUrl}
+          />
+        </div>
+      </div>
+
+      {/* Loading Stage Indicator */}
+      <div className="mb-3">
+        <div className="d-flex align-items-center justify-content-center py-2">
+          <span 
+            className="fw-500 fs-6"
+            style={{ 
+              color: '#335cff',
+              animation: 'hoverUpDown 1.5s ease-in-out infinite',
+            }}
+          >
+            {LOADING_STAGES[currentStage - 1]?.text || 'Chargement...'}
+          </span>
+        </div>
+        <div className="d-flex justify-content-center gap-1 mt-2">
+          {LOADING_STAGES.map((stage) => (
+            <span 
+              key={stage.id}
+              className={`stage-dot ${currentStage === stage.id ? 'active' : ''} ${currentStage > stage.id ? 'completed' : ''}`}
+              title={stage.text}
+            />
+          ))}
+        </div>
+      </div>
+
+      {/* Progress Bar */}
+      <div className="progress mb-2" style={{ height: '24px', borderRadius: '12px', overflow: 'hidden' }}>
+        <div 
+          className="progress-bar progress-bar-striped progress-bar-animated"
+          role="progressbar" 
+          style={{ 
+            width: `${progress}%`,
+            backgroundImage: 'linear-gradient(135deg, hsla(0,0%,100%,.15) 25%, transparent 25%, transparent 50%, hsla(0,0%,100%,.15) 50%, hsla(0,0%,100%,.15) 75%, transparent 75%, transparent), linear-gradient(91.46deg, #0c6cfb 1.25%, #a897ff 99.5%)',
+            backgroundSize: '24px 24px, 100% 100%',
+            transition: 'width 0.3s ease',
+          }}
+          aria-valuenow={progress} 
+          aria-valuemin={0} 
+          aria-valuemax={100}
+        />
+      </div>
+      <p className="text-end fw-bold fs-lg mb-3" style={{ color: '#6b7280' }}>
+        {Math.round(progress)}%
+      </p>
+
+      {/* Placeholder with dust particles */}
+      <div 
+        className="loading-placeholder p-3 d-flex gap-3 position-relative overflow-hidden"
+        style={{
+          backgroundColor: '#f6f8fa',
+          border: '1px solid #e2e4e9',
+          borderRadius: '12px',
+        }}
+      >
+        {/* Dust particles */}
+        {dustParticles.map((particle, idx) => (
+          <span 
+            key={idx}
+            style={{ 
+              position: 'absolute', 
+              top: particle.top, 
+              left: particle.left, 
+              width: `${particle.size}px`, 
+              height: `${particle.size}px`, 
+              background: 'white', 
+              borderRadius: '50%',
+              opacity: 0.8,
+              animation: `twinkle ${1 + Math.random() * 2}s ease-in-out infinite`,
+              animationDelay: `${Math.random() * 2}s`,
+            }}
+          />
+        ))}
+
+        {/* Loading placeholder image */}
+        <div 
+          className="loading-placeholder-img flex-shrink-0"
+          style={{
+            width: '160px',
+            height: '160px',
+            borderRadius: '8px',
+            backgroundColor: '#e2e4e9',
+            animation: 'shimmer 1.5s ease-in-out infinite',
+          }}
+        />
+        
+        {/* Loading placeholder details */}
+        <div className="w-100 ai-generated-details-loading">
+          <div 
+            className="loading-placeholder-text mb-4"
+            style={{
+              height: '24px',
+              width: '80%',
+              borderRadius: '16px',
+              backgroundColor: '#e2e4e9',
+              animation: 'shimmer 1.5s ease-in-out infinite',
+              animationDelay: '0.2s',
+            }}
+          />
+          <div 
+            className="loading-placeholder-text mb-3"
+            style={{
+              height: '19px',
+              width: '60%',
+              borderRadius: '16px',
+              backgroundColor: '#e2e4e9',
+              animation: 'shimmer 1.5s ease-in-out infinite',
+              animationDelay: '0.4s',
+            }}
+          />
+          <div 
+            className="loading-placeholder-text"
+            style={{
+              height: '19px',
+              width: '30%',
+              borderRadius: '16px',
+              backgroundColor: '#e2e4e9',
+              animation: 'shimmer 1.5s ease-in-out infinite',
+              animationDelay: '0.6s',
+            }}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Languages config
+const LANGUAGES = [
+  { code: 'en', name: 'Anglais', flag: '🇬🇧' },
+  { code: 'fr', name: 'Français', flag: '🇫🇷' },
+  { code: 'es', name: 'Espagnol', flag: '🇪🇸' },
+  { code: 'de', name: 'Allemand', flag: '🇩🇪' },
+  { code: 'it', name: 'Italien', flag: '🇮🇹' },
+  { code: 'pt', name: 'Portugais', flag: '🇵🇹' },
+];
+
+// Steps config
+const STEPS = [
+  { id: 1, icon: 'ri-link', label: 'Importer' },
+  { id: 2, icon: 'ri-image-line', label: 'Sélectionner' },
+  { id: 3, icon: 'ri-settings-4-line', label: 'Personnaliser' },
+  { id: 4, icon: 'ri-upload-cloud-line', label: 'Publier' },
+];
+
+// Font families for Styles tab
+const FONT_FAMILIES = [
+  { name: 'Inter', class: 'font-inter', link: 'https://fonts.cdnfonts.com/css/inter' },
+  { name: 'Roboto', class: 'font-roboto', link: 'https://fonts.cdnfonts.com/css/roboto' },
+  { name: 'Space Grotesk', class: 'font-space-grotesk', link: 'https://fonts.cdnfonts.com/css/space-grotesk' },
+  { name: 'DM Sans', class: 'font-dm-sans', link: 'https://fonts.cdnfonts.com/css/dm-sans' },
+  { name: 'Montserrat', class: 'font-montserrat', link: 'https://fonts.cdnfonts.com/css/montserrat' },
+  { name: 'Be Vietnam Pro', class: 'font-be-vietnam', link: 'https://fonts.cdnfonts.com/css/be-vietnam-pro' },
+  { name: 'Karla', class: 'font-karla', link: 'https://fonts.cdnfonts.com/css/karla' },
+  { name: 'Poppins', class: 'font-poppins', link: 'https://fonts.cdnfonts.com/css/poppins' },
+];
+
+// Color presets for Styles tab
+const COLOR_PRESETS = [
+  { primary: '#6f6254', tertiary: '#e6e1dc' },
+  { primary: '#374732', tertiary: '#d9e3d4' },
+  { primary: '#8c1c25', tertiary: '#f1dada' },
+  { primary: '#e9572d', tertiary: '#fff6e8' },
+  { primary: '#4E2500', tertiary: '#FFF0DD' },
+  { primary: '#4e7a9b', tertiary: '#e0eef5' },
+  { primary: '#9a4e34', tertiary: '#ebddd3' },
+];
+
+export default function AIShopPage() {
+  const { data: session } = useSession();
+  const router = useRouter();
+  
+  // Step management
+  const [currentStep, setCurrentStep] = useState(1);
+  
+  // Step 1: Import
+  const [productUrl, setProductUrl] = useState("");
+  const [selectedLanguage, setSelectedLanguage] = useState("en");
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generationProgress, setGenerationProgress] = useState(0);
+  const [generationStage, setGenerationStage] = useState(1);
+  const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // Step 2: Select images
+  const [aiContent, setAiContent] = useState<AIContent | null>(null);
+  const [selectedImages, setSelectedImages] = useState<string[]>([]);
+  const [storeName, setStoreName] = useState("");
+  
+  // Step 3: Customize
+  const [activeSection, setActiveSection] = useState<string | null>('productInfo');
+  const [previewDevice, setPreviewDevice] = useState<'desktop' | 'mobile'>('mobile');
+  const [activeTab, setActiveTab] = useState<'content' | 'styles'>('content');
+  const [pageView, setPageView] = useState<'product_page' | 'home_page'>('product_page');
+  const [showAddSectionModal, setShowAddSectionModal] = useState(false);
+  const [previewKey, setPreviewKey] = useState<number>(Date.now());
+  
+  // Step 4: Publish
+  const [isPushing, setIsPushing] = useState(false);
+  const [publishProgress, setPublishProgress] = useState(0);
+  
+  // Common state
+  const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [generationHistory, setGenerationHistory] = useState<GeneratedShop[]>([]);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(true);
+  const [generatedProductId, setGeneratedProductId] = useState<number | null>(null);
+
+  // Use global stats context
+  const { stats, loading, refreshStats } = useStats();
+  const storeProgress = stats ? calculateProgress(stats.storeGeneration.used, stats.storeGeneration.limit) : null;
+
+  // Load generation history
+  const loadHistory = useCallback(async () => {
+    try {
+      setIsLoadingHistory(true);
+      const response = await fetch('/api/ai/generate-store?perPage=50');
+      if (response.ok) {
+        const data = await response.json();
+        setGenerationHistory(data.products || []);
+      }
+    } catch (err) {
+      console.error('Failed to load history:', err);
+    } finally {
+      setIsLoadingHistory(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadHistory();
+  }, [loadHistory]);
+
+  // Refresh preview when content changes (debounced)
+  useEffect(() => {
+    if (generatedProductId && currentStep === 3) {
+      const timer = setTimeout(() => {
+        setPreviewKey(Date.now());
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [aiContent, generatedProductId, currentStep]);
+
+  // Check if user has credits
+  const credits = stats?.storeGeneration.isUnlimited ? -1 : (stats?.storeGeneration.limit ?? 0) - (stats?.storeGeneration.used ?? 0);
+  const hasCredits = stats?.storeGeneration.isUnlimited || credits > 0;
+
+  // Get language flag
+  const getLanguageFlag = (lang: string) => {
+    return LANGUAGES.find(l => l.code === lang)?.flag || '🌐';
+  };
+
+  // Get relative time (e.g., "1 hour ago", "12 minutes ago")
+  const getRelativeTime = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins} minute${diffMins > 1 ? 's' : ''} ago`;
+    if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+    if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+    return date.toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' });
+  };
+
+  // Step 1: Generate AI content
   const handleGenerate = async () => {
     if (!productUrl.trim()) {
       setError("Veuillez entrer l'URL d'un produit");
       return;
     }
 
-    // Validate URL format
-    const isValidUrl = productUrl.includes('aliexpress.com') || productUrl.includes('amazon.com');
-    if (!isValidUrl) {
+    const isAliExpress = productUrl.includes('aliexpress.com');
+    const isAmazon = productUrl.includes('amazon.');
+    
+    if (!isAliExpress && !isAmazon) {
       setError("Veuillez entrer un lien AliExpress ou Amazon valide");
       return;
     }
 
     setIsGenerating(true);
     setError(null);
+    setGenerationProgress(0);
+    setGenerationStage(1);
+
+    // Start progress animation
+    // Phase 1: 0-40% (scraping) over ~15 seconds
+    // Phase 2: 40-70% (AI copywriting) over ~20 seconds  
+    // Phase 3: 70-90% (store creation) over ~10 seconds
+    // Phase 4: 90-99% (finalizing) until API responds
+    
+    let progress = 0;
+    const startTime = Date.now();
+    
+    progressIntervalRef.current = setInterval(() => {
+      const elapsed = Date.now() - startTime;
+      
+      // Dynamic stages based on elapsed time
+      if (elapsed < 15000) {
+        // Stage 1: Scraping (0-15s) -> 0-40%
+        setGenerationStage(1);
+        progress = Math.min(40, (elapsed / 15000) * 40);
+      } else if (elapsed < 35000) {
+        // Stage 2: AI Copywriting (15-35s) -> 40-70%
+        setGenerationStage(2);
+        progress = 40 + Math.min(30, ((elapsed - 15000) / 20000) * 30);
+      } else if (elapsed < 50000) {
+        // Stage 3: Store Creation (35-50s) -> 70-90%
+        setGenerationStage(3);
+        progress = 70 + Math.min(20, ((elapsed - 35000) / 15000) * 20);
+      } else {
+        // Stage 4: Finalizing (50s+) -> 90-99%
+        setGenerationStage(4);
+        progress = Math.min(99, 90 + ((elapsed - 50000) / 30000) * 9);
+      }
+      
+      setGenerationProgress(progress);
+    }, 100);
 
     try {
-      // TODO: Call actual API endpoint when implemented
-      // const result = await fetch('/api/ai/generate-shop', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({ productUrl, language: selectedLanguage }),
-      // })
+      const response = await fetch('/api/ai/generate-store', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          productUrl, 
+          language: selectedLanguage 
+        }),
+      });
+
+      const data = await response.json();
+
+      // Clear progress interval
+      if (progressIntervalRef.current) {
+        clearInterval(progressIntervalRef.current);
+        progressIntervalRef.current = null;
+      }
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Erreur lors de la génération');
+      }
+
+      // Complete progress
+      setGenerationProgress(100);
       
-      // Placeholder: Show coming soon message
-      setError("Cette fonctionnalité sera bientôt disponible. Veuillez configurer votre intégration Shopify dans les paramètres.");
+      // Small delay to show 100%
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // Save AI content and move to step 2
+      setAiContent(data.aiContent);
+      setSelectedImages(data.aiContent.images || []);
+      setStoreName(data.aiContent.title || '');
+      setGeneratedProductId(data.productId);
+      setCurrentStep(2);
+      
+      // Refresh stats
+      refreshStats();
+      loadHistory();
+      
     } catch (err) {
+      // Clear progress interval on error
+      if (progressIntervalRef.current) {
+        clearInterval(progressIntervalRef.current);
+        progressIntervalRef.current = null;
+      }
       setError(err instanceof Error ? err.message : "Erreur lors de la génération");
+      setGenerationProgress(0);
+      setGenerationStage(1);
     } finally {
       setIsGenerating(false);
     }
   };
 
+  // Clean up interval on unmount
+  useEffect(() => {
+    return () => {
+      if (progressIntervalRef.current) {
+        clearInterval(progressIntervalRef.current);
+      }
+    };
+  }, []);
+
+  // Step 4: Push to Shopify
+  const handlePushToShopify = async () => {
+    if (!generatedProductId) {
+      setError("Aucun produit généré à publier");
+      return;
+    }
+
+    setIsPushing(true);
+    setPublishProgress(10);
+    setError(null);
+
+    try {
+      // Simulate progress
+      const progressInterval = setInterval(() => {
+        setPublishProgress(prev => Math.min(prev + 10, 90));
+      }, 500);
+
+      const response = await fetch('/api/ai/push-theme', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          productId: generatedProductId,
+          method: 'template',
+          publish: false
+        }),
+      });
+
+      clearInterval(progressInterval);
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Erreur lors de la publication');
+      }
+
+      setPublishProgress(100);
+      setSuccessMessage("Boutique publiée avec succès sur Shopify !");
+      
+      // Reset and go back to step 1
+      setTimeout(() => {
+        setCurrentStep(1);
+        setAiContent(null);
+        setSelectedImages([]);
+        setStoreName("");
+        setProductUrl("");
+        setGeneratedProductId(null);
+        setPublishProgress(0);
+        loadHistory();
+      }, 2000);
+      
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Erreur lors de la publication");
+      setPublishProgress(0);
+    } finally {
+      setIsPushing(false);
+    }
+  };
+
+  // Regenerate individual field with AI
+  const handleRegenerateField = async (fieldName: string, currentValue: string): Promise<string> => {
+    try {
+      const response = await fetch('/api/ai/regenerate-field', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fieldName,
+          currentValue,
+          productTitle: aiContent?.title || '',
+          productDescription: aiContent?.description || '',
+          language: selectedLanguage,
+        }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to regenerate');
+      }
+
+      return data.newValue || currentValue;
+    } catch (error) {
+      console.error('Regenerate field error:', error);
+      return currentValue;
+    }
+  };
+
+  // Navigation
+  const canGoNext = useMemo(() => {
+    switch (currentStep) {
+      case 1: return !!aiContent;
+      case 2: return selectedImages.length > 0;
+      case 3: return true;
+      case 4: return false;
+      default: return false;
+    }
+  }, [currentStep, aiContent, selectedImages.length]);
+
+  const handleNext = () => {
+    if (currentStep === 4) {
+      handlePushToShopify();
+    } else if (canGoNext) {
+      setCurrentStep(prev => Math.min(prev + 1, 4));
+    }
+  };
+
+  const handleBack = () => {
+    setCurrentStep(prev => Math.max(prev - 1, 1));
+  };
+
+  // Section types for customization - matches Laravel/Rails sections
+  const SECTION_TYPES = [
+    { id: 'productInfo', icon: 'ri-price-tag-3-line', name: 'Infos produit', sectionType: 'featured-product' },
+    { id: 'hero', icon: 'ri-layout-top-line', name: 'Section héro', sectionType: 'img-with-txt' },
+    { id: 'benefits', icon: 'ri-thumb-up-line', name: 'Avantages', sectionType: 'pdp-benefits' },
+    { id: 'testimonials', icon: 'ri-star-line', name: 'Avis clients', sectionType: 'product-reviews' },
+    { id: 'timeline', icon: 'ri-time-line', name: 'Timeline', sectionType: 'timeline-points' },
+    { id: 'clinical', icon: 'ri-donut-chart-fill', name: 'Statistiques', sectionType: 'pdp-statistics-column' },
+    { id: 'comparison', icon: 'ri-table-line', name: 'Comparaison', sectionType: 'pdp-comparison-table' },
+    { id: 'faq', icon: 'ri-question-answer-line', name: 'FAQ', sectionType: 'image-faq' },
+    { id: 'styles', icon: 'ri-palette-line', name: 'Styles', sectionType: 'styles' },
+  ];
+
   return (
     <>
+      {/* Custom CSS for animations */}
+      <style jsx global>{`
+        @keyframes scaleIn {
+          from { transform: scale(0); opacity: 0; }
+          to { transform: scale(1); opacity: 1; }
+        }
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes slideInRight {
+          from { opacity: 0; transform: translateX(30px); }
+          to { opacity: 1; transform: translateX(0); }
+        }
+        @keyframes slideInLeft {
+          from { opacity: 0; transform: translateX(-30px); }
+          to { opacity: 1; transform: translateX(0); }
+        }
+        @keyframes pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.5; }
+        }
+        @keyframes hoverUpDown {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-4px); }
+        }
+        @keyframes shimmer {
+          0% { opacity: 0.6; }
+          50% { opacity: 1; }
+          100% { opacity: 0.6; }
+        }
+        @keyframes twinkle {
+          0%, 100% { opacity: 0.3; transform: scale(1); }
+          50% { opacity: 1; transform: scale(1.5); }
+        }
+        @keyframes sparkle {
+          0%, 100% { transform: rotate(0deg) scale(1); }
+          25% { transform: rotate(10deg) scale(1.1); }
+          75% { transform: rotate(-10deg) scale(1.1); }
+        }
+        @keyframes progress-bar-stripes-new {
+          0% { background-position: -24px 0, 0 0; }
+          100% { background-position: 0 0, 0 0; }
+        }
+        
+        .step-content-enter {
+          animation: fadeIn 0.3s ease-out;
+        }
+        .image-card:hover .custom-image-radio {
+          transform: scale(1) !important;
+          border-color: #335cff !important;
+        }
+        .section-nav-item {
+          transition: all 0.2s ease;
+        }
+        .section-nav-item:hover {
+          background-color: rgba(153, 160, 174, 0.1);
+        }
+        .section-nav-item.active {
+          background-color: rgba(51, 92, 255, 0.1);
+          color: #335cff;
+        }
+        /* Hide drag handle and visibility button by default, show on hover */
+        .section-nav-item .section-drag-handle {
+          display: none;
+        }
+        .section-nav-item:hover .section-drag-handle {
+          display: inline-block;
+        }
+        .section-nav-item .section-visibility-btn {
+          opacity: 0;
+          transition: opacity 0.2s ease;
+        }
+        .section-nav-item:hover .section-visibility-btn {
+          opacity: 1;
+        }
+        /* Custom font check input styling */
+        .custom-font-check-input {
+          transition: all 0.2s ease;
+        }
+        .custom-font-check-input:hover {
+          border-color: #335cff !important;
+        }
+        /* Color preset button styling */
+        .preset-color-btn:active,
+        .preset-color-btn:focus {
+          border-color: #0e121b !important;
+        }
+        /* Edit image AI button */
+        .edit-image-ai-btn {
+          opacity: 0;
+          transition: all 0.2s ease;
+        }
+        .image-card:hover .edit-image-ai-btn {
+          opacity: 1;
+        }
+        
+        /* Regenerate Field Button */
+        .regenerate-field-btn {
+          background: transparent;
+          border: none;
+          color: #99a0ae;
+          transition: all 0.2s ease;
+          cursor: pointer;
+          padding: 4px;
+          border-radius: 4px;
+        }
+        .regenerate-field-btn:hover {
+          background: rgba(51, 92, 255, 0.1);
+          color: #335cff;
+        }
+        .regenerate-field-btn:hover .regenerate-loading-icon {
+          animation: sparkle 1s ease-in-out infinite;
+        }
+        .regenerate-field-btn.loading .regenerate-loading-icon {
+          animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+        
+        /* Form control with side button */
+        .form-control-w-side-button {
+          padding-right: 40px !important;
+        }
+        
+        /* Input wrapper for AI regenerate */
+        .input-with-ai-btn {
+          position: relative;
+        }
+        .input-with-ai-btn .regenerate-field-btn {
+          position: absolute;
+          top: 50%;
+          right: 8px;
+          transform: translateY(-50%);
+        }
+        .input-with-ai-btn textarea + .regenerate-field-btn {
+          top: 8px;
+          transform: none;
+        }
+        
+        /* Section header with delete button */
+        .section-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 1rem;
+        }
+        .section-header .delete-section-btn {
+          color: #99a0ae;
+          transition: color 0.2s ease;
+        }
+        .section-header .delete-section-btn:hover {
+          color: #dc3545;
+        }
+        
+        /* Horizontal divider */
+        .horizontal-solid-divider {
+          border-bottom: 1px solid #e5e7eb;
+          margin: 1rem 0;
+        }
+        .mobile-step-header {
+          background: #fff;
+          border-bottom: 1px solid #e5e7eb;
+          position: sticky;
+          top: 0;
+          z-index: 100;
+        }
+        
+        /* Generation Loader Styles */
+        .generation-loader .floating-spark-icon {
+          width: 72px;
+          height: 72px;
+          top: -58px;
+          right: 80px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 50%;
+          background: linear-gradient(135deg, #f0f4ff 0%, #e8f0ff 100%);
+          box-shadow: 0 12px 27px 0 rgba(53,120,227,.15);
+        }
+        .generation-loader .floating-spark-icon .sparkling-icon {
+          font-size: 28px;
+          text-align: center;
+          line-height: 72px;
+          background: linear-gradient(90deg, #476CFF, #0C6CFB);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
+          animation: sparkle 2s ease-in-out infinite;
+        }
+        .generation-loader .progress-bar-striped {
+          background-size: 24px 24px, 100% 100% !important;
+          animation: progress-bar-stripes-new 1s linear infinite !important;
+        }
+        
+        /* Stage Dots */
+        .stage-dot {
+          width: 10px;
+          height: 10px;
+          border-radius: 50%;
+          background-color: #dee2e6;
+          transition: all 0.3s ease;
+        }
+        .stage-dot.active {
+          background-color: #335cff;
+          transform: scale(1.2);
+        }
+        .stage-dot.completed {
+          background-color: #28a745;
+        }
+        
+        /* Preview iframe */
+        .preview-frame {
+          border: 1px solid #e5e7eb;
+          border-radius: 8px;
+          background: #fff;
+          overflow: hidden;
+        }
+        .preview-frame iframe {
+          width: 100%;
+          height: 100%;
+          border: none;
+        }
+        
+        /* Preview Device Toggle - Match Laravel */
+        .preview-device-toggle {
+          display: none;
+          background-color: #e4e4e7;
+          border-radius: 8px;
+          padding: 4px;
+        }
+        @media (min-width: 1300px) {
+          .preview-device-toggle {
+            display: flex;
+          }
+        }
+        .preview-device-btn {
+          background: transparent;
+          border: none;
+          padding: 2px 16px;
+          font-size: 14px;
+          color: #6b7280;
+          border-radius: 6px;
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+        .preview-device-btn:hover {
+          color: #374151;
+        }
+        .preview-device-btn.active {
+          background-color: #fff;
+          color: #111827;
+          box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+        }
+        
+        /* Preview Panel Container */
+        #AIStorePreview {
+          height: calc(100vh - 115px);
+          width: inherit;
+        }
+        #AIStorePreview.preview-mobile .preview-ifram-wrapper {
+          width: 500px;
+          margin: 0 auto;
+        }
+        #AIStorePreview.preview-desktop .preview-ifram-wrapper {
+          width: 100%;
+        }
+        .preview-ifram-wrapper {
+          transition: width 0.3s ease;
+        }
+        .preview-ifram-wrapper iframe {
+          border: none;
+        }
+        
+        /* Content Editor Wrapper - Match Laravel */
+        .content-editor-wrapper {
+          position: relative;
+          height: calc(100vh - 156px);
+          display: flex;
+          flex-direction: column;
+          width: 400px;
+        }
+        .content-editor {
+          flex: 1;
+          overflow-y: auto;
+          overflow-x: hidden;
+          padding-bottom: 100px;
+        }
+        .step-buttons-wrapper {
+          position: absolute;
+          bottom: 0;
+          left: 0;
+          right: 0;
+          background-color: #fff;
+          padding: 16px;
+          border-top: 1px solid #e4e4e7;
+          z-index: 10;
+        }
+        
+        /* Section Navigation Menu - Match Laravel */
+        .content-menu-wrapper .content-menu-items-tab {
+          width: 300px;
+          border-right: 1px solid #e4e4e7;
+          padding: 10px;
+          flex-wrap: nowrap !important;
+          flex-direction: column;
+        }
+        .content-menu-wrapper .content-menu-item-link {
+          transition: all 0.3s;
+          color: #525866;
+          background-color: #fff;
+          border: none;
+          border-radius: 10px;
+          padding: 8px 30px 8px 8px;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+        .content-menu-wrapper .content-menu-item-link.active {
+          background-color: rgba(153, 160, 174, 0.1);
+          color: #335cff;
+        }
+        .content-menu-wrapper .content-menu-item-link.active .item-link-icon {
+          color: #335cff;
+        }
+        .content-menu-wrapper .content-menu-item-link.active .item-link-right-arrow {
+          opacity: 1;
+        }
+        .content-menu-wrapper .content-menu-item-link .item-link-icon {
+          color: #99a0ae;
+        }
+        .content-menu-wrapper .content-menu-item-link .item-link-right-arrow {
+          right: 8px;
+          top: 12px;
+          opacity: 0;
+          color: #99a0ae;
+        }
+        
+        /* Add New Section Button */
+        .btn-add-new-section {
+          padding: 8px;
+        }
+        .btn-add-new-section:hover {
+          background-color: rgba(153, 160, 174, 0.1);
+        }
+        
+        /* Sortable Section Navigation */
+        .sortable-section-nav {
+          display: flex;
+          flex-direction: column;
+        }
+        .section-nav-item-ghost {
+          opacity: 0.4;
+          background: rgba(51, 92, 255, 0.1);
+          border-radius: 8px;
+        }
+        .section-nav-item-drag {
+          background: #fff;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+          border-radius: 8px;
+        }
+        
+        /* Page Toggle Dropdown */
+        .page-toggle {
+          padding: 0.375rem 2.25rem 0.375rem 0.75rem;
+          height: 34px;
+        }
+        
+        /* Responsive adjustments */
+        @media (min-width: 992px) and (max-width: 1400px) {
+          #AIStorePreview {
+            width: 350px !important;
+          }
+          .content-menu-items-tab {
+            width: 240px !important;
+          }
+        }
+        
+        @media only screen and (max-width: 768px) {
+          .generation-loader .floating-spark-icon {
+            width: 60px;
+            height: 60px;
+            top: -58px;
+            right: 40px;
+          }
+          .generation-loader .floating-spark-icon .sparkling-icon {
+            font-size: 24px;
+            line-height: 60px;
+          }
+          #AIStorePreview {
+            width: 100% !important;
+          }
+        }
+      `}</style>
+
       <DashboardHeader
         title="Créez votre boutique avec l'IA"
         subtitle="Créez une boutique Shopify optimisée en quelques secondes"
@@ -102,247 +1423,1259 @@ export default function AIShopPage() {
         showSearch={false}
         showStats={false}
       >
-        {/* Shop Generation Credits */}
-        <div          className="progress-circle d-flex gap-2 flex-row"
-        >
-          <div className="progress-circle-wrapper">
-            {credits === null ? (
-              <div className="spinner-border spinner-border-sm" role="status"></div>
-            ) : credits === -1 ? (
-              <i className="ri-infinity-fill"></i>
-            ) : (
-              <span className="fw-bold">{credits}</span>
-            )}
-          </div>
-          <div className="progress-details">
-            <div className="progress-text">{credits === -1 ? '∞' : credits ?? '...'}</div>
-            <div className="progress-label">Génération de boutique</div>
-          </div>
-        </div>
+        {/* Step Navigation for Desktop */}
+        {currentStep > 1 && (
+          <StepIndicator currentStep={currentStep} steps={STEPS} />
+        )}
+        
+        {/* Credits Display */}
+        {currentStep === 1 && (
+          loading ? (
+            <div className="progress-circle d-flex gap-2 flex-column flex-md-row" style={{ opacity: 0.5 }}>
+              <div className="progress-circle-wrapper">
+                <div className="spinner-border spinner-border-sm text-primary" role="status">
+                  <span className="visually-hidden">Loading...</span>
+                </div>
+              </div>
+              <div className="progress-details">
+                <div className="progress-text text-muted">...</div>
+                <div className="progress-label">Chargement</div>
+              </div>
+            </div>
+          ) : stats?.storeGeneration.isUnlimited ? (
+            <div className="progress-circle-unli d-flex gap-2 flex-column flex-md-row">
+              <div className="progress-circle-wrapper">
+                <i className="ri-infinity-fill"></i>
+              </div>
+              <div className="progress-details">
+                <div className="progress-text">∞</div>
+                <div className="progress-label">Génération de boutique</div>
+              </div>
+            </div>
+          ) : stats ? (
+            <div 
+              className="progress-circle d-flex gap-2 flex-column flex-md-row"
+              data-progress={stats.storeGeneration.used}
+              data-total={stats.storeGeneration.limit}
+            >
+              <div className="progress-circle-wrapper">
+                <svg width="32px" height="32px">
+                  <circle className="progress-background circle-2" cx="16" cy="16" r="12"></circle>
+                  <circle 
+                    className="progress-bar-circle circle-2" 
+                    cx="16" cy="16" r="12" 
+                    stroke={storeProgress?.color || '#0c6cfb'}
+                    strokeDasharray={storeProgress?.dasharray}
+                    strokeDashoffset={storeProgress?.dashoffset}
+                    style={{ transform: 'rotate(-90deg)', transformOrigin: 'center' }}
+                  ></circle>
+                </svg>
+              </div>
+              <div className="progress-details">
+                <div className="progress-text" style={{ color: storeProgress?.isLimitReached ? '#ef4444' : undefined }}>{storeProgress?.text}</div>
+                <div className="progress-label">Génération de boutique</div>
+              </div>
+            </div>
+          ) : null
+        )}
       </DashboardHeader>
 
+      {/* Mobile Step Header */}
+      {currentStep > 1 && (
+        <MobileStepHeader
+          currentStep={currentStep}
+          steps={STEPS}
+          onBack={handleBack}
+          onNext={handleNext}
+          canGoBack={currentStep > 1}
+          canGoNext={canGoNext || currentStep === 4}
+          isLoading={isGenerating || isPushing}
+        />
+      )}
+
       <div className="bg-white home-content-wrapper">
-        <div className="container-fluid px-2 px-md-4 py-5">
+        <div className="container-fluid px-2 px-md-4 py-4">
           
           {/* Error Message */}
           {error && (
-            <div              className="alert alert-warning mx-auto mb-4 d-flex justify-content-between align-items-center"
-              style={{ maxWidth: '900px' }}
-            >
-              <span>{error}</span>
-              <button 
-                type="button" 
-                className="btn-close" 
-                onClick={() => setError(null)}
-              ></button>
+            <div className="alert alert-danger mx-auto mb-4 d-flex justify-content-between align-items-center" style={{ maxWidth: '900px' }}>
+              <span><i className="ri-error-warning-line me-2"></i>{error}</span>
+              <button type="button" className="btn-close" onClick={() => setError(null)}></button>
             </div>
           )}
 
-          {/* Hero Section */}
-          <div            className="text-center mx-auto"
-            style={{ maxWidth: '900px', marginTop: '40px', marginBottom: '50px' }}
-          >
-            <h2 className="fw-400 mb-3" style={{ fontSize: 'clamp(20px, 5vw, 26px)', color: '#0E121B' }}>
-              Créez votre boutique en quelques secondes avec{' '}
-              <span style={{
-                background: 'linear-gradient(90deg, #476CFF 0%, #0C6CFB 100%)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                backgroundClip: 'text',
-                fontWeight: 600
-              }}>CopyfyAI</span>
-              <sup>
-                <span className="badge bg-success-new ms-2 align-middle" style={{ fontSize: '10px', fontWeight: 500, verticalAlign: 'super' }}>
-                  NEW
-                </span>
-              </sup>
-            </h2>
-            <p className="text-sub mb-0" style={{ fontSize: '15px', lineHeight: '1.6', color: '#6B7280' }}>
-              Transformez un lien de produit en boutique qui convertie. Collez le lien{' '}
-              <span className="export-aliexpress-gradient">AliExpress</span> ou{' '}
-              <span className="export-shopify-gradient">Amazon</span> ci-dessous, générez et personnalisez.
-            </p>
-          </div>
+          {/* Success Message */}
+          {successMessage && (
+            <div className="alert alert-success mx-auto mb-4 d-flex justify-content-between align-items-center" style={{ maxWidth: '900px' }}>
+              <span><i className="ri-check-line me-2"></i>{successMessage}</span>
+              <button type="button" className="btn-close" onClick={() => setSuccessMessage(null)}></button>
+            </div>
+          )}
 
-          {/* Input Section */}
-          <div            className="ai-shop-input-wrapper mx-auto"
-          >
-            <div className="ai-shop-input-section">
-              {/* URL Input */}
-              <div className="position-relative" style={{ flexGrow: 1, width: '400px', maxWidth: '100%' }}>
+          {/* ==================== STEP 1: IMPORT ==================== */}
+          {currentStep === 1 && (
+            <div className="step-content-enter">
+              {/* Show loading animation when generating */}
+              {isGenerating ? (
+                <GenerationLoader
+                  isVisible={isGenerating}
+                  productUrl={productUrl}
+                  progress={generationProgress}
+                  currentStage={generationStage}
+                />
+              ) : (
+                <>
+                  {/* Hero Section */}
+                  <div className="text-center mx-auto" style={{ maxWidth: '900px', marginTop: '40px', marginBottom: '50px' }}>
+                    <h2 className="fw-400 mb-3" style={{ fontSize: 'clamp(20px, 5vw, 26px)', color: '#0E121B' }}>
+                      Créez votre boutique en quelques secondes avec{' '}
+                      <span style={{
+                        background: 'linear-gradient(90deg, #476CFF 0%, #0C6CFB 100%)',
+                        WebkitBackgroundClip: 'text',
+                        WebkitTextFillColor: 'transparent',
+                        backgroundClip: 'text',
+                        fontWeight: 600
+                      }}>CopyfyAI</span>
+                      <sup>
+                        <span className="badge bg-success-new ms-2 align-middle" style={{ fontSize: '10px', fontWeight: 500, verticalAlign: 'super' }}>
+                          NEW
+                        </span>
+                      </sup>
+                    </h2>
+                    <p className="text-sub mb-0" style={{ fontSize: '15px', lineHeight: '1.6', color: '#6B7280' }}>
+                      Transformez un lien de produit en boutique qui convertie. Collez le lien{' '}
+                      <span className="export-aliexpress-gradient">AliExpress</span> ou{' '}
+                      <span className="export-shopify-gradient">Amazon</span> ci-dessous, générez et personnalisez.
+                    </p>
+                  </div>
+
+                  {/* Input Section */}
+                  <div className="ai-shop-input-wrapper mx-auto">
+                    <div className="ai-shop-input-section">
+                      <div className="position-relative" style={{ flexGrow: 1, width: '400px', maxWidth: '100%' }}>
+                        <Input
+                          type="text"
+                          className="ai-shop-url-input form-control design-2"
+                          placeholder="https://www.aliexpress.com/item/10050082978909342..."
+                          value={productUrl}
+                          onChange={(e) => setProductUrl(e.target.value)}
+                          disabled={isGenerating || !hasCredits}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' && !isGenerating && hasCredits && productUrl.trim()) {
+                              handleGenerate();
+                            }
+                          }}
+                        />
+                      </div>
+
+                      <select
+                        className="ai-shop-lang-select form-select design-2"
+                        value={selectedLanguage}
+                        onChange={(e) => setSelectedLanguage(e.target.value)}
+                        disabled={isGenerating}
+                      >
+                        {LANGUAGES.map(lang => (
+                          <option key={lang.code} value={lang.code}>
+                            {lang.flag} {lang.name}
+                          </option>
+                        ))}
+                      </select>
+
+                      <Button
+                        onClick={handleGenerate}
+                        className="ai-shop-generate-btn btn btn-primary"
+                        disabled={isGenerating || !productUrl.trim() || !hasCredits}
+                      >
+                        {isGenerating ? (
+                          <>
+                            <span className="spinner-border spinner-border-sm me-2" role="status"></span>
+                            Génération...
+                          </>
+                        ) : (
+                          <>
+                            <i className="ri-sparkling-line me-2"></i>
+                            Générer
+                          </>
+                        )}
+                      </Button>
+                    </div>
+
+                    {/* Shopify Setup Notice */}
+                    {!session?.user?.shopifyDomain && (
+                      <div className="alert alert-info mt-3 mx-auto" style={{ maxWidth: '600px' }}>
+                        <i className="ri-information-line me-2"></i>
+                        <a href="/dashboard/settings" className="alert-link">Connectez votre boutique Shopify</a>
+                        {' '}dans les paramètres pour utiliser cette fonctionnalité.
+                      </div>
+                    )}
+
+                    {!hasCredits && !loading && (
+                      <div className="alert alert-warning mt-3 mx-auto" style={{ maxWidth: '600px' }}>
+                        <i className="ri-coins-line me-2"></i>
+                        Vous avez atteint votre limite de génération.{' '}
+                        <a href="/dashboard/settings" className="alert-link">Passez au plan supérieur</a>
+                        {' '}pour plus de crédits.
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+
+              {/* History Section - hidden when generating */}
+              {!isGenerating && (
+              <div className="table-view mx-auto mt-5" style={{ maxWidth: '1200px' }}>
+                <h3 className="fs-normal fw-600 mb-4">History</h3>
+
+                <div className="table-wrapper" style={{ overflowX: 'auto', paddingBottom: '50px' }}>
+                  <Table className="table mb-0 table-hover" style={{ minWidth: '700px' }}>
+                    <TableHeader>
+                      <TableRow className="border-0" style={{ backgroundColor: '#f8fafc' }}>
+                        <TableHead className="border-0 fw-500 py-3" style={{ color: '#64748b', fontSize: '13px' }}>Product</TableHead>
+                        <TableHead className="border-0 fw-500 py-3" style={{ color: '#64748b', fontSize: '13px' }}>Language</TableHead>
+                        <TableHead className="border-0 fw-500 py-3" style={{ color: '#64748b', fontSize: '13px' }}>Type</TableHead>
+                        <TableHead className="border-0 fw-500 py-3" style={{ color: '#64748b', fontSize: '13px' }}>Last Update</TableHead>
+                        <TableHead className="border-0 fw-500 py-3 text-end" style={{ color: '#64748b', fontSize: '13px' }}>Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {isLoadingHistory ? (
+                        <TableRow>
+                          <TableCell colSpan={5} className="text-center py-5">
+                            <div className="spinner-border text-primary" role="status">
+                              <span className="visually-hidden">Chargement...</span>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ) : generationHistory.length > 0 ? (
+                        generationHistory.map((item) => (
+                          <TableRow key={item.id} className="border-bottom">
+                            <TableCell className="align-middle py-3">
+                              <div className="d-flex align-items-center gap-3">
+                                <div className="position-relative">
+                                  <img 
+                                    src={item.image} 
+                                    alt={item.title} 
+                                    className="rounded" 
+                                    style={{ width: '64px', height: '64px', objectFit: 'cover' }} 
+                                    onError={(e) => { (e.target as HTMLImageElement).src = '/img_not_found.png'; }} 
+                                  />
+                                  {/* Sparkle decoration on image */}
+                                  <span className="position-absolute" style={{ top: '-4px', right: '-4px', fontSize: '12px' }}>✨</span>
+                                </div>
+                                <div>
+                                  <p className="mb-1 fw-500" style={{ fontSize: '14px', color: '#1e293b' }}>{item.title}</p>
+                                  <a 
+                                    href={item.productUrl} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer" 
+                                    className="text-decoration-none" 
+                                    style={{ fontSize: '12px', color: '#3b82f6' }}
+                                  >
+                                    {item.productUrl.length > 40 ? item.productUrl.substring(0, 40) + '...' : item.productUrl}
+                                  </a>
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell className="align-middle py-3">
+                              <span style={{ fontSize: '20px' }}>{getLanguageFlag(item.language)}</span>
+                            </TableCell>
+                            <TableCell className="align-middle py-3">
+                              <span 
+                                className="badge px-3 py-2" 
+                                style={{ 
+                                  backgroundColor: '#3b82f6', 
+                                  color: '#fff', 
+                                  borderRadius: '6px',
+                                  fontSize: '12px',
+                                  fontWeight: 500
+                                }}
+                              >
+                                Store
+                              </span>
+                            </TableCell>
+                            <TableCell className="align-middle py-3" style={{ color: '#64748b', fontSize: '13px' }}>
+                              {getRelativeTime(item.createdAt)}
+                            </TableCell>
+                            <TableCell className="align-middle py-3 text-end">
+                              <a 
+                                href={`/dashboard/ai-shop/${item.id}`} 
+                                className="btn text-decoration-none d-inline-flex align-items-center gap-1"
+                                style={{ 
+                                  border: '1px solid #e2e8f0',
+                                  borderRadius: '8px',
+                                  padding: '6px 14px',
+                                  fontSize: '13px',
+                                  color: '#475569',
+                                  backgroundColor: '#fff'
+                                }}
+                              >
+                                <i className="ri-edit-line" style={{ fontSize: '14px' }}></i>
+                                Configure
+                              </a>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      ) : (
+                        <TableRow>
+                          <TableCell colSpan={5} className="text-center py-5">
+                            <div className="d-flex flex-column align-items-center gap-3">
+                              <div className="d-flex align-items-center justify-content-center rounded-circle" style={{ width: '56px', height: '56px', backgroundColor: '#EFF6FF' }}>
+                                <i className="ri-store-2-line" style={{ fontSize: '28px', color: '#0c6cfb' }}></i>
+                              </div>
+                              <div>
+                                <h4 className="fw-600 fs-normal mb-1">No store generated</h4>
+                                <p className="text-sub fs-small mb-0">Enter an AliExpress or Amazon product link to create your first store.</p>
+                              </div>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+              )}
+            </div>
+          )}
+
+          {/* ==================== STEP 2: SELECT IMAGES ==================== */}
+          {currentStep === 2 && aiContent && (
+            <div className="step-content-enter mx-auto" style={{ maxWidth: '900px' }}>
+              {/* Store Name - Centered */}
+              <div className="text-center mb-4">
+                <label className="form-label fw-500 fs-small text-muted mb-2">
+                  Nom de votre boutique (peut être modifié à tout moment)
+                </label>
                 <Input
                   type="text"
-                  className="ai-shop-url-input form-control design-2"
-                  placeholder="https://www.aliexpress.com/item/10050082978909342..."
-                  value={productUrl}
-                  onChange={(e) => setProductUrl(e.target.value)}
-                  disabled={isGenerating || credits === 0}
+                  className="form-control text-center fw-600"
+                  style={{ maxWidth: '300px', margin: '0 auto', fontSize: '1.2rem' }}
+                  value={storeName || 'YOUR BRAND'}
+                  onChange={(e) => setStoreName(e.target.value)}
+                  placeholder="YOUR BRAND"
                 />
               </div>
 
-              {/* Language Select */}
-              <select
-                className="ai-shop-lang-select form-select design-2"
-                value={selectedLanguage}
-                onChange={(e) => setSelectedLanguage(e.target.value)}
-                disabled={isGenerating}
-              >
-                <option value="en">Anglais</option>
-                <option value="fr">Français</option>
-                <option value="es">Espagnol</option>
-                <option value="de">Allemand</option>
-                <option value="it">Italien</option>
-                <option value="pt">Portugais</option>
-              </select>
-
-              {/* Generate Button */}
-              <Button
-                onClick={handleGenerate}
-                className="ai-shop-generate-btn btn btn-primary"
-                disabled={isGenerating || !productUrl.trim() || credits === 0}
-              >
-                {isGenerating ? (
-                  <>
-                    <span className="spinner-border spinner-border-sm me-2" role="status"></span>
-                    Génération...
-                  </>
-                ) : (
-                  <>
-                    <i className="ri-sparkling-line me-2"></i>
-                    Générer
-                  </>
-                )}
-              </Button>
-            </div>
-
-            {/* Shopify Setup Notice */}
-            {!session?.user?.shopifyDomain && (
-              <div className="alert alert-info mt-3 mx-auto" style={{ maxWidth: '600px' }}>
-                <i className="ri-information-line me-2"></i>
-                <a href="/dashboard/settings" className="alert-link">
-                  Connectez votre boutique Shopify
-                </a>
-                {' '}dans les paramètres pour utiliser cette fonctionnalité.
+              {/* Generate AI Image Button */}
+              <div className="text-center mb-4 p-4 border rounded" style={{ backgroundColor: '#fafafa' }}>
+                <button className="btn btn-outline-secondary">
+                  <i className="ri-magic-line me-2"></i>
+                  Générer une image avec l&apos;IA
+                </button>
               </div>
-            )}
-          </div>
 
-          {/* History Section */}
-          <div            className="table-view mx-auto mt-5"
-            style={{ maxWidth: '1200px' }}
-          >
-            <h3 className="fs-normal fw-600 mb-4">Historique</h3>
+              {/* Image Selection */}
+              <div className="mb-4">
+                <p className="fw-500 fs-small text-dark mb-2">Sélectionnez les images du produit que vous souhaitez ajouter</p>
+                <p className="text-muted fs-xs mb-3">
+                  <i className="ri-information-line me-1"></i>
+                  Conseil: Vous pouvez réorganiser les images en les faisant glisser dans l&apos;ordre de votre choix.
+                </p>
+                
+                {/* Images Grid with "Modifier avec IA" buttons */}
+                <div className="row g-3" data-image-grid>
+                  {(aiContent.images || []).map((image, idx) => (
+                    <div key={idx} className="col-6 col-md-4 col-lg-3 image-card">
+                      <label className="radio-container d-block position-relative" style={{ cursor: 'pointer' }}>
+                        <input 
+                          type="checkbox" 
+                          className="d-none"
+                          checked={selectedImages.includes(image)}
+                          onChange={() => {
+                            if (selectedImages.includes(image)) {
+                              setSelectedImages(selectedImages.filter(i => i !== image));
+                            } else {
+                              setSelectedImages([...selectedImages, image]);
+                            }
+                          }}
+                        />
+                        <div 
+                          className={`custom-image-radio rounded overflow-hidden border ${selectedImages.includes(image) ? 'border-primary border-2' : ''}`}
+                          style={{ aspectRatio: '1' }}
+                        >
+                          <img 
+                            src={image} 
+                            alt={`Product ${idx + 1}`}
+                            className="w-100 h-100"
+                            style={{ objectFit: 'cover' }}
+                          />
+                          {/* Checkmark */}
+                          {selectedImages.includes(image) && (
+                            <div 
+                              className="position-absolute d-flex align-items-center justify-content-center rounded-circle bg-primary"
+                              style={{ top: '8px', right: '8px', width: '24px', height: '24px' }}
+                            >
+                              <i className="ri-check-line text-white fs-small"></i>
+                            </div>
+                          )}
+                          {/* Edit with AI button */}
+                          <button
+                            type="button"
+                            className="edit-image-ai-btn position-absolute"
+                            style={{ 
+                              bottom: '8px', 
+                              right: '8px',
+                              background: 'rgba(14, 18, 27, 0.24)',
+                              backdropFilter: 'blur(4px)',
+                              color: '#fff',
+                              border: 'none',
+                              borderRadius: '12px',
+                              padding: '4px 12px',
+                              fontSize: '12px',
+                              cursor: 'pointer',
+                            }}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              // TODO: Implement AI image editing
+                              console.log('Edit image with AI:', image);
+                            }}
+                          >
+                            <i className="ri-magic-line me-1"></i>
+                            Modifier avec IA
+                          </button>
+                        </div>
+                      </label>
+                    </div>
+                  ))}
+                  {/* More images indicator */}
+                  {(aiContent.images || []).length > 8 && (
+                    <div className="col-6 col-md-4 col-lg-3">
+                      <div 
+                        className="d-flex align-items-center justify-content-center border rounded bg-light"
+                        style={{ aspectRatio: '1' }}
+                      >
+                        <span className="fs-4 fw-600 text-muted">
+                          +{(aiContent.images || []).length - 8}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
 
-            <div className="table-wrapper" style={{ overflowX: 'auto', paddingBottom: '50px' }}>
-              <Table className="table mb-0" style={{ minWidth: '800px' }}>
-                <TableHeader className="bg-weak-50">
-                  <TableRow className="border-0">
-                    <TableHead scope="col" className="border-0 text-uppercase fw-600" style={{ color: '#525866', fontSize: '12px' }}>
-                      Les produits
-                    </TableHead>
-                    <TableHead scope="col" className="border-0 text-uppercase fw-600" style={{ color: '#525866', fontSize: '12px' }}>
-                      Langue du site
-                    </TableHead>
-                    <TableHead scope="col" className="border-0 text-uppercase fw-600" style={{ color: '#525866', fontSize: '12px' }}>
-                      Statut
-                    </TableHead>
-                    <TableHead scope="col" className="border-0 text-uppercase fw-600" style={{ color: '#525866', fontSize: '12px' }}>
-                      Date
-                    </TableHead>
-                    <TableHead scope="col" className="border-0 text-uppercase fw-600 text-end" style={{ color: '#525866', fontSize: '12px' }}>
-                      Actions
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {generationHistory.length > 0 ? (
-                    generationHistory.map((item) => (
-                      <TableRow key={item.id}>
-                        <TableCell className="align-middle py-3 border-b-gray">
-                          <div className="d-flex align-items-center gap-3">
-                            <img
-                              src={item.image}
-                              alt={item.title}
-                              className="rounded"
-                              style={{ width: '50px', height: '50px', objectFit: 'cover' }}
-                              onError={(e) => {
-                                (e.target as HTMLImageElement).src = '/img_not_found.png';
-                              }}
+              {/* Navigation Buttons */}
+              <div className="d-none d-lg-flex justify-content-between align-items-center pt-4 border-top">
+                <Button variant="outline" onClick={handleBack}>
+                  Retour
+                </Button>
+                <Button onClick={handleNext} disabled={selectedImages.length === 0}>
+                  Suivant
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* ==================== STEP 3: CUSTOMIZE ==================== */}
+          {currentStep === 3 && aiContent && (
+            <div className="step-content-enter customize-ai-store">
+              <div className="d-flex content-menu-wrapper" style={{ height: 'calc(100vh - 115px)' }}>
+                {/* Left Sidebar: Section Navigation Only */}
+                <div className="d-none d-lg-flex flex-column content-menu-items-tab flex-shrink-0" style={{ width: '280px', borderRight: '1px solid #e5e7eb', height: '100%', overflowY: 'auto' }}>
+                  <div className="p-3">
+                    {/* Add New Section Button */}
+                    <button 
+                      className="btn btn-link btn-add-new-section text-decoration-none text-start w-100 p-2 mb-2 rounded"
+                      style={{ background: 'transparent' }}
+                      onClick={() => setShowAddSectionModal(true)}
+                    >
+                      <i className="ri-add-circle-line me-2 fs-lg text-muted"></i>
+                      <span className="fw-500 text-dark">Add new section</span>
+                    </button>
+
+                    {/* Section Navigation - Sortable */}
+                    <div id="sortableSectionNav" className="sortable-section-nav d-flex flex-column gap-1">
+                      {SECTION_TYPES.map(section => (
+                        <div 
+                          key={section.id} 
+                          className={`section-nav-item d-flex align-items-center gap-2 rounded position-relative`}
+                          data-section-id={section.id}
+                          data-section-type={section.id}
+                        >
+                          {/* Drag Handle */}
+                          <i className="ri-draggable section-drag-handle text-muted" style={{ fontSize: '16px', cursor: 'grab', padding: '8px 4px' }}></i>
+                          
+                          <button
+                            type="button"
+                            className={`content-menu-item-link d-flex align-items-center gap-2 flex-grow-1 text-start border-0 bg-transparent py-2 px-1 rounded ${activeSection === section.id ? 'active' : ''}`}
+                            onClick={() => setActiveSection(section.id)}
+                          >
+                            <i className={`${section.icon} item-link-icon ${activeSection === section.id ? 'text-primary' : 'text-muted'}`} style={{ fontSize: '16px' }}></i>
+                            <span className={`fs-small fw-500 ${activeSection === section.id ? 'text-primary' : ''}`}>{section.name}</span>
+                            <i className="ri-arrow-right-s-line item-link-right-arrow ms-auto text-muted" style={{ opacity: activeSection === section.id ? 1 : 0 }}></i>
+                          </button>
+
+                          {/* Visibility Toggle */}
+                          <button 
+                            className="btn btn-sm section-visibility-btn p-1"
+                            title="Toggle visibility"
+                          >
+                            <i className="ri-eye-line text-muted"></i>
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Middle: Content/Styles Wrapper with Editor */}
+                <div className="content-editor-wrapper d-flex flex-column" style={{ width: '400px', height: '100%', borderRight: '1px solid #e5e7eb' }}>
+                  {/* Content/Styles Tab Headers */}
+                  <ul className="nav nav-tabs nav-pills custom-nav-line px-3 gap-4 border-bottom flex-shrink-0" role="tablist">
+                    <li className="nav-item" role="presentation">
+                      <button 
+                        className={`nav-link px-0 pb-3 pt-2 border-0 bg-transparent fw-500 fs-small ${activeTab === 'content' ? 'active text-primary' : 'text-dark'}`}
+                        onClick={() => setActiveTab('content')}
+                        style={{ borderBottom: activeTab === 'content' ? '2px solid #335cff' : 'none' }}
+                      >
+                        Content
+                      </button>
+                    </li>
+                    <li className="nav-item" role="presentation">
+                      <button 
+                        className={`nav-link px-0 pb-3 pt-2 border-0 bg-transparent fw-500 fs-small ${activeTab === 'styles' ? 'active text-primary' : 'text-dark'}`}
+                        onClick={() => setActiveTab('styles')}
+                        style={{ borderBottom: activeTab === 'styles' ? '2px solid #335cff' : 'none' }}
+                      >
+                        Styles
+                      </button>
+                    </li>
+                  </ul>
+
+                  {/* Content Editor Area - Scrollable */}
+                  <div className="content-editor flex-grow-1 p-4" style={{ overflowY: 'auto' }}>
+                    {/* Content Tab - Section Editor */}
+                    {activeTab === 'content' && (
+                      <div className="tab-content">
+                        {/* Section Header */}
+                        <div className="d-flex justify-content-between align-items-center mb-3">
+                          <h5 className="mb-0 fs-lg fw-600">
+                            {SECTION_TYPES.find(s => s.id === activeSection)?.name || 'Section'}
+                          </h5>
+                          <button className="btn btn-link text-muted text-decoration-none p-0" type="button">
+                            <i className="ri-delete-bin-6-line fs-5"></i>
+                          </button>
+                        </div>
+
+                        {activeSection === 'productInfo' && (
+                          <div className="section-content">
+                            <AIInputField
+                              label="En-tête de section"
+                              value={aiContent.header || ''}
+                              onChange={(val) => setAiContent({ ...aiContent, header: val })}
+                              placeholder="Découvrez notre produit"
+                              fieldName="header"
+                              onRegenerate={handleRegenerateField}
                             />
-                            <div>
-                              <p className="mb-0 fw-500 fs-small">{item.title}</p>
-                              <a
-                                href={item.productUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-muted text-decoration-none"
-                                style={{ fontSize: '11px' }}
-                              >
-                                {item.productUrl.length > 50 ? item.productUrl.substring(0, 50) + '...' : item.productUrl}
-                              </a>
+                            
+                            <AIInputField
+                              label="Sous-titre"
+                              value={aiContent.subheading || ''}
+                              onChange={(val) => setAiContent({ ...aiContent, subheading: val })}
+                              placeholder="Une solution innovante"
+                              fieldName="subheading"
+                              onRegenerate={handleRegenerateField}
+                            />
+
+                            <AIInputField
+                              label="Titre du produit"
+                              value={aiContent.title || ''}
+                              onChange={(val) => setAiContent({ ...aiContent, title: val })}
+                              fieldName="title"
+                              onRegenerate={handleRegenerateField}
+                            />
+
+                            {/* Prices - no AI regenerate */}
+                            <div className="row mb-3">
+                              <div className="col-6">
+                                <label className="form-label text-dark fw-500 mb-1 fs-small">Prix</label>
+                                <Input
+                                  type="text"
+                                  value={aiContent.price || ''}
+                                  onChange={(e) => setAiContent({ ...aiContent, price: e.target.value })}
+                                  className="form-control"
+                                />
+                              </div>
+                              <div className="col-6">
+                                <label className="form-label text-dark fw-500 mb-1 fs-small">Prix barré</label>
+                                <Input
+                                  type="text"
+                                  value={aiContent.compareAtPrice || ''}
+                                  onChange={(e) => setAiContent({ ...aiContent, compareAtPrice: e.target.value })}
+                                  className="form-control"
+                                  placeholder="99.99"
+                                />
+                              </div>
+                            </div>
+
+                            <AIInputField
+                              type="textarea"
+                              label="Description"
+                              value={aiContent.description || ''}
+                              onChange={(val) => setAiContent({ ...aiContent, description: val })}
+                              placeholder="Décrivez votre produit..."
+                              fieldName="description"
+                              onRegenerate={handleRegenerateField}
+                            />
+                          </div>
+                        )}
+
+                        {activeSection === 'hero' && (
+                          <div className="section-content">
+                            <AIInputField
+                              label="Texte accrocheur principal"
+                              value={aiContent.mainCatchyText || ''}
+                              onChange={(val) => setAiContent({ ...aiContent, mainCatchyText: val })}
+                              placeholder="Votre titre principal"
+                              fieldName="mainCatchyText"
+                              onRegenerate={handleRegenerateField}
+                            />
+                            <AIInputField
+                              label="Sous-texte"
+                              value={aiContent.subMainCatchyText || ''}
+                              onChange={(val) => setAiContent({ ...aiContent, subMainCatchyText: val })}
+                              placeholder="Votre sous-titre"
+                              fieldName="subMainCatchyText"
+                              onRegenerate={handleRegenerateField}
+                            />
+                          </div>
+                        )}
+
+                        {activeSection === 'benefits' && (
+                          <div className="section-content">
+                            <AIInputField
+                              label="Titre des bénéfices"
+                              value={aiContent.benefitsHeading || ''}
+                              onChange={(val) => setAiContent({ ...aiContent, benefitsHeading: val })}
+                              placeholder="Pourquoi nous choisir"
+                              fieldName="benefitsHeading"
+                              onRegenerate={handleRegenerateField}
+                            />
+                            {(aiContent.benefits || []).map((benefit: string, idx: number) => (
+                              <AIInputField
+                                key={idx}
+                                label={`Bénéfice ${idx + 1}`}
+                                value={benefit}
+                                onChange={(val) => {
+                                  const newBenefits = [...(aiContent.benefits || [])];
+                                  newBenefits[idx] = val;
+                                  setAiContent({ ...aiContent, benefits: newBenefits });
+                                }}
+                                fieldName={`benefits[${idx}]`}
+                                onRegenerate={handleRegenerateField}
+                              />
+                            ))}
+                          </div>
+                        )}
+
+                        {activeSection === 'testimonials' && (
+                          <div className="section-content">
+                            {(aiContent.testimonials || []).slice(0, 4).map((testimonial: { header?: string; name?: string; review?: string }, idx: number) => (
+                              <div key={idx} className="mb-4 pb-3 border-bottom">
+                                <p className="fw-500 fs-small text-muted mb-2">
+                                  <i className="ri-chat-quote-line me-1"></i>Avis {idx + 1}
+                                </p>
+                                <AIInputField
+                                  label="Titre"
+                                  value={testimonial.header || ''}
+                                  onChange={(val) => {
+                                    const newTestimonials = [...(aiContent.testimonials || [])];
+                                    newTestimonials[idx] = { ...testimonial, header: val };
+                                    setAiContent({ ...aiContent, testimonials: newTestimonials });
+                                  }}
+                                  fieldName={`testimonials[${idx}].header`}
+                                  onRegenerate={handleRegenerateField}
+                                />
+                                <AIInputField
+                                  label="Nom"
+                                  value={testimonial.name || ''}
+                                  onChange={(val) => {
+                                    const newTestimonials = [...(aiContent.testimonials || [])];
+                                    newTestimonials[idx] = { ...testimonial, name: val };
+                                    setAiContent({ ...aiContent, testimonials: newTestimonials });
+                                  }}
+                                  fieldName={`testimonials[${idx}].name`}
+                                  onRegenerate={handleRegenerateField}
+                                />
+                                <AIInputField
+                                  type="textarea"
+                                  label="Avis"
+                                  value={testimonial.review || ''}
+                                  onChange={(val) => {
+                                    const newTestimonials = [...(aiContent.testimonials || [])];
+                                    newTestimonials[idx] = { ...testimonial, review: val };
+                                    setAiContent({ ...aiContent, testimonials: newTestimonials });
+                                  }}
+                                  fieldName={`testimonials[${idx}].review`}
+                                  onRegenerate={handleRegenerateField}
+                                />
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {activeSection === 'faq' && (
+                          <div className="section-content">
+                            {(aiContent.faq || []).map((item: { question?: string; answer?: string }, idx: number) => (
+                              <div key={idx} className="mb-4 pb-3 border-bottom">
+                                <p className="fw-500 fs-small text-muted mb-2">FAQ {idx + 1}</p>
+                                <AIInputField
+                                  label="Question"
+                                  value={item.question || ''}
+                                  onChange={(val) => {
+                                    const newFaq = [...(aiContent.faq || [])];
+                                    newFaq[idx] = { ...item, question: val };
+                                    setAiContent({ ...aiContent, faq: newFaq });
+                                  }}
+                                  fieldName={`faq[${idx}].question`}
+                                  onRegenerate={handleRegenerateField}
+                                />
+                                <AIInputField
+                                  type="textarea"
+                                  label="Réponse"
+                                  value={item.answer || ''}
+                                  onChange={(val) => {
+                                    const newFaq = [...(aiContent.faq || [])];
+                                    newFaq[idx] = { ...item, answer: val };
+                                    setAiContent({ ...aiContent, faq: newFaq });
+                                  }}
+                                  fieldName={`faq[${idx}].answer`}
+                                  onRegenerate={handleRegenerateField}
+                                />
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Other sections - placeholder */}
+                        {!['productInfo', 'hero', 'benefits', 'testimonials', 'faq'].includes(activeSection || '') && (
+                          <div className="section-content">
+                            <p className="text-muted">Éditeur de section en cours de développement...</p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Styles Tab */}
+                    {activeTab === 'styles' && (
+                    <div className="p-3">
+                      {/* Font Family Accordion */}
+                      <div className="accordion mb-4" id="stylesAccordion">
+                        <div className="accordion-item border-0 border-bottom">
+                          <h2 className="accordion-header">
+                            <button 
+                              className="accordion-button collapsed bg-transparent px-0" 
+                              type="button" 
+                              data-bs-toggle="collapse" 
+                              data-bs-target="#fontCollapse"
+                            >
+                              <i className="ri-font-size me-2 text-muted"></i>
+                              <span className="fw-500 fs-small">Police de Caractères</span>
+                            </button>
+                          </h2>
+                          <div id="fontCollapse" className="accordion-collapse collapse">
+                            <div className="accordion-body px-0 pt-2 pb-4">
+                              <p className="fs-small text-muted mb-3">Sélectionnez la police de caractères pour votre boutique</p>
+                              <div className="d-flex gap-2 flex-wrap">
+                                {FONT_FAMILIES.map(font => (
+                                  <label key={font.name} className="radio-container" style={{ cursor: 'pointer' }}>
+                                    <input 
+                                      type="radio" 
+                                      name="font_family" 
+                                      value={font.name}
+                                      checked={(aiContent.font_family_input || 'Inter') === font.name}
+                                      onChange={() => setAiContent({ ...aiContent, font_family_input: font.name })}
+                                      className="d-none"
+                                    />
+                                    <div 
+                                      className={`custom-font-check-input text-center p-2 rounded border ${(aiContent.font_family_input || 'Inter') === font.name ? 'border-primary' : 'border-light'}`}
+                                      style={{ width: '100px', background: '#fff', position: 'relative' }}
+                                    >
+                                      {(aiContent.font_family_input || 'Inter') === font.name && (
+                                        <span 
+                                          className="position-absolute bg-primary rounded-circle d-flex align-items-center justify-content-center"
+                                          style={{ width: '18px', height: '18px', top: '6px', right: '6px' }}
+                                        >
+                                          <i className="ri-check-line text-white" style={{ fontSize: '12px' }}></i>
+                                        </span>
+                                      )}
+                                      <p className="fw-500 fs-2 mb-1" style={{ fontFamily: font.name }}>Ag</p>
+                                      <p className="fs-xs text-muted mb-0">{font.name}</p>
+                                    </div>
+                                  </label>
+                                ))}
+                              </div>
                             </div>
                           </div>
-                        </TableCell>
-                        <TableCell className="align-middle py-3 border-b-gray">
-                          <img
-                            src={`/flags/${item.language}.svg`}
-                            alt={item.language}
-                            style={{ width: '24px', height: '18px' }}
-                          />
-                        </TableCell>
-                        <TableCell className="align-middle py-3 border-b-gray">
-                          <span className={`badge ${
-                            item.status === 'completed' ? 'bg-success' :
-                            item.status === 'processing' ? 'bg-warning' :
-                            item.status === 'failed' ? 'bg-danger' : 'bg-secondary'
-                          } text-white px-2 py-1 fs-xs`}>
-                            {item.status === 'completed' ? 'Terminé' :
-                             item.status === 'processing' ? 'En cours' :
-                             item.status === 'failed' ? 'Échec' : 'En attente'}
-                          </span>
-                        </TableCell>
-                        <TableCell className="align-middle py-3 border-b-gray text-sub fs-small">
-                          {new Date(item.createdAt).toLocaleDateString('fr-FR')}
-                        </TableCell>
-                        <TableCell className="align-middle py-3 border-b-gray text-end">
-                          {item.status === 'completed' && item.shopifyUrl && (
-                            <a 
-                              href={item.shopifyUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="btn btn-secondary btn-sm text-decoration-none"
+                        </div>
+
+                        {/* Import Brand Colors */}
+                        <div className="accordion-item border-0 border-bottom">
+                          <h2 className="accordion-header">
+                            <button 
+                              className="accordion-button collapsed bg-transparent px-0" 
+                              type="button" 
+                              data-bs-toggle="collapse" 
+                              data-bs-target="#importBrandCollapse"
                             >
-                              <i className="ri-external-link-line me-1"></i>
-                              Voir la boutique
-                            </a>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={5} className="text-center py-5">
-                        <div className="d-flex flex-column align-items-center gap-3">
-                          <div 
-                            className="d-flex align-items-center justify-content-center rounded-circle"
-                            style={{ width: '56px', height: '56px', backgroundColor: '#EFF6FF' }}
-                          >
-                            <i className="ri-store-2-line" style={{ fontSize: '28px', color: '#0c6cfb' }}></i>
-                          </div>
-                          <div>
-                            <h4 className="fw-600 fs-normal mb-1">Aucune boutique générée</h4>
-                            <p className="text-sub fs-small mb-0">
-                              Entrez un lien de produit AliExpress ou Amazon pour créer votre première boutique.
-                            </p>
+                              <i className="ri-palette-line me-2 text-muted"></i>
+                              <span className="fw-500 fs-small">Importer les couleurs d'un site concurrent</span>
+                            </button>
+                          </h2>
+                          <div id="importBrandCollapse" className="accordion-collapse collapse">
+                            <div className="accordion-body px-0 pt-2 pb-4">
+                              <Input 
+                                type="text"
+                                placeholder="ex: apple.com"
+                                className="form-control mb-2"
+                              />
+                              <Button variant="outline" size="sm">Importer</Button>
+                            </div>
                           </div>
                         </div>
-                      </TableCell>
-                    </TableRow>
+
+                        {/* Set Brand Colors */}
+                        <div className="accordion-item border-0">
+                          <h2 className="accordion-header">
+                            <button 
+                              className="accordion-button bg-transparent px-0" 
+                              type="button" 
+                              data-bs-toggle="collapse" 
+                              data-bs-target="#colorsCollapse"
+                            >
+                              <i className="ri-color-filter-line me-2 text-muted"></i>
+                              <span className="fw-500 fs-small">Choisissez des couleurs pour votre site</span>
+                            </button>
+                          </h2>
+                          <div id="colorsCollapse" className="accordion-collapse collapse show">
+                            <div className="accordion-body px-0 pt-2 pb-4">
+                              {/* Color Presets */}
+                              <div className="d-flex gap-2 flex-wrap mb-3">
+                                {COLOR_PRESETS.map((preset, idx) => (
+                                  <button
+                                    key={idx}
+                                    type="button"
+                                    className="btn p-1 rounded-pill border"
+                                    style={{ background: '#fff' }}
+                                    onClick={() => setAiContent({ 
+                                      ...aiContent, 
+                                      primary_color_picker: preset.primary,
+                                      tertiary_color_picker: preset.tertiary
+                                    })}
+                                  >
+                                    <span 
+                                      className="d-inline-block" 
+                                      style={{ 
+                                        width: '20px', 
+                                        height: '20px', 
+                                        background: preset.primary,
+                                        borderRadius: '10px 0 0 10px'
+                                      }}
+                                    ></span>
+                                    <span 
+                                      className="d-inline-block" 
+                                      style={{ 
+                                        width: '20px', 
+                                        height: '20px', 
+                                        background: preset.tertiary,
+                                        borderRadius: '0 10px 10px 0'
+                                      }}
+                                    ></span>
+                                  </button>
+                                ))}
+                              </div>
+
+                              {/* Generate New Colors Button */}
+                              <button
+                                type="button"
+                                className="btn btn-sm mb-4 text-white"
+                                style={{ 
+                                  background: 'linear-gradient(135deg, #4e7a9b, #6f6254)',
+                                  borderRadius: '20px',
+                                  padding: '8px 16px'
+                                }}
+                              >
+                                <i className="ri-refresh-line me-2"></i>
+                                Générer de nouvelles couleurs
+                              </button>
+
+                              {/* Action Color */}
+                              <div className="mb-3">
+                                <p className="mb-0 fw-500 fs-small">Couleur d'action</p>
+                                <p className="mb-2 fs-xs text-muted">Utilisez-la dans les boutons et les liens et plus pour mettre en évidence et souligner</p>
+                                <div className="d-flex align-items-center gap-2">
+                                  <label 
+                                    className="rounded-circle d-flex align-items-center justify-content-center overflow-hidden border"
+                                    style={{ 
+                                      width: '28px', 
+                                      height: '28px', 
+                                      background: aiContent.primary_color_picker || '#6f6254',
+                                      cursor: 'pointer'
+                                    }}
+                                  >
+                                    <input 
+                                      type="color"
+                                      value={aiContent.primary_color_picker || '#6f6254'}
+                                      onChange={(e) => setAiContent({ ...aiContent, primary_color_picker: e.target.value })}
+                                      style={{ opacity: 0, width: '100%', height: '100%', cursor: 'pointer' }}
+                                    />
+                                  </label>
+                                  <Input
+                                    type="text"
+                                    value={aiContent.primary_color_picker || '#6f6254'}
+                                    onChange={(e) => setAiContent({ ...aiContent, primary_color_picker: e.target.value })}
+                                    className="form-control"
+                                    style={{ width: '100px' }}
+                                    maxLength={7}
+                                  />
+                                </div>
+                              </div>
+
+                              {/* Surface Color */}
+                              <div>
+                                <p className="mb-0 fw-500 fs-small">Couleur de surface</p>
+                                <p className="mb-2 fs-xs text-muted">Utilisez-la dans la barre d'annonces et plus</p>
+                                <div className="d-flex align-items-center gap-2">
+                                  <label 
+                                    className="rounded-circle d-flex align-items-center justify-content-center overflow-hidden border"
+                                    style={{ 
+                                      width: '28px', 
+                                      height: '28px', 
+                                      background: aiContent.tertiary_color_picker || '#e6e1dc',
+                                      cursor: 'pointer'
+                                    }}
+                                  >
+                                    <input 
+                                      type="color"
+                                      value={aiContent.tertiary_color_picker || '#e6e1dc'}
+                                      onChange={(e) => setAiContent({ ...aiContent, tertiary_color_picker: e.target.value })}
+                                      style={{ opacity: 0, width: '100%', height: '100%', cursor: 'pointer' }}
+                                    />
+                                  </label>
+                                  <Input
+                                    type="text"
+                                    value={aiContent.tertiary_color_picker || '#e6e1dc'}
+                                    onChange={(e) => setAiContent({ ...aiContent, tertiary_color_picker: e.target.value })}
+                                    className="form-control"
+                                    style={{ width: '100px' }}
+                                    maxLength={7}
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   )}
-                </TableBody>
-              </Table>
+                  </div>
+
+                  {/* Step Navigation Buttons - Inside Content Editor Wrapper */}
+                  <div className="step-buttons-wrapper d-flex justify-content-end align-items-center gap-2 p-3 border-top bg-white flex-shrink-0">
+                    <Button variant="outline" onClick={handleBack}>
+                      Retour
+                    </Button>
+                    <Button onClick={handleNext}>
+                      Suivant
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Preview Panel - AIStorePreview */}
+                <div 
+                  id="AIStorePreview"
+                  className={`d-none d-lg-flex flex-column flex-grow-1 bg-weak-50 ${previewDevice === 'mobile' ? 'preview-mobile' : 'preview-desktop'}`}
+                  style={{ backgroundColor: '#f9fafb' }}
+                >
+                  {/* Preview Header Bar */}
+                  <div className="preview-btn-wrapper border-bottom px-3 d-flex justify-content-between align-items-center bg-white" style={{ height: '46px' }}>
+                    {/* Left: Page & Theme selectors */}
+                    <div className="d-flex align-items-center gap-2">
+                      <select 
+                        id="pageToggle"
+                        className="form-select page-toggle fs-small btn btn-secondary"
+                        value={pageView}
+                        onChange={(e) => setPageView(e.target.value as 'product_page' | 'home_page')}
+                        style={{ maxWidth: '140px', height: '34px' }}
+                      >
+                        <option value="product_page">Page de prod</option>
+                        <option value="home_page">Page d&apos;accueil</option>
+                      </select>
+                      <select 
+                        id="themeSelector"
+                        className="form-select fs-small d-none"
+                        style={{ maxWidth: '110px', height: '34px' }}
+                        defaultValue="theme_v4"
+                      >
+                        <option value="theme_v4">Theme V4</option>
+                        <option value="theme_v3">Theme V3</option>
+                      </select>
+                    </div>
+                    
+                    {/* Center: Mobile/Desktop Toggle */}
+                    <div id="previewDeviceToggle" className="preview-device-toggle d-none d-xl-flex">
+                      <button 
+                        type="button"
+                        className={`preview-device-btn ${previewDevice === 'mobile' ? 'active' : ''}`}
+                        data-device="mobile"
+                        onClick={() => setPreviewDevice('mobile')}
+                      >
+                        Mobile
+                      </button>
+                      <button 
+                        type="button"
+                        className={`preview-device-btn ${previewDevice === 'desktop' ? 'active' : ''}`}
+                        data-device="desktop"
+                        onClick={() => setPreviewDevice('desktop')}
+                      >
+                        Desktop
+                      </button>
+                    </div>
+                    
+                    {/* Right: View Store Link */}
+                    <a 
+                      id="preview_link_btn"
+                      href="#" 
+                      className="btn btn-secondary fw-normal d-flex align-items-center gap-1"
+                      style={{ height: '34px', fontSize: '14px' }}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <i className="ri-external-link-line"></i>
+                      <span className="d-none d-xl-inline">Voir la boutique</span>
+                    </a>
+                  </div>
+                  
+                  {/* Preview Iframe Container */}
+                  <div 
+                    id="previewiframeWrapper" 
+                    className="preview-ifram-wrapper p-3 d-flex justify-content-center mx-auto flex-grow-1"
+                    style={{ 
+                      width: previewDevice === 'mobile' ? '500px' : '100%',
+                      transition: 'width 0.3s ease',
+                      overflow: 'auto',
+                    }}
+                  >
+                    {generatedProductId ? (
+                      <iframe
+                        id="shopPreviewIframe"
+                        className="radius-12 bg-white"
+                        src={`/api/ai/liquid-preview?product_id=${generatedProductId}&page_type=${pageView === 'home_page' ? 'home' : 'product'}&t=${previewKey}`}
+                        style={{ 
+                          width: '100%', 
+                          height: 'calc(100vh - 280px)', 
+                          border: 'none',
+                          borderRadius: '12px',
+                          boxShadow: previewDevice === 'mobile' ? '0 4px 20px rgba(0,0,0,0.1)' : 'none',
+                        }}
+                        title="Aperçu de la boutique"
+                      />
+                    ) : (
+                      <div 
+                        id="iframeLodingSkeleton"
+                        className="is-loading w-100 d-flex align-items-center justify-content-center"
+                        style={{ height: '500px', maxWidth: '390px', borderRadius: '12px', background: '#e9ecef' }}
+                      >
+                        <div className="text-center text-muted">
+                          <i className="ri-store-2-line mb-3" style={{ fontSize: '48px', opacity: 0.3 }}></i>
+                          <p className="fw-500">Aperçu en temps réel</p>
+                          <p className="fs-small">L&apos;aperçu de votre boutique apparaîtra ici</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
             </div>
-          </div>
+          )}
+
+          {/* ==================== STEP 4: PUBLISH ==================== */}
+          {currentStep === 4 && aiContent && (
+            <div className="step-content-enter">
+              {/* Warning Banner */}
+              <div className="alert alert-warning alert-dismissible mb-0 rounded-0 py-2 px-4" role="alert">
+                <i className="ri-alert-line me-2"></i>
+                <span className="fs-small">
+                  Remarque: Une fois votre theme mis à jour sur Shopify, vous pourrez le personnaliser et l&apos;optimiser pour qu&apos;il corresponde parfaitement à votre marque.
+                </span>
+                <button type="button" className="btn-close py-2" data-bs-dismiss="alert"></button>
+              </div>
+
+              <div className="d-flex" style={{ minHeight: 'calc(100vh - 250px)' }}>
+                {/* Left Panel - Summary */}
+                <div className="d-none d-lg-block p-4" style={{ width: '400px', borderRight: '1px solid #e5e7eb' }}>
+                  <div className="text-center mb-4">
+                    <div 
+                      className="d-flex align-items-center justify-content-center mx-auto rounded-circle mb-3"
+                      style={{ width: '64px', height: '64px', backgroundColor: '#EFF6FF' }}
+                    >
+                      <i className="ri-rocket-line" style={{ fontSize: '32px', color: '#335cff' }}></i>
+                    </div>
+                    <h4 className="fw-600 mb-2">Prêt à publier ?</h4>
+                    <p className="text-muted fs-small">
+                      Votre boutique <strong>{storeName || aiContent.title}</strong> est prête à être mise à jour sur Shopify.
+                    </p>
+                  </div>
+
+                  {/* Summary Card */}
+                  <div className="card border mb-4">
+                    <div className="card-body p-3">
+                      <div className="d-flex align-items-center gap-3 mb-3">
+                        {selectedImages[0] && (
+                          <img 
+                            src={selectedImages[0]} 
+                            alt="Product" 
+                            className="rounded"
+                            style={{ width: '50px', height: '50px', objectFit: 'cover' }}
+                          />
+                        )}
+                        <div>
+                          <h6 className="fw-600 mb-1">{aiContent.title}</h6>
+                          <p className="text-muted mb-0 fs-xs">{aiContent.price}</p>
+                        </div>
+                      </div>
+                      <div className="d-flex justify-content-between fs-xs text-muted">
+                        <span><i className="ri-image-line me-1"></i>{selectedImages.length} images</span>
+                        <span><i className="ri-translate-2 me-1"></i>{LANGUAGES.find(l => l.code === selectedLanguage)?.name}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Progress Bar */}
+                  {isPushing && (
+                    <div className="mb-4">
+                      <div className="progress" style={{ height: '6px' }}>
+                        <div 
+                          className="progress-bar progress-bar-animated"
+                          role="progressbar" 
+                          style={{ width: `${publishProgress}%`, backgroundColor: '#335cff' }}
+                        ></div>
+                      </div>
+                      <p className="text-muted fs-xs mt-2 text-center">
+                        Publication en cours... {publishProgress}%
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Shopify Connection Warning */}
+                  {!session?.user?.shopifyDomain && (
+                    <div className="alert alert-info text-start mb-4 py-2 px-3">
+                      <i className="ri-information-line me-2"></i>
+                      <span className="fs-small">Vous devez connecter votre boutique Shopify avant de pouvoir publier.</span>
+                    </div>
+                  )}
+
+                  {/* Buttons */}
+                  <div className="d-flex flex-column gap-2">
+                    <Button variant="outline" onClick={handleBack} disabled={isPushing} className="w-100">
+                      Retour
+                    </Button>
+                    <Button 
+                      onClick={session?.user?.shopifyDomain ? handlePushToShopify : undefined}
+                      disabled={isPushing}
+                      className="w-100 btn-primary d-flex align-items-center justify-content-center gap-2"
+                    >
+                      {isPushing ? (
+                        <>
+                          <span className="spinner-border spinner-border-sm" role="status"></span>
+                          Publication...
+                        </>
+                      ) : (
+                        <>
+                          <img src="/img/shopify-logo-min.png" width="18" height="18" alt="Shopify" />
+                          {session?.user?.shopifyDomain ? 'Mettre à jour le thème' : 'Connecter votre Shopify'}
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Right Panel - Full Preview */}
+                <div 
+                  className="flex-grow-1 d-flex flex-column" 
+                  style={{ backgroundColor: '#f0f2f5' }}
+                >
+                  {/* Preview Header */}
+                  <div className="px-3 py-2 border-bottom d-flex justify-content-between align-items-center bg-white" style={{ height: '46px' }}>
+                    <div className="d-flex align-items-center gap-2">
+                      <select 
+                        className="form-select form-select-sm"
+                        style={{ width: '140px', height: '34px' }}
+                        defaultValue="product_page"
+                      >
+                        <option value="product_page">Page de prod</option>
+                        <option value="home_page">Page d&apos;accueil</option>
+                      </select>
+                      <select 
+                        className="form-select form-select-sm d-none d-xl-block"
+                        style={{ width: '100px', height: '34px' }}
+                        defaultValue="theme_v4"
+                      >
+                        <option value="theme_v4">Theme V</option>
+                      </select>
+                    </div>
+                    <div 
+                      className="preview-device-toggle d-none d-xl-flex p-1 rounded"
+                      style={{ backgroundColor: '#e4e4e7' }}
+                    >
+                      <button 
+                        className={`btn btn-sm px-3 ${previewDevice === 'mobile' ? 'bg-white shadow-sm' : ''}`}
+                        onClick={() => setPreviewDevice('mobile')}
+                        style={{ borderRadius: '6px' }}
+                      >
+                        Mobile
+                      </button>
+                      <button 
+                        className={`btn btn-sm px-3 ${previewDevice === 'desktop' ? 'bg-white shadow-sm' : ''}`}
+                        onClick={() => setPreviewDevice('desktop')}
+                        style={{ borderRadius: '6px' }}
+                      >
+                        Desktop
+                      </button>
+                    </div>
+                    <a 
+                      href="#" 
+                      className="btn btn-outline-secondary btn-sm d-flex align-items-center gap-1"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <i className="ri-external-link-line"></i>
+                      <span className="d-none d-xl-inline">Voir la boutique</span>
+                    </a>
+                  </div>
+
+                  {/* Preview Iframe */}
+                  <div 
+                    className="flex-grow-1 d-flex justify-content-center p-3 overflow-auto"
+                  >
+                    <div 
+                      className="preview-frame bg-white shadow-sm rounded overflow-hidden"
+                      style={{ 
+                        width: previewDevice === 'mobile' ? '375px' : '100%',
+                        maxWidth: previewDevice === 'mobile' ? '375px' : '1200px',
+                        height: 'calc(100vh - 350px)',
+                        transition: 'all 0.3s ease',
+                      }}
+                    >
+                      {generatedProductId ? (
+                        <iframe
+                          id="step4PreviewIframe"
+                          src={`/api/ai/liquid-preview?product_id=${generatedProductId}&page_type=${pageView === 'home_page' ? 'home' : 'product'}&t=${previewKey}`}
+                          style={{ width: '100%', height: '100%', border: 'none' }}
+                          title="Aperçu de la boutique"
+                        />
+                      ) : (
+                        <div className="d-flex flex-column align-items-center justify-content-center h-100 text-muted">
+                          <i className="ri-store-2-line mb-3" style={{ fontSize: '48px', opacity: 0.3 }}></i>
+                          <p className="fw-500">Aperçu indisponible</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </>
