@@ -1,0 +1,38 @@
+<div class="pdp__productFaq_widget faqWidget-{{ block.id }}">
+  <div class="pdp__productFaq_widget_container">
+    {%- assign suffix_faq_key = "a,b,c,d,e,f,g,h,i,j" | split: "," -%}
+    {%- assign first_visible_item = true -%}
+    {%- for key in suffix_faq_key -%}
+        {%- liquid
+            assign title_key = "title_" | append:key
+            assign content_key = "content_" | append:key
+            assign title_value = block.settings[title_key] | strip
+            assign content_value = block.settings[content_key] | strip
+        -%}
+        {%- if title_value != blank and title_value != "" and title_value.size > 0 -%}
+            <div class="pdp__productFaq_widget__item{% if first_visible_item %} active{% endif %}">
+                <div class="pdp__productFaq_widget__question">
+                    <span class="pdp__productFaq_widget_title">{{ title_value }}</span>
+                    <span class="pdp__productFaq_widget_icon"><svg width="800" height="800" viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg"><title>plus-line</title><path class="clr-i-outline clr-i-outline-path-1" d="M30 17H19V6a1 1 0 1 0-2 0v11H6a1 1 0 0 0-1 1 .91.91 0 0 0 1 .94h11V30a1 1 0 1 0 2 0V19h11a1 1 0 0 0 1-1 1 1 0 0 0-1-1"/><path fill="none" d="M0 0h36v36H0z"/></svg></span>
+                </div>
+                {%- if content_value != blank and content_value != "" -%}
+                    <div class="pdp__productFaq_widget_content"><div class="pdp__productFaq_widget_content_int">{{ content_value }}</div></div>
+                {%- endif -%}
+            </div>
+            {%- assign first_visible_item = false -%}
+        {%- endif -%}
+    {%- endfor -%}
+  </div>
+</div>
+
+{% style %}
+    body .pdp__productFaq_widget.faqWidget-{{ block.id }}{
+        margin: {{ block.settings.margin_top_faq }}px 0 {{ block.settings.margin_bottom_faq }}px 0;
+    }
+    body .faqWidget-{{ block.id }} .pdp__productFaq_widget__item {
+        border-bottom: 1px solid rgba(var(--color-foreground));
+    }
+    body .faqWidget-{{ block.id }} .pdp__productFaq_widget_icon svg {
+        fill: rgba(var(--color-foreground));
+    } 
+{% endstyle %}

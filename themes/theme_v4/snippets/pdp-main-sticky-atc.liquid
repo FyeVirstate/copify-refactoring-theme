@@ -1,0 +1,68 @@
+<div class="PDP__stk__mainwrapper color-{{ section.settings.color_scheme }}"">
+    <div class="PDP__stk__mainOuter">
+        <div class="PDP__stk__media_interior"> 
+            <div class="PDP__stk__media_content">
+                <div class="PDP__stk__media">
+                    {%- if product.featured_image != blank -%}
+                    {{ product.featured_image | image_url:width:product.featured_image.width | image_tag:preload:true }}
+                    {%- endif -%}
+                </div>
+                <div class="PDP__stk__title__wp">
+                    <div class="PDP__stk__title">{{ product.title }}</div>
+                    <div class="PDP__stk__price_wp">
+                        {%- if product.selected_or_first_available_variant.compare_at_price > product.selected_or_first_available_variant.price -%}
+                            <span class="PDP__stk__price">{{ product.selected_or_first_available_variant.price | money }}</span>
+                            <span class="PDP__stk__cprice">{{ product.selected_or_first_available_variant.compare_at_price | money }}</span>
+                        {%- else -%}
+                            <span class="PDP__stk__price">{{ product.selected_or_first_available_variant.price | money }}</span>
+                        {%- endif -%}
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="PDP__stk__button">
+            <div class="PDP__stk__button__wp">
+                <div class="PDP__stk__actionbtn">
+                    <button class="product-form__submit button button--full-width button--primary"
+                    id="PDP__stk__button-{{ section.id }}"
+                    {% if product.selected_or_first_available_variant.available == false
+                        or quantity_rule_soldout
+                        or product.selected_or_first_available_variant == null
+                    %}
+                        disabled
+                    {% endif %}                    
+                    >
+                        <span>
+                            {%- if product.selected_or_first_available_variant == null -%}
+                                {{ 'products.product.unavailable' | t }}
+                            {%- elsif product.selected_or_first_available_variant.available == false or quantity_rule_soldout -%}
+                                {{ 'products.product.sold_out' | t }}
+                            {%- else -%}
+                                {{ 'products.product.add_to_cart' | t }}
+                            {%- endif -%}
+                        </span>
+                        {%- render 'loading-spinner' -%}
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{%- style -%}
+    body .PDP__stk__mainwrapper .product-form__submit{
+        background-color : rgba(var(--color-button)) !important;
+        color: rgba(var(--color-button-text)) !important;
+        border-radius: {{ section.settings.bd__radius | append:'px' }};
+    } 
+    body .PDP__stk__mainwrapper .product-form__submit:hover{
+        background-color: rgba(var(--color-button)) !important;
+        color: rgba(var(--color-button-text)) !important;
+    } 
+    body .PDP__stk__mainwrapper .PDP__stk__price{
+        color:var(--color-highliter) !important;
+    }
+    body .PDP__stk__mainwrapper .PDP__stk__cprice{
+        color:rgb(var(--color-foreground),0.7);
+    }
+{%- endstyle -%}

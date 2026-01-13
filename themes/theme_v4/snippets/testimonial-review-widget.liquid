@@ -1,0 +1,140 @@
+<div class="Testimonial__reviews_widget">
+   <div class="Testimonial__reviews_interior swiper">
+      <div class="Swper__testimnial_init_wp swiper-wrapper">
+
+        {%- if block.settings.video1 != blank or block.settings.text1 != blank or block.settings.image1 != blank -%}
+        <div class="Testimonial_widget_videos_rvw swiper-slide">
+          <div class="Testimonial__video_tagged">
+            {%- if block.settings.video1 != blank -%}
+              <div class="video__playIcon" >
+                <span class="action--play hidden"><svg width="24" height="24" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4.5 12.5v-10l7 5z" stroke="#FFF" stroke-linejoin="round"></path></svg></span>
+                <span class="action--pause"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M14 19.495v-14h4v14zm-8 0v-14h4v14z" fill="#fff"></path></svg></span>
+              </div>
+            {%- endif -%}
+            <div class="video_execution_layoutWp" >
+              {%- if block.settings.video1 != blank -%}
+                {{ block.settings.video1 | video_tag: autoplay: true, loop: true, muted: true, controls: false }}  
+              {%- elsif block.settings.image1 != blank -%}
+                {{ block.settings.image1 | image_url:width:block.settings.image1.width | image_tag:preload:true }}
+              {%- endif -%}                 
+            </div>
+          </div>
+          {%- if block.settings.text1 != blank -%}
+            <div class="video_playback_ratings">
+              <svg xmlns="http://www.w3.org/2000/svg" width="80" height="14" viewBox="0 0 80 14"><g fill="rgba(var(--color-foreground));" fill-rule="evenodd"><path d="M71.996 11.368l-3.94 2.42c-.474.292-.756.096-.628-.443l1.074-4.53-3.507-3.022c-.422-.363-.324-.693.24-.74l4.602-.37 1.778-4.3c.21-.51.55-.512.762 0l1.78 4.3 4.602.37c.552.046.666.37.237.74l-3.507 3.02 1.075 4.532c.127.536-.147.74-.628.444l-3.94-2.422zM55.996 11.368l-3.94 2.42c-.474.292-.756.096-.628-.443l1.074-4.53-3.507-3.022c-.422-.363-.324-.693.24-.74l4.602-.37 1.778-4.3c.21-.51.55-.512.762 0l1.78 4.3 4.602.37c.552.046.666.37.237.74l-3.507 3.02 1.075 4.532c.127.536-.147.74-.628.444l-3.94-2.422zM40.123 11.368l-3.94 2.42c-.475.292-.756.096-.63-.443l1.076-4.53-3.508-3.022c-.422-.363-.324-.693.24-.74l4.602-.37 1.778-4.3c.21-.51.55-.512.762 0l1.778 4.3 4.603.37c.554.046.667.37.24.74l-3.508 3.02 1.075 4.532c.127.536-.147.74-.628.444l-3.94-2.422zM24.076 11.368l-3.94 2.42c-.475.292-.757.096-.63-.443l1.076-4.53-3.507-3.022c-.422-.363-.324-.693.238-.74l4.603-.37 1.78-4.3c.21-.51.55-.512.76 0l1.78 4.3 4.602.37c.554.046.667.37.24.74l-3.508 3.02 1.074 4.532c.127.536-.146.74-.628.444l-3.94-2.422zM8.123 11.368l-3.94 2.42c-.475.292-.756.096-.63-.443l1.076-4.53L1.12 5.792c-.422-.363-.324-.693.24-.74l4.602-.37 1.778-4.3c.21-.51.55-.512.762 0l1.778 4.3 4.603.37c.554.046.667.37.24.74l-3.508 3.02 1.075 4.532c.127.536-.147.74-.628.444l-3.94-2.422z"></path></g></svg>
+            </div>
+            <div class="video_playback_title" >{{ block.settings.text1 }}</div>
+          {%- endif -%}
+        </div>
+        {%- endif -%}
+
+        {%- if block.settings.video2 != blank or block.settings.text2 != blank -%}
+        <div class="Testimonial_widget_videos_rvw swiper-slide">
+          <div class="Testimonial__video_tagged" >
+
+            {%- if block.settings.video2 != blank -%}
+              <div class="video__playIcon" >
+                <span class="action--play hidden"><svg width="24" height="24" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4.5 12.5v-10l7 5z" stroke="#FFF" stroke-linejoin="round"></path></svg></span>
+                <span class="action--pause"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M14 19.495v-14h4v14zm-8 0v-14h4v14z" fill="#fff"></path></svg></span>
+              </div>
+            {%- endif -%}
+
+            <div class="video_execution_layoutWp" >
+              {%- if block.settings.video2 != blank -%}
+                {{ block.settings.video2 | video_tag: autoplay: true, loop: true, muted: true, controls: false }}  
+              {%- elsif block.settings.image2 != blank -%}
+                {{ block.settings.image2 | image_url:width:block.settings.image2.width | image_tag:preload:true }}
+              {%- endif -%}                    
+            </div>
+          </div>
+          {%- if block.settings.text2 != blank -%}
+            <div class="video_playback_ratings">
+              <svg xmlns="http://www.w3.org/2000/svg" width="80" height="14" viewBox="0 0 80 14"><g fill="rgba(var(--color-foreground));" fill-rule="evenodd"><path d="M71.996 11.368l-3.94 2.42c-.474.292-.756.096-.628-.443l1.074-4.53-3.507-3.022c-.422-.363-.324-.693.24-.74l4.602-.37 1.778-4.3c.21-.51.55-.512.762 0l1.78 4.3 4.602.37c.552.046.666.37.237.74l-3.507 3.02 1.075 4.532c.127.536-.147.74-.628.444l-3.94-2.422zM55.996 11.368l-3.94 2.42c-.474.292-.756.096-.628-.443l1.074-4.53-3.507-3.022c-.422-.363-.324-.693.24-.74l4.602-.37 1.778-4.3c.21-.51.55-.512.762 0l1.78 4.3 4.602.37c.552.046.666.37.237.74l-3.507 3.02 1.075 4.532c.127.536-.147.74-.628.444l-3.94-2.422zM40.123 11.368l-3.94 2.42c-.475.292-.756.096-.63-.443l1.076-4.53-3.508-3.022c-.422-.363-.324-.693.24-.74l4.602-.37 1.778-4.3c.21-.51.55-.512.762 0l1.778 4.3 4.603.37c.554.046.667.37.24.74l-3.508 3.02 1.075 4.532c.127.536-.147.74-.628.444l-3.94-2.422zM24.076 11.368l-3.94 2.42c-.475.292-.757.096-.63-.443l1.076-4.53-3.507-3.022c-.422-.363-.324-.693.238-.74l4.603-.37 1.78-4.3c.21-.51.55-.512.76 0l1.78 4.3 4.602.37c.554.046.667.37.24.74l-3.508 3.02 1.074 4.532c.127.536-.146.74-.628.444l-3.94-2.422zM8.123 11.368l-3.94 2.42c-.475.292-.756.096-.63-.443l1.076-4.53L1.12 5.792c-.422-.363-.324-.693.24-.74l4.602-.37 1.778-4.3c.21-.51.55-.512.762 0l1.778 4.3 4.603.37c.554.046.667.37.24.74l-3.508 3.02 1.075 4.532c.127.536-.147.74-.628.444l-3.94-2.422z"></path></g></svg>
+            </div>
+            <div class="video_playback_title" >{{ block.settings.text2 }}</div>
+          {%- endif -%}
+        </div>
+        {%- endif -%}
+        
+        {%- if block.settings.video3 != blank or block.settings.text3 != blank -%}
+        <div class="Testimonial_widget_videos_rvw swiper-slide">
+          <div class="Testimonial__video_tagged" >
+            {%- if block.settings.video3 != blank -%}
+              <div class="video__playIcon" >
+                <span class="action--play hidden"><svg width="24" height="24" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4.5 12.5v-10l7 5z" stroke="#FFF" stroke-linejoin="round"></path></svg></span>
+                <span class="action--pause"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M14 19.495v-14h4v14zm-8 0v-14h4v14z" fill="#fff"></path></svg></span>
+              </div>
+            {%- endif -%}
+            <div class="video_execution_layoutWp" >
+              {%- if block.settings.video3 != blank -%}
+                {{ block.settings.video3 | video_tag: autoplay: true, loop: true, muted: true, controls: false }}  
+              {%- elsif block.settings.image3 != blank -%}
+                {{ block.settings.image3 | image_url:width:block.settings.image3.width | image_tag:preload:true }}
+              {%- endif -%}                    
+            </div>
+          </div>
+          {%- if block.settings.text3 != blank -%}
+            <div class="video_playback_ratings">
+              <svg xmlns="http://www.w3.org/2000/svg" width="80" height="14" viewBox="0 0 80 14"><g fill="rgba(var(--color-foreground));" fill-rule="evenodd"><path d="M71.996 11.368l-3.94 2.42c-.474.292-.756.096-.628-.443l1.074-4.53-3.507-3.022c-.422-.363-.324-.693.24-.74l4.602-.37 1.778-4.3c.21-.51.55-.512.762 0l1.78 4.3 4.602.37c.552.046.666.37.237.74l-3.507 3.02 1.075 4.532c.127.536-.147.74-.628.444l-3.94-2.422zM55.996 11.368l-3.94 2.42c-.474.292-.756.096-.628-.443l1.074-4.53-3.507-3.022c-.422-.363-.324-.693.24-.74l4.602-.37 1.778-4.3c.21-.51.55-.512.762 0l1.78 4.3 4.602.37c.552.046.666.37.237.74l-3.507 3.02 1.075 4.532c.127.536-.147.74-.628.444l-3.94-2.422zM40.123 11.368l-3.94 2.42c-.475.292-.756.096-.63-.443l1.076-4.53-3.508-3.022c-.422-.363-.324-.693.24-.74l4.602-.37 1.778-4.3c.21-.51.55-.512.762 0l1.778 4.3 4.603.37c.554.046.667.37.24.74l-3.508 3.02 1.075 4.532c.127.536-.147.74-.628.444l-3.94-2.422zM24.076 11.368l-3.94 2.42c-.475.292-.757.096-.63-.443l1.076-4.53-3.507-3.022c-.422-.363-.324-.693.238-.74l4.603-.37 1.78-4.3c.21-.51.55-.512.76 0l1.78 4.3 4.602.37c.554.046.667.37.24.74l-3.508 3.02 1.074 4.532c.127.536-.146.74-.628.444l-3.94-2.422zM8.123 11.368l-3.94 2.42c-.475.292-.756.096-.63-.443l1.076-4.53L1.12 5.792c-.422-.363-.324-.693.24-.74l4.602-.37 1.778-4.3c.21-.51.55-.512.762 0l1.778 4.3 4.603.37c.554.046.667.37.24.74l-3.508 3.02 1.075 4.532c.127.536-.147.74-.628.444l-3.94-2.422z"></path></g></svg>
+            </div>
+            <div class="video_playback_title" >{{ block.settings.text3 }}</div>
+          {%- endif -%}
+        </div>
+        {%- endif -%}
+        
+        {%- if block.settings.video4 != blank or block.settings.text4 != blank -%}
+        <div class="Testimonial_widget_videos_rvw swiper-slide">
+          <div class="Testimonial__video_tagged" >
+            {%- if block.settings.video4 != blank -%}
+              <div class="video__playIcon">
+                <span class="action--play hidden"><svg width="24" height="24" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4.5 12.5v-10l7 5z" stroke="#FFF" stroke-linejoin="round"></path></svg></span>
+                <span class="action--pause"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M14 19.495v-14h4v14zm-8 0v-14h4v14z" fill="#fff"></path></svg></span>
+              </div>
+            {%- endif -%}
+            <div class="video_execution_layoutWp">
+              {%- if block.settings.video4 != blank -%}
+                {{ block.settings.video4 | video_tag: autoplay: true, loop: true, muted: true, controls: false }}  
+              {%- elsif block.settings.image4 != blank -%}
+                {{ block.settings.image4 | image_url:width:block.settings.image4.width | image_tag:preload:true }}
+              {%- endif -%}                    
+            </div>
+          </div>
+          {%- if block.settings.text4 != blank -%}
+            <div class="video_playback_ratings">
+              <svg xmlns="http://www.w3.org/2000/svg" width="80" height="14" viewBox="0 0 80 14"><g fill="rgba(var(--color-foreground));" fill-rule="evenodd"><path d="M71.996 11.368l-3.94 2.42c-.474.292-.756.096-.628-.443l1.074-4.53-3.507-3.022c-.422-.363-.324-.693.24-.74l4.602-.37 1.778-4.3c.21-.51.55-.512.762 0l1.78 4.3 4.602.37c.552.046.666.37.237.74l-3.507 3.02 1.075 4.532c.127.536-.147.74-.628.444l-3.94-2.422zM55.996 11.368l-3.94 2.42c-.474.292-.756.096-.628-.443l1.074-4.53-3.507-3.022c-.422-.363-.324-.693.24-.74l4.602-.37 1.778-4.3c.21-.51.55-.512.762 0l1.78 4.3 4.602.37c.552.046.666.37.237.74l-3.507 3.02 1.075 4.532c.127.536-.147.74-.628.444l-3.94-2.422zM40.123 11.368l-3.94 2.42c-.475.292-.756.096-.63-.443l1.076-4.53-3.508-3.022c-.422-.363-.324-.693.24-.74l4.602-.37 1.778-4.3c.21-.51.55-.512.762 0l1.778 4.3 4.603.37c.554.046.667.37.24.74l-3.508 3.02 1.075 4.532c.127.536-.147.74-.628.444l-3.94-2.422zM24.076 11.368l-3.94 2.42c-.475.292-.757.096-.63-.443l1.076-4.53-3.507-3.022c-.422-.363-.324-.693.238-.74l4.603-.37 1.78-4.3c.21-.51.55-.512.76 0l1.78 4.3 4.602.37c.554.046.667.37.24.74l-3.508 3.02 1.074 4.532c.127.536-.146.74-.628.444l-3.94-2.422zM8.123 11.368l-3.94 2.42c-.475.292-.756.096-.63-.443l1.076-4.53L1.12 5.792c-.422-.363-.324-.693.24-.74l4.602-.37 1.778-4.3c.21-.51.55-.512.762 0l1.778 4.3 4.603.37c.554.046.667.37.24.74l-3.508 3.02 1.075 4.532c.127.536-.147.74-.628.444l-3.94-2.422z"></path></g></svg>
+            </div>
+            <div class="video_playback_title" >{{ block.settings.text4 }}</div>
+          {%- endif -%}
+        </div>
+        {%- endif -%}
+        
+        {%- if block.settings.video5 != blank or block.settings.text5 != blank -%}
+        <div class="Testimonial_widget_videos_rvw swiper-slide">
+          <div class="Testimonial__video_tagged" >
+            {%- if block.settings.video5 != blank -%}
+              <div class="video__playIcon" >
+                <span class="action--play hidden"><svg width="24" height="24" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4.5 12.5v-10l7 5z" stroke="#FFF" stroke-linejoin="round"></path></svg></span>
+                <span class="action--pause"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M14 19.495v-14h4v14zm-8 0v-14h4v14z" fill="#fff"></path></svg></span>
+              </div>
+            {%- endif -%}
+            <div class="video_execution_layoutWp" >
+              {%- if block.settings.video5 != blank -%}
+                {{ block.settings.video5 | video_tag: autoplay: true, loop: true, muted: true, controls: false }}  
+              {%- elsif block.settings.image5 != blank -%}
+                {{ block.settings.image5 | image_url:width:block.settings.image5.width | image_tag:preload:true }}
+              {%- endif -%}                    
+            </div>
+          </div>
+          {%- if block.settings.text5 != blank -%}
+            <div class="video_playback_ratings">
+              <svg xmlns="http://www.w3.org/2000/svg" width="80" height="14" viewBox="0 0 80 14"><g fill="rgba(var(--color-foreground));" fill-rule="evenodd"><path d="M71.996 11.368l-3.94 2.42c-.474.292-.756.096-.628-.443l1.074-4.53-3.507-3.022c-.422-.363-.324-.693.24-.74l4.602-.37 1.778-4.3c.21-.51.55-.512.762 0l1.78 4.3 4.602.37c.552.046.666.37.237.74l-3.507 3.02 1.075 4.532c.127.536-.147.74-.628.444l-3.94-2.422zM55.996 11.368l-3.94 2.42c-.474.292-.756.096-.628-.443l1.074-4.53-3.507-3.022c-.422-.363-.324-.693.24-.74l4.602-.37 1.778-4.3c.21-.51.55-.512.762 0l1.78 4.3 4.602.37c.552.046.666.37.237.74l-3.507 3.02 1.075 4.532c.127.536-.147.74-.628.444l-3.94-2.422zM40.123 11.368l-3.94 2.42c-.475.292-.756.096-.63-.443l1.076-4.53-3.508-3.022c-.422-.363-.324-.693.24-.74l4.602-.37 1.778-4.3c.21-.51.55-.512.762 0l1.778 4.3 4.603.37c.554.046.667.37.24.74l-3.508 3.02 1.075 4.532c.127.536-.147.74-.628.444l-3.94-2.422zM24.076 11.368l-3.94 2.42c-.475.292-.757.096-.63-.443l1.076-4.53-3.507-3.022c-.422-.363-.324-.693.238-.74l4.603-.37 1.78-4.3c.21-.51.55-.512.76 0l1.78 4.3 4.602.37c.554.046.667.37.24.74l-3.508 3.02 1.074 4.532c.127.536-.146.74-.628.444l-3.94-2.422zM8.123 11.368l-3.94 2.42c-.475.292-.756.096-.63-.443l1.076-4.53L1.12 5.792c-.422-.363-.324-.693.24-.74l4.602-.37 1.778-4.3c.21-.51.55-.512.762 0l1.778 4.3 4.603.37c.554.046.667.37.24.74l-3.508 3.02 1.075 4.532c.127.536-.147.74-.628.444l-3.94-2.422z"></path></g></svg>
+            </div>
+            <div class="video_playback_title" >{{ block.settings.text5 }}</div>
+          {%- endif -%}
+        </div>  
+        {%- endif -%}
+
+      </div>
+    </div>
+  {% comment %} <div class="Testimonial_button_reviews" >Read All Reviews</div> {% endcomment %}
+</div>

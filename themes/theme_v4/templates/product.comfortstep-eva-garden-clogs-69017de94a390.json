@@ -1,0 +1,697 @@
+{
+    "sections": {
+        "main": {
+            "type": "main-product-custom",
+            "blocks": {
+                "star_heading_9xJAbW": {
+                    "type": "star_heading",
+                    "settings": {
+                        "review_stars": 4.5,
+                        "rating_text": "Rated 4.8 (21,883+ happy customers)"
+                    }
+                },
+                "title": {
+                    "type": "title",
+                    "settings": {}
+                },
+                "vendor": {
+                    "type": "text",
+                    "settings": {
+                        "text": "Engineered for comfort, built for adventure. Your feet deserve the best.",
+                        "text_style": "body"
+                    }
+                },
+                "divider_Mc9TG9": {
+                    "type": "divider",
+                    "settings": {
+                        "margin_top": 10,
+                        "margin_bottom": 6
+                    }
+                },
+                "price": {
+                    "type": "price",
+                    "settings": {}
+                },
+                "divider_HwFiDa": {
+                    "type": "divider",
+                    "settings": {
+                        "margin_top": 10,
+                        "margin_bottom": 6
+                    }
+                },
+                "tag_custom_kHgyMb": {
+                    "type": "tag_custom",
+                    "settings": {
+                        "tag_heading": "In few words"
+                    }
+                },
+                "custom_product_form_jehUnn": {
+                    "type": "custom_product_form",
+                    "settings": {}
+                },
+                "variant_picker": {
+                    "type": "variant_picker",
+                    "disabled": true,
+                    "settings": {
+                        "picker_type": "button",
+                        "swatch_shape": "circle"
+                    }
+                },
+                "buy_buttons": {
+                    "type": "buy_buttons",
+                    "settings": {
+                        "show_dynamic_checkout": false,
+                        "show_gift_card_recipient": false,
+                        "in_stock_text": "In Stock",
+                        "out_of_stock_text": "Out of Stock",
+                        "order_in_text": "Order in",
+                        "get_it_text": "and get it by",
+                        "delivery_days": 4,
+                        "text_style": "body",
+                        "inventory_threshold": 10,
+                        "show_inventory_quantity": true
+                    }
+                },
+                "icon_with_text_Pi7aQp": {
+                    "type": "icon-with-text",
+                    "settings": {
+                        "layout": "horizontal",
+                        "icon_1": "shield",
+                        "heading_1": "Money-Back Guarantee",
+                        "icon_2": "tick",
+                        "heading_2": "90-Day Free Returns",
+                        "icon_3": "truck",
+                        "heading_3": ""
+                    }
+                },
+                "trust_image_tcRB3p": {
+                    "type": "trust_image",
+                    "settings": {}
+                },
+                "free_heading_slider_cVWa46": {
+                    "type": "free_heading_slider",
+                    "settings": {
+                        "show_block": false,
+                        "free_1_title": "Free Shipping",
+                        "free_1_text": "in US & EU",
+                        "free_2_title": "Free Shipping",
+                        "free_2_text": "in US & EU",
+                        "free_3_title": "Free Shipping",
+                        "free_3_text": "in US & EU"
+                    }
+                },
+                "video_slider_pJT8mt": {
+                    "type": "video_slider",
+                    "settings": {
+                        "show_block": false,
+                        "video_1_video": "",
+                        "video_2_video": "",
+                        "video_3_video": "",
+                        "video_4_video": ""
+                    }
+                },
+                "reviews_rJbdnP": {
+                    "type": "reviews",
+                    "settings": {
+                        "heading": "Reviews",
+                        "rating_text": "Rated 4.8/5 based on 200 reviews",
+                        "review_1_title": "Best summer shoes ever!",
+                        "review_1_text": "So comfortable I bought three pairs. Perfect for gardening and beach.",
+                        "review_1_name": "Michael R.",
+                        "review_1_avatar": "avtar.svg",
+                        "review_1_stars": 4.5,
+                        "review_1_time": "3 days ago",
+                        "review_2_title": "Lightweight and durable",
+                        "review_2_text": "Wear them daily around the house. My feet never hurt anymore!",
+                        "review_2_name": "James T.",
+                        "review_2_stars": 4.5,
+                        "review_2_time": "2 days ago",
+                        "review_3_title": "Perfect fit!",
+                        "review_3_text": "Finally found plus size clogs that don't compromise on comfort.",
+                        "review_3_name": "David K.",
+                        "review_3_stars": 4.5,
+                        "review_3_time": "1 week ago",
+                        "review_4_title": "Great value",
+                        "review_4_text": "Quality exceeds the price. Highly recommend for outdoor activities.",
+                        "review_4_name": "Robert M.",
+                        "review_4_stars": 4.5,
+                        "review_4_time": "3 days ago"
+                    }
+                },
+                "collapsible_tab_WaHTn9": {
+                    "type": "collapsible_tab",
+                    "settings": {
+                        "heading": "HOW TO USE",
+                        "icon": "none",
+                        "content": "<p>Soft EVA foam molds to your feet, providing cushioned support. Ventilation holes keep feet cool and dry. Anti-slip sole ensures stability on wet or dry surfaces.</p>",
+                        "page": ""
+                    }
+                },
+                "collapsible_tab_nM3LH4": {
+                    "type": "collapsible_tab",
+                    "settings": {
+                        "heading": "DESCRIPTION & CARE",
+                        "icon": "none",
+                        "content": "<p>Ultra-lightweight EVA clogs designed for all-day comfort. Perfect for beach, garden, or home. Breathable design keeps feet cool. Soft cushioning with anti-slip sole. Plus sizes available.</p>",
+                        "page": ""
+                    }
+                },
+                "collapsible_tab_WaHTQ9": {
+                    "type": "collapsible_tab",
+                    "settings": {
+                        "heading": "Instructions",
+                        "icon": "none",
+                        "content": "<p>Slip on and go. Rinse with water to clean. Air dry in shade. Suitable for indoor and outdoor use. Perfect for garden work, beach trips, or casual wear around the house.</p>",
+                        "page": ""
+                    }
+                },
+                "collapsible_tab_WaHTF9": {
+                    "type": "collapsible_tab",
+                    "settings": {
+                        "heading": "Delivery Information",
+                        "icon": "none",
+                        "content": "<p>Fast shipping available. Standard delivery 7-15 business days. Express options at checkout. Track your order online. Hassle-free returns within 30 days if not satisfied.</p>",
+                        "page": ""
+                    }
+                }
+            },
+            "block_order": [
+                "star_heading_9xJAbW",
+                "title",
+                "vendor",
+                "divider_Mc9TG9",
+                "price",
+                "divider_HwFiDa",
+                "tag_custom_kHgyMb",
+                "custom_product_form_jehUnn",
+                "variant_picker",
+                "buy_buttons",
+                "icon_with_text_Pi7aQp",
+                "trust_image_tcRB3p",
+                "free_heading_slider_cVWa46",
+                "video_slider_pJT8mt",
+                "reviews_rJbdnP",
+                "collapsible_tab_WaHTn9",
+                "collapsible_tab_nM3LH4",
+                "collapsible_tab_WaHTQ9",
+                "collapsible_tab_WaHTF9"
+            ],
+            "settings": {
+                "product_title_size": "h2",
+                "enable_sticky_info": true,
+                "color_scheme": "scheme-1",
+                "square_media": true,
+                "media_size": "medium",
+                "constrain_to_viewport": false,
+                "media_fit": "cover",
+                "gallery_layout": "thumbnail_slider",
+                "mobile_thumbnails": "show",
+                "media_position": "left",
+                "image_zoom": "none",
+                "hide_variants": true,
+                "enable_video_looping": false,
+                "padding_top": 0,
+                "padding_bottom": 56
+            }
+        },
+        "h_tickers_Va7Uai": {
+            "type": "h-tickers",
+            "blocks": {
+                "text_hAtUVh": {
+                    "type": "text",
+                    "settings": {
+                        "title": "",
+                        "image": ""
+                    }
+                },
+                "text_qjhrya": {
+                    "type": "text",
+                    "settings": {
+                        "title": "",
+                        "image": ""
+                    }
+                },
+                "text_BXeBnJ": {
+                    "type": "text",
+                    "settings": {
+                        "title": "",
+                        "image": ""
+                    }
+                },
+                "text_dH3rKK": {
+                    "type": "text",
+                    "settings": {
+                        "title": "",
+                        "image": ""
+                    }
+                },
+                "text_DryriH": {
+                    "type": "text",
+                    "settings": {
+                        "title": "",
+                        "image": ""
+                    }
+                },
+                "text_8XAFCt": {
+                    "type": "text",
+                    "settings": {
+                        "title": "",
+                        "image": ""
+                    }
+                },
+                "text_rLNUKG": {
+                    "type": "text",
+                    "settings": {
+                        "title": "",
+                        "image": ""
+                    }
+                },
+                "text_P9VN3y": {
+                    "type": "text",
+                    "settings": {
+                        "title": "",
+                        "image": ""
+                    }
+                }
+            },
+            "block_order": [
+                "text_hAtUVh",
+                "text_qjhrya",
+                "text_BXeBnJ",
+                "text_dH3rKK",
+                "text_DryriH",
+                "text_8XAFCt",
+                "text_rLNUKG",
+                "text_P9VN3y"
+            ],
+            "name": "Horizontal Ticker",
+            "settings": {
+                "color_scheme": "scheme-2",
+                "show_store_name": false,
+                "speed": 1.5,
+                "text_spacing": 3,
+                "text_size": "2.5",
+                "italic_text": false,
+                "uppercase_text": false,
+                "bold_text": false,
+                "padding_top": 20,
+                "padding_bottom": 20
+            }
+        },
+        "product_section_1_LwmfCP": {
+            "type": "product-section-1",
+            "blocks": {
+                "feature_left_TBf6tF": {
+                    "type": "feature_left",
+                    "settings": {
+                        "title": "Feather-Light",
+                        "text": "So light, you'll forget you're wearing them."
+                    }
+                },
+                "feature_left_PBTXUT": {
+                    "type": "feature_left",
+                    "settings": {
+                        "title": "All-Day Cushion",
+                        "text": "Soft EVA foam cradles every step you take."
+                    }
+                },
+                "feature_right_eMXP6L": {
+                    "type": "feature_right",
+                    "settings": {
+                        "title": "Breathable Design",
+                        "text": "Ventilation holes keep your feet cool & dry."
+                    }
+                },
+                "feature_right_Y3TRjX": {
+                    "type": "feature_right",
+                    "settings": {
+                        "title": "Non-Slip Grip",
+                        "text": "Stable on any surface, wet or dry terrain."
+                    }
+                },
+                "guarantee_BJUxNp": {
+                    "type": "guarantee",
+                    "settings": {
+                        "icon": "tick",
+                        "text": "Money Back Guarantee"
+                    }
+                },
+                "guarantee_7A4ybd": {
+                    "type": "guarantee",
+                    "settings": {
+                        "icon": "shield",
+                        "text": "30-Night Risk-Free"
+                    }
+                }
+            },
+            "block_order": [
+                "feature_left_TBf6tF",
+                "feature_left_PBTXUT",
+                "feature_right_eMXP6L",
+                "feature_right_Y3TRjX",
+                "guarantee_BJUxNp",
+                "guarantee_7A4ybd"
+            ],
+            "name": "Product Section 1",
+            "settings": {
+                "section_color_scheme": "scheme-1",
+                "heading": "Your New Go-To Summer Footwear\u2013Seriously Comfortable",
+                "highlight_italic": true,
+                "heading_size": "h2",
+                "subheading": "Soft, breathable, and built to last. Experience footwear that actually feels good.",
+                "center_image": "product_section_image.png",
+                "image_height": "small",
+                "button_text": "RISK-FREE - 50% OFF",
+                "button_link": "",
+                "padding_top": 40,
+                "padding_bottom": 40
+            }
+        },
+        "text_and_image_kQYq3M": {
+            "type": "text-and-image",
+            "blocks": {
+                "heading_NK3gFY": {
+                    "type": "heading",
+                    "settings": {
+                        "show_stars": true,
+                        "review_stars": 4.5,
+                        "rating_text": "Rated 4.8 (21,883+ happy customers)",
+                        "heading": "Comfort That Moves With You, Wherever Life Takes You",
+                        "heading_size": "h2"
+                    }
+                },
+                "text_7z7VAY": {
+                    "type": "text",
+                    "settings": {
+                        "text": "<p>From garden to beach to home, experience the freedom of lightweight EVA clogs that keep your feet happy all day. Breathable, cushioned, unstoppable.</p>",
+                        "text_style": "body"
+                    }
+                },
+                "button_B7QEwB": {
+                    "type": "button",
+                    "settings": {
+                        "button_label": "SHOP NOW",
+                        "button_link": "shopify://collections/all",
+                        "button_style_secondary": false,
+                        "icon_1": "tick",
+                        "text_1": "Risk-Free Trial",
+                        "icon_2": "tick",
+                        "text_2": "Free Shipping",
+                        "icon_3": "tick",
+                        "text_3": "Hassle-Free Returns"
+                    }
+                }
+            },
+            "block_order": [
+                "heading_NK3gFY",
+                "text_7z7VAY",
+                "button_B7QEwB"
+            ],
+            "name": "Text and Image",
+            "settings": {
+                "section_color_scheme": "",
+                "color_scheme": "",
+                "image": "",
+                "height": "medium",
+                "desktop_image_width": "medium",
+                "layout": "image_first",
+                "image_behavior": "none",
+                "content_layout": "no-overlap",
+                "desktop_content_position": "middle",
+                "desktop_content_alignment": "left",
+                "mobile_content_alignment": "left",
+                "padding_top": 36,
+                "padding_bottom": 36
+            }
+        },
+        "product_results_eb4dFn": {
+            "type": "product-results",
+            "blocks": {
+                "result_LmtWJw": {
+                    "type": "result",
+                    "settings": {
+                        "percentage": "+95%",
+                        "text": "Users report reduced foot fatigue"
+                    }
+                },
+                "result_BAw9HD": {
+                    "type": "result",
+                    "settings": {
+                        "percentage": "+92%",
+                        "text": "Say feet stay cooler and drier"
+                    }
+                },
+                "result_LmtWPw": {
+                    "type": "result",
+                    "settings": {
+                        "percentage": "+89%",
+                        "text": "Would recommend to friends & family"
+                    }
+                },
+                "result_BAw9KD": {
+                    "type": "result",
+                    "settings": {
+                        "percentage": "+87%",
+                        "text": "Prefer these over regular sandals"
+                    }
+                }
+            },
+            "block_order": [
+                "result_LmtWJw",
+                "result_BAw9HD",
+                "result_LmtWPw",
+                "result_BAw9KD"
+            ],
+            "name": "Product Results",
+            "settings": {
+                "section_color_scheme": "scheme-1",
+                "heading": "Proven Results",
+                "highlight_italic": true,
+                "heading_size": "h2",
+                "center_image": "product_section_image.png",
+                "image_height": "adapt",
+                "image_position": "right",
+                "bottom_note": "Results are collected on reviews post-purchase*",
+                "padding_top": 40,
+                "padding_bottom": 40
+            }
+        },
+        "product_compare_NzVpgU": {
+            "type": "product-compare",
+            "blocks": {
+                "compare_row_zXkHd3": {
+                    "type": "compare_row",
+                    "settings": {
+                        "feature": "All-day comfort",
+                        "left_icon_type": "check",
+                        "left_text": "\u2713",
+                        "right_icon_type": "cross",
+                        "right_text": "\u2717"
+                    }
+                },
+                "compare_row_W9TeTP": {
+                    "type": "compare_row",
+                    "settings": {
+                        "feature": "Lightweight freedom",
+                        "left_icon_type": "check",
+                        "left_text": "\u2713",
+                        "right_icon_type": "cross",
+                        "right_text": "\u2717"
+                    }
+                },
+                "compare_row_Nkwqw3": {
+                    "type": "compare_row",
+                    "settings": {
+                        "feature": "Breathable freshness",
+                        "left_icon_type": "check",
+                        "left_text": "\u2713",
+                        "right_icon_type": "cross",
+                        "right_text": "\u2717"
+                    }
+                },
+                "compare_row_LCDjtA": {
+                    "type": "compare_row",
+                    "settings": {
+                        "feature": "Versatile style",
+                        "left_icon_type": "check",
+                        "left_text": "\u2713",
+                        "right_icon_type": "cross",
+                        "right_text": "\u2717"
+                    }
+                },
+                "compare_row_AKHf6B": {
+                    "type": "compare_row",
+                    "settings": {
+                        "feature": "Easy maintenance",
+                        "left_icon_type": "check",
+                        "left_text": "\u2713",
+                        "right_icon_type": "cross",
+                        "right_text": "\u2717"
+                    }
+                },
+                "guarantee_bAcM6X": {
+                    "type": "guarantee",
+                    "settings": {
+                        "icon": "tick",
+                        "text": "Money-Back Guarantee"
+                    }
+                },
+                "guarantee_76nEPh": {
+                    "type": "guarantee",
+                    "settings": {
+                        "icon": "shield",
+                        "text": "30-Hassle free Return"
+                    }
+                }
+            },
+            "block_order": [
+                "compare_row_zXkHd3",
+                "compare_row_W9TeTP",
+                "compare_row_Nkwqw3",
+                "compare_row_LCDjtA",
+                "compare_row_AKHf6B",
+                "guarantee_bAcM6X",
+                "guarantee_76nEPh"
+            ],
+            "name": "Product Compare",
+            "settings": {
+                "section_color_scheme": "scheme-3",
+                "heading": "Why Choose Our Product?",
+                "highlight_italic": true,
+                "heading_size": "h2",
+                "col_left": "Our Product",
+                "col_right": "Others",
+                "button_text": "RISK-FREE - 50% OFF",
+                "button_link": "",
+                "padding_top": 40,
+                "padding_bottom": 40
+            }
+        },
+        "product_reviews_m8WX3U": {
+            "type": "product-reviews",
+            "blocks": {
+                "review_khLXQP": {
+                    "type": "review",
+                    "settings": {
+                        "review_title": "Best summer shoes ever!",
+                        "review_text": "So comfortable I bought three pairs. Perfect for gardening and beach.",
+                        "review_stars": 5,
+                        "reviewer_name": "Michael R.",
+                        "review_time": "2 weeks ago"
+                    }
+                },
+                "review_DqGbak": {
+                    "type": "review",
+                    "settings": {
+                        "review_title": "Lightweight and durable",
+                        "review_text": "Wear them daily around the house. My feet never hurt anymore!",
+                        "review_stars": 5,
+                        "reviewer_name": "James T.",
+                        "review_time": "3 weeks ago"
+                    }
+                },
+                "review_3FiQJw": {
+                    "type": "review",
+                    "settings": {
+                        "review_title": "Perfect fit!",
+                        "review_text": "Finally found plus size clogs that don't compromise on comfort.",
+                        "review_stars": 5,
+                        "reviewer_name": "David K.",
+                        "review_time": "3 days ago"
+                    }
+                },
+                "review_6UTTQ8": {
+                    "type": "review",
+                    "settings": {
+                        "review_title": "Great value",
+                        "review_text": "Quality exceeds the price. Highly recommend for outdoor activities.",
+                        "review_stars": 5,
+                        "reviewer_name": "Robert M.",
+                        "review_time": "1 week ago"
+                    }
+                }
+            },
+            "block_order": [
+                "review_khLXQP",
+                "review_DqGbak",
+                "review_3FiQJw",
+                "review_6UTTQ8"
+            ],
+            "name": "Product Reviews",
+            "settings": {
+                "section_color_scheme": "",
+                "review_stars": 4.5,
+                "review_text": "Rated 4.8 (21,883+ happy customers)",
+                "heading": "Customers can't stop raving about this product",
+                "heading_size": "h3",
+                "button_text": "RISK-FREE - 50% OFF",
+                "button_link": "shopify://collections",
+                "icon1": "shield",
+                "text1": "30-Night Risk-Free",
+                "icon2": "truck",
+                "text2": "Free Shipping",
+                "padding_top": 40,
+                "padding_bottom": 40
+            }
+        },
+        "product_faq_y9iPrW": {
+            "type": "product-faq",
+            "blocks": {
+                "faq_7UFBzL": {
+                    "type": "faq",
+                    "settings": {
+                        "q": "Are these suitable for wide feet ?",
+                        "a": "<p>Yes! EVA material flexes to accommodate wider feet comfortably.</p>"
+                    }
+                },
+                "faq_4T8UeV": {
+                    "type": "faq",
+                    "settings": {
+                        "q": "Can I wear these to the beach ?",
+                        "a": "<p>Absolutely! Quick-drying and perfect for sand and water activities.</p>"
+                    }
+                },
+                "faq_A8EhAQ": {
+                    "type": "faq",
+                    "settings": {
+                        "q": "Do they run true to size ?",
+                        "a": "<p>Yes, standard sizing. Check our size chart for the perfect fit.</p>"
+                    }
+                },
+                "faq_VKAfzc": {
+                    "type": "faq",
+                    "settings": {
+                        "q": "Are they easy to clean ?",
+                        "a": "<p>Very easy! Just rinse with water and air dry. Low maintenance footwear.</p>"
+                    }
+                }
+            },
+            "block_order": [
+                "faq_7UFBzL",
+                "faq_4T8UeV",
+                "faq_A8EhAQ",
+                "faq_VKAfzc"
+            ],
+            "name": "Product FAQ",
+            "settings": {
+                "section_color_scheme": "scheme-1",
+                "heading": "Frequently Asked Questions",
+                "heading_size": "h3",
+                "image_height": "adapt",
+                "hide_image_mobile": false,
+                "padding_top": 40,
+                "padding_bottom": 40
+            }
+        }
+    },
+    "order": [
+        "main",
+        "h_tickers_Va7Uai",
+        "product_section_1_LwmfCP",
+        "text_and_image_kQYq3M",
+        "product_results_eb4dFn",
+        "product_compare_NzVpgU",
+        "product_reviews_m8WX3U",
+        "product_faq_y9iPrW"
+    ]
+}

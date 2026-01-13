@@ -1,0 +1,43 @@
+<div class="product-labels-container productLabels___wp-{{ block.id }}">
+	<div class="product_labels-wrapper">
+    {%- assign suffix_labels_keys = "a,b,c,d" | split:',' -%}
+    {%- for key in suffix_labels_keys -%}
+        {%- liquid
+            assign svg_icon_key = 'icon_' | append:key
+            assign title_key = 'title_' | append:key
+            assign para_key = 'para_' | append:key
+        -%}
+        {%- if block.settings[svg_icon_key] != blank or block.settings[title_key] != blank or block.settings[para_key] != blank -%}
+		<div class="product-label">
+			{%- if block.settings[svg_icon_key] != blank -%}<div class="product-label-icon">{% render 'icons-list', icon: block.settings[svg_icon_key] %}</div>{%- endif -%}
+			<div class="product-label-content">
+				{%- if block.settings[title_key] != blank -%}<div class="product-label-name">{{ block.settings[title_key] }}</div>{%- endif -%}
+                {%- if block.settings[para_key] != blank -%}
+                    <div class="serving-info">
+                        <span class="serving-count">{{ block.settings[para_key] }}</span>
+                    </div>
+                {%- endif -%}
+			</div>
+		</div>
+        {%- endif -%}
+        {%- endfor -%}
+	</div>
+</div>
+
+{%- style -%}
+    body .productLabels___wp-{{ block.id }}{
+        margin: {{ block.settings.margin_top }}px 0px {{ block.settings.margin_bottom }}px 0px; 
+    }
+    body .productLabels___wp-{{ block.id }} .product-label{
+        background-color: rgb(var(--color-innerHighlight));
+        border: 1px solid rgba(var(--color-foreground));
+        border-radius: {{ block.settings.bd_radius | append:'px' }};
+    }
+    body .productLabels___wp-{{ block.id }} .product-label-name,
+    body .productLabels___wp-{{ block.id }} .serving-info{
+        color: rgba(var(--color-foreground));
+    }
+    body .productLabels___wp-{{ block.id }} .product-label-icon svg path{
+        fill: rgba(var(--color-foreground));
+    }
+{%- endstyle -%}

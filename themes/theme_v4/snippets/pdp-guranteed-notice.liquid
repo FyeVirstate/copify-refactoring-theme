@@ -1,0 +1,52 @@
+{%- if block.settings.design_mode == 'design_a' -%}
+  <div class="custom-money-back-guarantee guranteeNotice__wp-{{ block.id }}" style=" ">
+    <div class="custom-guarantee-content">
+      {%- if block.settings.icon_dsg_a != 'none' -%}
+          <div class="custom-guarantee-icon">
+            <div class="custom-badge-container">
+                <div class="custom-badge-svg">{% render 'icons-list', icon: block.settings.icon_dsg_a %}</div>
+            </div>
+          </div>
+      {%- endif -%}
+      <div class="custom-guarantee-text">
+        {%- if block.settings.title_dsg_a != blank -%}<div class="custom-guarantee-text__title" style="color: {{ block.settings.text_color__dsg_a }}">{{ block.settings.title_dsg_a }}</div>{%- endif -%}
+        {%- if block.settings.paragraph_dsg_a != blank -%}<p style="color: {{ block.settings.text_color__dsg_a }}">{{ block.settings.paragraph_dsg_a }}</p>{%- endif -%}
+      </div>
+    </div>
+  </div>
+  {%- style -%}
+      body .guranteeNotice__wp-{{ block.id }}{
+          margin: {{ block.settings.margin_top }}px 0px {{ block.settings.margin_bottom }}px 0px;
+          background-color: rgb(var(--color-innerHighlight));
+          border-color: rgba(var(--color-foreground));
+      }
+  {%- endstyle -%}  
+{%- elsif block.settings.design_mode == 'design_b' -%}
+  <div class="guarantee-container guranteeNotice__wp-{{ block.id }} {% if block.settings.align_dsg_b %}align-{{ block.settings.align_dsg_b }}{% endif %}" style="background: {{ block.settings.background__dsg_b }}; border: 1px solid {{ block.settings.border__dsg_b }};">
+    <div class="badge-container">
+      {%- if block.settings.icon_dsg_b != 'none' -%}
+        <div class="badge-circle" style="border-color: {{ block.settings.text_color__dsg_b }}">
+          {% render 'icons-list', icon: block.settings.icon_dsg_b %}
+        </div>
+      {%- endif -%}
+    </div>
+    <div class="guarantee-text">
+      <p>
+        {%- if block.settings.small_title_dsg_b != blank -%}<span class="guarantee-text-small">{{ block.settings.small_title_dsg_b }} </span>{%- endif -%}
+        {%- if block.settings.large_title_dsg_b != blank -%}<span class="guarantee-text-large">{{ block.settings.large_title_dsg_b }}</span>{%- endif -%}
+      </p>
+    </div>
+  </div>
+  {%- style -%}
+      body .guranteeNotice__wp-{{ block.id }}{
+          margin: {{ block.settings.margin_top }}px 0px {{ block.settings.margin_bottom }}px 0px;
+      }
+      body .guranteeNotice__wp-{{ block.id }} .guarantee-text-small{
+          color: rgba(var(--color-foreground));
+      }
+      body .guranteeNotice__wp-{{ block.id }} .guarantee-text-large{
+          color: rgba(var(--color-foreground));
+      }             
+  {%- endstyle -%}
+{%- endif -%}
+

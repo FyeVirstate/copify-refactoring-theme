@@ -11,8 +11,10 @@ import {
   normalizeSectionType
 } from '@/lib/services/contentMapping'
 
-const LIQUID_SERVICE_URL = process.env.LIQUID_SERVICE_URL || 'http://127.0.0.1:9292'
-const THEMES_BASE_PATH = process.env.THEMES_PATH || 'C:/Users/Zakaria/Documents/Github/copyfy-theme/public/shopify'
+const LIQUID_SERVICE_URL = process.env.LIQUID_SERVICE_URL || 'https://web-production-86921.up.railway.app/'
+const THEMES_BASE_PATH = process.env.THEMES_PATH || path.join(process.cwd(), 'themes')
+// Path to themes on the Liquid service server (Railway)
+const LIQUID_SERVICE_THEMES_PATH = process.env.LIQUID_SERVICE_THEMES_PATH || '/app/themes'
 
 /**
  * Load theme settings from settings_data.json
@@ -2094,8 +2096,8 @@ export async function GET(request: NextRequest) {
     
     // Load theme sections based on page type
     const { sections: templateSections, order } = loadThemeSections(themeKey, pageType)
-    // Use forward slashes for Ruby service (Windows path.join uses backslashes)
-    const themePath = path.join(THEMES_BASE_PATH, themeKey).replace(/\\/g, '/')
+    // Theme path for Liquid service (Railway path, not local)
+    const themePath = `${LIQUID_SERVICE_THEMES_PATH}/${themeKey}`
     
     // Build context and sections
     const context = buildGlobalContext(aiContent, productData, images, themeKey)
@@ -2319,8 +2321,8 @@ export async function POST(request: NextRequest) {
     
     // Load theme sections based on page type
     const { sections: templateSections, order } = loadThemeSections(themeKey, pageType)
-    // Use forward slashes for Ruby service (Windows path.join uses backslashes)
-    const themePath = path.join(THEMES_BASE_PATH, themeKey).replace(/\\/g, '/')
+    // Theme path for Liquid service (Railway path, not local)
+    const themePath = `${LIQUID_SERVICE_THEMES_PATH}/${themeKey}`
     
     // Build context and sections
     const context = buildGlobalContext(aiContent, productData, images, themeKey)

@@ -1,0 +1,24 @@
+<div class="guarantee-badges-container guranteeBadges__wp-{{ block.id }}">
+    {%- assign suffix_gurantee_keys = "a,b,c,d" | split:',' -%}
+    {%- for key in suffix_gurantee_keys -%}
+        {%- liquid
+            assign icon_key = 'icon_' | append:key
+            assign title_key = 'title_' | append:key
+        -%}
+        {%- if block.settings[icon_key] != 'none' or block.settings[title_key] != blank -%}
+            <div class="guarantee-item">
+                {%- if block.settings[icon_key] != 'none' -%}<div class="guarantee-custom-icon">{% render 'icons-list', icon: block.settings[icon_key] %}</div>{%- endif -%}
+                {%- if block.settings[title_key] != blank -%}<span class="guarantee-text">{{ block.settings[title_key] }}</span>{%- endif -%}
+            </div>
+        {%- endif -%}
+    {%- endfor -%}
+</div>
+
+{%- style -%}
+    body .guranteeBadges__wp-{{ block.id }}{
+        margin:{{ block.settings.margin_top_badge }}px 0px {{ block.settings.margin_bottom_badge }}px 0px;
+    }
+    body .guranteeBadges__wp-{{ block.id }} .guarantee-text{
+        color: rgba(var(--color-foreground));
+    }
+{%- endstyle -%}

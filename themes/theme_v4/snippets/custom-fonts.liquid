@@ -1,0 +1,47 @@
+{%- liquid
+  assign title_font = settings.title_custom_fonts | default: 'Inter'
+  assign content_font = settings.content_custom_fonts | default: 'Inter'
+-%}
+<!-- Google Fonts Preconnect -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+{% if title_font == 'Poppins' or content_font == 'Poppins' %}
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+{% endif %}
+
+{% if title_font == 'Inter' or content_font == 'Inter' %}
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+{% endif %}
+
+{% if title_font == 'Roboto' or content_font == 'Roboto' %}
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+{% endif %}
+
+{% if title_font == 'Space Grotesk' or content_font == 'Space Grotesk' %}
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+{% endif %}
+
+{% if title_font == 'DM Sans' or content_font == 'DM Sans' %}
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+{% endif %}
+
+{% if title_font == 'Montserrat' or content_font == 'Montserrat' %}
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+{% endif %}
+
+{% if title_font == 'Be Vietnam Pro' or content_font == 'Be Vietnam Pro' %}
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+{% endif %}
+
+{% if title_font == 'Karla' or content_font == 'Karla' %}
+<link href="https://fonts.googleapis.com/css2?family=Karla:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+{% endif %}
+
+{% if title_font == 'Lato' or content_font == 'Lato' %}
+<link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
+{% endif %}
+
+{% if title_font == 'Merriweather' or content_font == 'Merriweather' %}
+<link href="https://fonts.googleapis.com/css2?family=Merriweather:wght@300;400;700&display=swap" rel="stylesheet">
+{% endif %}

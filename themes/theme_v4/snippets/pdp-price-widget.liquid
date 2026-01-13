@@ -1,0 +1,71 @@
+<div class="priceProduct__selector" id="price-{{- section.id -}}">
+    <div class="shop-product-price-container shopProduct__price-wp-{{ block.id }}">
+        <span class="shop-product-price-block {% if product.selected_or_first_available_variant.compare_at_price > product.selected_or_first_available_variant.price %} on-sale{% endif %}">{{ product.selected_or_first_available_variant.price | money }}</span>
+        {%- if product.selected_or_first_available_variant.compare_at_price > product.selected_or_first_available_variant.price -%}
+            <span class="shop-compare-price"><s>{{ product.selected_or_first_available_variant.compare_at_price | money }}</s></span>
+        {%- endif -%}
+        {%- if product.selected_or_first_available_variant.compare_at_price > product.selected_or_first_available_variant.price -%}
+        <span class="shop-save-price">
+            <svg class="tag-icon" width="10" height="10" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor"><path d="M243.31 136 144 36.69A15.86 15.86 0 0 0 132.69 32H40a8 8 0 0 0-8 8v92.69A15.86 15.86 0 0 0 36.69 144L136 243.31a16 16 0 0 0 22.63 0l84.68-84.68a16 16 0 0 0 0-22.63M84 96a12 12 0 1 1 12-12 12 12 0 0 1-12 12"/></svg>
+            {{- block.settings.save_txt -}}&nbsp;
+            {%- liquid
+                if product.selected_or_first_available_variant.compare_at_price > product.selected_or_first_available_variant.price
+                assign original_price = product.selected_or_first_available_variant.compare_at_price
+                assign sale_price = product.selected_or_first_available_variant.price
+                assign discount = original_price | minus: sale_price
+                assign discount_percent = discount | times: 100.0 | divided_by: original_price
+                endif
+                if discount_percent
+                assign rounded_discount = discount_percent | floor
+                assign decimal_part = discount_percent | minus: rounded_discount
+                if decimal_part >= 0.5
+                    assign rounded_discount = rounded_discount | plus: 1
+                endif
+                echo block.settings.badge_txt
+                echo '&nbsp;'
+                echo rounded_discount
+                echo '%'
+                endif
+            -%}        
+        </span>
+        {%- endif -%}
+    </div>
+</div>
+
+{%- style -%}
+    body .shopProduct__price-wp-{{ block.id }}{
+        margin: {{ block.settings.margin_top }}px 0px {{ block.settings.margin_bottom }}px 0px;
+    }
+    body .shopProduct__price-wp-{{ block.id }} .shop-product-price-block{
+        font-size: {{ block.settings.price_font_size | append:'px' }};
+        font-weight: {{ block.settings.price_font_w }};
+    }
+    body .shopProduct__price-wp-{{ block.id }} .shop-product-price-block.on-sale{
+        color:var(--color-highliter) !important;
+    }    
+    body .shopProduct__price-wp-{{ block.id }} .shop-compare-price{
+        font-size: {{ block.settings.cprice_font_size | append:'px' }};
+        font-weight: {{ block.settings.cprice_font_w }};        
+    }
+    body .shopProduct__price-wp-{{ block.id }} .shop-compare-price s{
+        color:rgb(var(--color-foreground),0.7);
+    }        
+    body .shopProduct__price-wp-{{ block.id }} .shop-save-price{
+        background-color:rgba(var(--color-innerHighlight));
+        color: rgba(var(--color-sale-badge));
+        font-size: {{ block.settings.badge_font_size | append:'px' }};
+        font-weight: {{ block.settings.badge_font_w }};  
+        border-radius: {{ block.settings.badge_bd_radius | append:'px' }};      
+    }  
+    @media(max-width:749px){
+        body .shopProduct__price-wp-{{ block.id }} .shop-product-price-block{
+            font-size: {{ block.settings.price_font_size_mb | append:'px' }};
+        }
+        body .shopProduct__price-wp-{{ block.id }} .shop-compare-price{
+            font-size: {{ block.settings.cprice_font_size_mb | append:'px' }};
+        }  
+        body .shopProduct__price-wp-{{ block.id }} .shop-save-price{
+            font-size: {{ block.settings.badge_font_size_mb | append:'px' }};
+        } 
+    }
+{%- endstyle -%}

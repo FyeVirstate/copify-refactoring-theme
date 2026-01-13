@@ -1,0 +1,340 @@
+<style>
+  .section-{{ section.id }}-padding {
+    background: rgb(var(--color-background));
+  }
+
+  .section-{{ section.id }}
+  -padding h2
+  , .section-{{ section.id }}
+  -padding table tr td
+  , .section-{{ section.id }}
+  -padding table tr th {
+    color: rgb(var(--color-foreground));
+  }
+
+
+  .section-{{ section.id }}-padding table tr th:nth-child(2),
+  .section-{{ section.id }}-padding table tr td:nth-child(2),
+  .section-{{ section.id }}-padding table tr:last-child td:nth-child(2):before {
+    background: var(--color-highliter);
+  }
+
+  .section-{{ section.id }}
+  -padding table tr th
+  , .section-{{ section.id }}
+  -padding table tr td {
+    border-bottom: 1px solid var(--color-highliter);
+  }
+
+  .section-{{ section.id }}
+  -padding .btn.btn-red {
+    background: rgb(var(--color-button));
+    color: rgb(var(--color-button-text));
+  }
+
+
+  .section-{{ section.id }}
+  -padding .btn-bottom-box svg path {
+    fill: rgb(var(--color-foreground));
+  }
+
+  /* Image height options */
+  .result-image--adapt {
+    max-width: var(--page-width);
+    width: 100%;
+    height: auto;
+  }
+
+  .result-image--small {
+    max-width: var(--page-width);
+    width: 100%;
+    height: 400px;
+    object-fit: cover;
+  }
+
+  .result-image--medium {
+    max-width: var(--page-width);
+    width: 100%;
+    height: 500px;
+    object-fit: cover;
+  }
+
+  .result-image--large {
+    max-width: var(--page-width);
+    width: 100%;
+    height: 600px;
+    object-fit: cover;
+  }
+
+  /* Centering like FAQ section */
+  .com-faq-sec {
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+  }
+
+  .com-faq-sec--no-image {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .com-faq-sec--image-right {
+    flex-direction: row-reverse;
+  }
+
+  .left-img-box {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    position: relative;
+  }
+
+  .right-faq-box {
+    width: 100%;
+  }
+
+  .right-faq-box--centered {
+    width: 100%;
+    max-width: 800px;
+    margin: 0 auto;
+  }
+
+  .results-sec {
+    max-width: var(--page-width);
+    margin: 0 auto;
+  }
+
+
+  @media screen and (max-width: 749px) {
+    .com-faq-sec {
+      flex-direction: column;
+    }
+  }
+
+
+  @media screen and (min-width: 750px) {
+    .section-{{ section.id }}-padding {
+      padding-top: {{ section.settings.padding_top }}px;
+      padding-bottom: {{ section.settings.padding_bottom }}px;
+    }
+
+  }
+
+</style>
+<!-- sections->product-results -->
+<div class="faq-sec results-sec section-{{ section.id }}-padding color-{{ section.settings.section_color_scheme }}">
+  <div class="page-width">
+    {% assign has_image = false %}
+    {% if settings.d_product_s_2_left != blank or section.settings.center_image != blank %}
+      {% assign has_image = true %}
+    {% endif %}
+    <div class="com-faq-sec{% unless has_image %} com-faq-sec--no-image{% endunless %}{% if section.settings.image_position == 'right' %} com-faq-sec--image-right{% endif %}">
+
+      <!-- Image (left or right) -->
+      {% assign has_image = false %}
+      {% assign imgUrl = settings.d_product_s_2_left | asset_url %}
+      {% if settings.d_product_s_2_left != blank %}
+        {% assign has_image = true %}
+      {% endif %}
+      {% if section.settings.center_image != blank %}
+        {% assign imgUrl = section.settings.center_image | img_url: '800x' %}
+        {% assign has_image = true %}
+      {% endif %}
+
+      {% if has_image %}
+        <div class="left-img-box{% if section.settings.image_position == 'right' %} right-img-box{% endif %}">
+          <img
+            src="{{ imgUrl }}"
+            alt=""
+            class="result-image--{{ section.settings.image_height }}">
+        </div>
+      {% endif %}
+
+      <!-- Results content -->
+      <div class="right-faq-box{% unless has_image %} right-faq-box--centered{% endunless %}">
+        <div class="faq-box-sec">
+
+          {% if section.settings.heading != blank %}
+            {%- assign title_size = section.settings.heading_size | default: 'h2' -%}
+            <h2 class="{{ title_size }}{% if section.settings.highlight_italic %} highlight-italic{% endif %}">{{ section.settings.heading }}</h2>
+          {% endif %}
+
+          <div class="result-box">
+            {% for block in section.blocks %}
+              {% if block.type == 'result' %}
+                <div class="result-list">
+                  <div class="text-left">
+                    <h3>{{ block.settings.percentage }}</h3>
+                  </div>
+                  <div class="right-text">
+                    <p>{{ block.settings.text }}</p>
+                  </div>
+                </div>
+              {% endif %}
+            {% endfor %}
+          </div>
+
+          <div class="list-bottom">
+            {% if section.settings.bottom_note != blank %}
+              <p>{{ section.settings.bottom_note }}</p>
+            {% endif %}
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% schema %}
+  {
+    "name": "Product Results",
+    "settings": [
+      {
+        "type": "header",
+        "content": "t:sections.image-with-text.settings.header_colors.content"
+      },
+      {
+        "type": "color_scheme",
+        "id": "section_color_scheme",
+        "label": "t:sections.all.colors.label",
+        "default": "scheme-1"
+      },
+      {
+        "type": "inline_richtext",
+        "id": "heading",
+        "label": "Heading",
+        "default": "Resultats"
+      },
+      {
+        "type": "checkbox",
+        "id": "highlight_italic",
+        "label": "Highlight italic words in heading",
+        "default": true,
+        "info": "If checked, italic words in heading will be highlighted with a different color"
+      }, {
+        "type": "select",
+        "id": "heading_size",
+        "options": [
+          {
+            "value": "h4",
+            "label": "t:sections.all.heading_size.options__1.label"
+          },
+          {
+            "value": "h3",
+            "label": "t:sections.all.heading_size.options__2.label"
+          },
+          {
+            "value": "h2",
+            "label": "t:sections.all.heading_size.options__3.label"
+          },
+          {
+            "value": "h1",
+            "label": "t:sections.all.heading_size.options__4.label"
+          }, {
+            "value": "h0",
+            "label": "t:sections.all.heading_size.options__5.label"
+          }
+        ],
+        "default": "h2",
+        "label": "Heading Size"
+      }, {
+        "type": "image_picker",
+        "id": "center_image",
+        "label": "Image",
+        "info": "700x700 recommended"
+      }, {
+        "type": "select",
+        "id": "image_height",
+        "options": [
+          {
+            "value": "adapt",
+            "label": "Adapt to image"
+          }, {
+            "value": "small",
+            "label": "Small"
+          }, {
+            "value": "medium",
+            "label": "Medium"
+          }, {
+            "value": "large",
+            "label": "Large"
+          }
+        ],
+        "default": "adapt",
+        "label": "Image Height"
+      }, {
+        "type": "select",
+        "id": "image_position",
+        "options": [
+          {
+            "value": "left",
+            "label": "Left"
+          }, {
+            "value": "right",
+            "label": "Right"
+          }
+        ],
+        "default": "right",
+        "label": "Image Position"
+      }, {
+        "type": "text",
+        "id": "bottom_note",
+        "label": "Bottom Note",
+        "default": "Results are collected on reviews post-purchase*"
+      }, {
+        "type": "range",
+        "id": "padding_top",
+        "min": 0,
+        "max": 100,
+        "step": 4,
+        "unit": "px",
+        "label": "t:sections.all.padding.padding_top",
+        "default": 40
+      }, {
+        "type": "range",
+        "id": "padding_bottom",
+        "min": 0,
+        "max": 100,
+        "step": 4,
+        "unit": "px",
+        "label": "t:sections.all.padding.padding_bottom",
+        "default": 40
+      }
+    ],
+    "blocks": [
+      {
+        "type": "result",
+        "name": "Result Item",
+        "settings": [
+          {
+            "type": "text",
+            "id": "percentage",
+            "label": "Percentage / Number",
+            "default": "+46%"
+          }, {
+            "type": "textarea",
+            "id": "text",
+            "label": "Description",
+            "default": "Immerse yourself in tranquility, allowing your mind to unwind and relax"
+          }
+        ]
+      }
+    ],
+    "presets": [
+      {
+        "name": "Product Results",
+        "category": "Product",
+        "blocks": [
+          {
+            "type": "result"
+          }, {
+            "type": "result"
+          }
+        ]
+      }
+    ]
+  }
+{% endschema %}

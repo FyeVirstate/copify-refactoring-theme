@@ -1,0 +1,34 @@
+<div class="productLabels_mainwrapper productLabels-wp-{{ block.id }}">
+  <div class="productLabels_container">
+    {%- assign suffix_labels_keys = "a,b,c,d" | split:',' -%}
+    {%- for key in suffix_labels_keys -%}
+        {%- liquid
+            assign svg_icon_key = 'icon_' | append:key
+            assign title_key = 'title_' | append:key
+        -%}  
+    {%- if block.settings[svg_icon_key] != blank or block.settings[title_key] != blank -%}  
+      <div class="productLabels__item productLabels_ndx-{{- forloop.index0 -}}">
+        {%- if block.settings[svg_icon_key] != 'none' -%}<div class="productLabels__icon">{% render 'icons-list', icon: block.settings[svg_icon_key] %}</div>{%- endif -%}
+        {%- if block.settings[title_key] != blank -%}
+        <div class="productLabels__content">
+          <div class="productLabels__title">{{ block.settings[title_key] }}</div>
+        </div>
+        {%- endif -%}
+      </div>
+    {%- endif -%}
+    {%- endfor -%}
+  </div>
+</div>
+
+{%- style -%}
+    body .productLabels-wp-{{ block.id }}{
+        margin: {{ block.settings.margin_top }}px 0px {{ block.settings.margin_bottom }}px 0px;         
+    }   
+    body .productLabels-wp-{{ block.id }} .productLabels__item{
+        background-color: rgb(var(--color-innerHighlight));
+        border-color: rgba(var(--color-foreground));  
+    }
+    body .productLabels-wp-{{ block.id }} .productLabels__item .productLabels__title{
+        color: rgba(var(--color-foreground));  
+    }        
+{%- endstyle -%}

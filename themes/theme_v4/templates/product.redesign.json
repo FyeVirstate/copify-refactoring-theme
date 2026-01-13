@@ -1,0 +1,742 @@
+{
+  "sections": {
+    "main": {
+      "type": "pdp-main-product",
+      "blocks": {
+        "bullets_badges_fqGrtp": {
+          "type": "bullets_badges",
+          "settings": {
+            "margin_top": 5,
+            "margin_bottom": 5,
+            "icona_dsg_a": "check_mark",
+            "texta_dsg_a": "Boosts hydration",
+            "iconb_dsg_a": "check_mark",
+            "textb_dsg_a": "Boosts hydration",
+            "iconc_dsg_a": "check_mark",
+            "textc_dsg_a": "Boosts hydration",
+            "icond_dsg_a": "check_mark",
+            "textd_dsg_a": "Boosts hydration",
+            "icone_dsg_a": "check_mark",
+            "texte_dsg_a": "Boosts hydration"
+          }
+        },
+        "product_labels_ii_NPDeYt": {
+          "type": "product_labels_ii",
+          "settings": {
+            "margin_top": 5,
+            "margin_bottom": 5,
+            "bd_radius": 8,
+            "icon_a": "check_mark",
+            "title_a": "Fortify",
+            "para_a": "Bone & Joint health",
+            "icon_b": "check_mark",
+            "title_b": "Fortify",
+            "para_b": "Bone & Joint health",
+            "icon_c": "check_mark",
+            "title_c": "Fortify",
+            "para_c": "Bone & Joint health",
+            "icon_d": "check_mark",
+            "title_d": "Fortify",
+            "para_d": "Bone & Joint health"
+          }
+        },
+        "trustpilot_widget_Piap3x": {
+          "type": "trustpilot_widget",
+          "settings": {
+            "margin_top": 5,
+            "margin_bottom": 5,
+            "design_mode": "design_c",
+            "ratings_text_dsg_a": "Excellent",
+            "ratings_dsg_a": "4.7 out of 5",
+            "ratings_dsg_b": "4.7",
+            "ratings_count_dsg_b": "(137)",
+            "ratings_satisfaction_dsg_b": "Glowing Customers",
+            "ratings_dsg_c": "Rated 4.8 (21,883+ happy customers)"
+          }
+        },
+        "title_WkJnNA": {
+          "type": "title",
+          "settings": {}
+        },
+        "heading_header_NYdjQG": {
+          "type": "heading_header",
+          "settings": {
+            "require_bg": false,
+            "margin_top": 5,
+            "margin_bottom": 0,
+            "border_radius": 0,
+            "pd_space_lft": 0,
+            "pd_space_rtl": 14,
+            "pd_space_top": 5,
+            "pd_bottom_top": 0,
+            "badge": "",
+            "heading": "Enjoy superior comfort with enhanced airflow from innovative aerated foams.",
+            "divider_bf": false,
+            "divider": false,
+            "font_size": 16,
+            "font_size_mb": 16,
+            "font_weight": "300"
+          }
+        },
+        "price_widget_thM6mT": {
+          "type": "price_widget",
+          "settings": {
+            "margin_top": 5,
+            "margin_bottom": 5,
+            "price_font_size": 28,
+            "price_font_size_mb": 24,
+            "price_font_w": "700",
+            "cprice_font_size": 21,
+            "cprice_font_size_mb": 18,
+            "cprice_font_w": "300",
+            "badge_txt": "Save",
+            "badge_bd_radius": 50,
+            "badge_font_size": 12,
+            "badge_font_size_mb": 10,
+            "badge_font_w": "300"
+          }
+        },
+        "variant_picker_Q3pRkb": {
+          "type": "variant_picker",
+          "settings": {
+            "margin_top": 5,
+            "margin_bottom": 5,
+            "heading_will_show": true,
+            "heading_font_size": 14,
+            "heading_font_size_mb": 14,
+            "heading_font_weight": "500",
+            "divider_line": "dashed",
+            "s_color_font_size": 14,
+            "s_color_font_size_mb": 12,
+            "s_color_font_weight": "300",
+            "bd__radius": 4,
+            "picker_type": "button"
+          }
+        },
+        "quantity_break_UMRib3": {
+          "type": "quantity_break",
+          "disabled": true,
+          "settings": {
+            "heading": "Choose Your Quantity",
+            "qty_a": 2,
+            "off_price_a": 10,
+            "title_a": "1-Month Supply",
+            "badge_a": "",
+            "sw_variant_a": true,
+            "qty_b": 3,
+            "off_price_b": 30,
+            "title_b": "1-Month Supply",
+            "badge_b": "",
+            "sw_variant_b": true,
+            "qty_c": 4,
+            "off_price_c": 60,
+            "title_c": "1-Month Supply",
+            "badge_c": "",
+            "sw_variant_c": true
+          }
+        },
+        "buy_buttons_GphbdX": {
+          "type": "buy_buttons",
+          "settings": {
+            "margin_top": 5,
+            "margin_bottom": 0,
+            "bg__color": "#c16452",
+            "txt__color": "#ffffff",
+            "hvr_bg__color": "#c16452",
+            "hvr_txt__color": "#ffffff",
+            "bd__radius": 34
+          }
+        },
+        "upsell_aTjCeG": {
+          "type": "upsell",
+          "settings": {
+            "margin_top": 5,
+            "margin_bottom": 5,
+            "price_as_button": false,
+            "product": "template-1",
+            "bubble_text": "BEST SELLER",
+            "description": "Short product description here",
+            "btn_txt": "+Add",
+            "btn_soldout_txt": "Sold out"
+          }
+        },
+        "bagdes_text_RjxLJ6": {
+          "type": "bagdes_text",
+          "settings": {
+            "margin_top_badge": 5,
+            "margin_bottom_badge": 5,
+            "icon_a": "<svg class=\"guarantee-icon\" xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\">\n        <path d=\"M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z\"></path>\n      </svg>",
+            "title_a": "30-Day Money-Back Guarantee",
+            "icon_b": "<svg class=\"guarantee-icon\" xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\">\n        <polyline points=\"20 6 9 17 4 12\"></polyline>\n      </svg>",
+            "title_b": "90 Day Returns",
+            "icon_c": "",
+            "title_c": "",
+            "icon_d": "",
+            "title_d": ""
+          }
+        },
+        "payment_icons_ARDNKD": {
+          "type": "payment_icons",
+          "settings": {
+            "margin_top_badge": 5,
+            "margin_bottom_badge": 5,
+            "icon_a": "master_card",
+            "icon_b": "american_express",
+            "icon_c": "apple_pay",
+            "icon_d": "google_pay",
+            "icon_e": "discover",
+            "icon_f": "visa",
+            "icon_g": "klarna"
+          }
+        },
+        "collapsible_tabs_aPxD3C": {
+          "type": "collapsible_tabs",
+          "settings": {
+            "margin_top_faq": 5,
+            "margin_bottom_faq": 5,
+            "title_a": "Description",
+            "content_a": "Product description goes here.",
+            "title_b": "How to use",
+            "content_b": "Usage instructions go here.",
+            "title_c": "Specifications",
+            "content_c": "Usage instructions go here.",
+            "title_d": "",
+            "content_d": "",
+            "title_e": "",
+            "content_e": "",
+            "title_f": "",
+            "content_f": "",
+            "title_g": "",
+            "content_g": "",
+            "title_h": "",
+            "content_h": "",
+            "title_i": "",
+            "content_i": "",
+            "title_j": "",
+            "content_j": ""
+          }
+        },
+        "video_reviews_Qn9UHV": {
+          "type": "video_reviews",
+          "settings": {
+            "image1": "",
+            "text1": "your competitive edge. Breathable mesh",
+            "video2": "",
+            "text2": "Made with premium materials that are built to last and deliver exceptional performance",
+            "video3": "",
+            "text3": "Thick cushioned sole + breathable design = all-day comfort without compromise.",
+            "video4": "",
+            "text4": "Step Into Superior Comfort and Performance",
+            "video5": "",
+            "text5": "These aren't just shoes—they're your competitive edge."
+          }
+        }
+      },
+      "block_order": [
+        "bullets_badges_fqGrtp",
+        "product_labels_ii_NPDeYt",
+        "trustpilot_widget_Piap3x",
+        "title_WkJnNA",
+        "heading_header_NYdjQG",
+        "price_widget_thM6mT",
+        "variant_picker_Q3pRkb",
+        "quantity_break_UMRib3",
+        "buy_buttons_GphbdX",
+        "upsell_aTjCeG",
+        "bagdes_text_RjxLJ6",
+        "payment_icons_ARDNKD",
+        "collapsible_tabs_aPxD3C",
+        "video_reviews_Qn9UHV"
+      ],
+      "settings": {
+        "product_title_size": "h2",
+        "enable_sticky_info": true,
+        "color_scheme": "scheme-1",
+        "square_media": true,
+        "media_size": "medium",
+        "constrain_to_viewport": false,
+        "media_fit": "cover",
+        "gallery_layout": "thumbnail_slider",
+        "mobile_thumbnails": "show",
+        "media_position": "left",
+        "image_zoom": "none",
+        "hide_variants": true,
+        "enable_video_looping": false,
+        "padding_top": 0,
+        "padding_bottom": 56,
+        "bd__radius": 34
+      }
+    },
+    "header_with_marquee_B8fi3m": {
+      "type": "header-with-marquee",
+      "blocks": {
+        "marquee_P9rqeR": {
+          "type": "marquee",
+          "settings": {
+            "name": "Elena Marwel",
+            "profession": "Perfect grip and stylish design — ideal for all-day comfort.",
+            "image": ""
+          }
+        },
+        "marquee_96tAmH": {
+          "type": "marquee",
+          "settings": {
+            "name": "Jackson",
+            "profession": "These shoes offer a perfect balance of style and support.",
+            "image": ""
+          }
+        },
+        "marquee_rGCFJC": {
+          "type": "marquee",
+          "settings": {
+            "name": "Lexi McDonald Moriarty",
+            "profession": "Breathable material and elegant look, great for long walks.",
+            "image": ""
+          }
+        },
+        "marquee_KzL4B9": {
+          "type": "marquee",
+          "settings": {
+            "name": "Lisa Jubilee,",
+            "profession": "The cushioning is soft and fits perfectly with every outfit.”",
+            "image": ""
+          }
+        },
+        "marquee_ne83hT": {
+          "type": "marquee",
+          "settings": {
+            "name": "Melissa Nohr",
+            "profession": "Breathable material and elegant look, great for long walks.",
+            "image": ""
+          }
+        }
+      },
+      "block_order": [
+        "marquee_P9rqeR",
+        "marquee_96tAmH",
+        "marquee_rGCFJC",
+        "marquee_KzL4B9",
+        "marquee_ne83hT"
+      ],
+      "name": "Marquee auto slider",
+      "settings": {
+        "heading": "Customer Reviews",
+        "color_scheme": "scheme-1"
+      }
+    },
+    "timeline_points_gzih3F": {
+      "type": "timeline-points",
+      "blocks": {
+        "point_8BijtR": {
+          "type": "point",
+          "settings": {
+            "timeframe": "High Quality Materials",
+            "description": "Made with premium materials that are built to last and deliver exceptional performance"
+          }
+        },
+        "point_L39weh": {
+          "type": "point",
+          "settings": {
+            "timeframe": "Easy to Use & Design",
+            "description": "Customize your experience with various settings to meet your specific needs."
+          }
+        },
+        "point_DFpURp": {
+          "type": "point",
+          "settings": {
+            "timeframe": "Long-Term Value",
+            "description": "A smart investment that pays for itself over time with its durability and efficiency."
+          }
+        },
+        "point_xyC7p9": {
+          "type": "point",
+          "settings": {
+            "timeframe": "What Makes Us Different",
+            "description": "Thick cushioned sole + breathable design = all-day comfort without compromise."
+          }
+        },
+        "point_MiJj7W": {
+          "type": "point",
+          "settings": {
+            "timeframe": "Step Into Superior Comfort and Performance",
+            "description": "These aren't just shoes—they're your competitive edge. Breathable mesh, thick cushioning, and elastic support work together for unstoppable comfort."
+          }
+        }
+      },
+      "block_order": [
+        "point_8BijtR",
+        "point_L39weh",
+        "point_DFpURp",
+        "point_xyC7p9",
+        "point_MiJj7W"
+      ],
+      "name": "Timeline points",
+      "settings": {
+        "heading": "<strong>Step Into Superior Comfort and Performance:</strong> These aren't just shoes—they're your competitive edge. Breathable mesh, thick cushioning, and elastic support work together for unstoppable comfort.",
+        "image": "",
+        "color_scheme": "scheme-1"
+      }
+    },
+    "pdp_benefits_VxM8kw": {
+      "type": "pdp-benefits",
+      "blocks": {
+        "icon_with_text_PKpfbe": {
+          "type": "icon_with_text",
+          "settings": {
+            "icon": "bubble_check",
+            "title": "High Quality Materials",
+            "description": "Made with premium materials that are built to last and deliver exceptional performance."
+          }
+        },
+        "icon_with_text_xrMRjk": {
+          "type": "icon_with_text",
+          "settings": {
+            "icon": "bubble_check",
+            "title": "Easy to Use Design",
+            "description": "Intuitive design makes this product simple to use, saving you valuable time and effort."
+          }
+        },
+        "icon_with_text_weLNXK": {
+          "type": "icon_with_text",
+          "settings": {
+            "icon": "bubble_check",
+            "title": "Multiple Configuration Options",
+            "description": "Customize your experience with various settings to meet your specific needs."
+          }
+        },
+        "icon_with_text_GHFHYa": {
+          "type": "icon_with_text",
+          "settings": {
+            "icon": "bubble_check",
+            "title": "Long-Term Value",
+            "description": "A smart investment that pays for itself over time with its durability and efficiency."
+          }
+        }
+      },
+      "block_order": [
+        "icon_with_text_PKpfbe",
+        "icon_with_text_xrMRjk",
+        "icon_with_text_weLNXK",
+        "icon_with_text_GHFHYa"
+      ],
+      "name": "Benefits - PDP",
+      "settings": {
+        "color_scheme": "scheme-1",
+        "heading": "Product Features",
+        "heading_highlight": "Premium",
+        "paragraph": "Discover the outstanding features that make our product stand out from the competition.",
+        "image": "",
+        "image_align": "right"
+      }
+    },
+    "image_faq_H7BmEQ": {
+      "type": "image-faq",
+      "blocks": {
+        "faq_Rk6HJH": {
+          "type": "faq",
+          "settings": {
+            "question": "Transform Your Running Experience Tody",
+            "content": "Don't settle for ordinary shoes. Experience the perfect blend of breathability, cushioning, and style"
+          }
+        },
+        "faq_zRJi8J": {
+          "type": "faq",
+          "settings": {
+            "question": "Transform Your Running Experience Tody",
+            "content": "Don't settle for ordinary shoes. Experience the perfect blend of breathability, cushioning, and style"
+          }
+        },
+        "faq_zNDRrg": {
+          "type": "faq",
+          "settings": {
+            "question": "Transform Your Running Experience Tody",
+            "content": "Don't settle for ordinary shoes. Experience the perfect blend of breathability, cushioning, and style"
+          }
+        },
+        "faq_NeBURw": {
+          "type": "faq",
+          "settings": {
+            "question": "Transform Your Running Experience Tody",
+            "content": "Don't settle for ordinary shoes. Experience the perfect blend of breathability, cushioning, and style"
+          }
+        }
+      },
+      "block_order": [
+        "faq_Rk6HJH",
+        "faq_zRJi8J",
+        "faq_zNDRrg",
+        "faq_NeBURw"
+      ],
+      "name": "Image with faq",
+      "settings": {
+        "image_alignment": "right",
+        "image": "",
+        "heading": "What Make Us <span>Different</span>",
+        "paragraph": "Thick cushionsed sole + beathable design = all-day Comfort without compromise.",
+        "color_scheme": "scheme-1"
+      }
+    },
+    "pdp_comparison_table_dACQCp": {
+      "type": "pdp-comparison-table",
+      "blocks": {
+        "table_heading_yNfHe3": {
+          "type": "table_heading",
+          "settings": {
+            "image": "",
+            "title": "Our Product",
+            "icon": "bubble_check",
+            "icon_text": "Original",
+            "highlighted": true
+          }
+        },
+        "table_heading_QAqqa8": {
+          "type": "table_heading",
+          "settings": {
+            "image": "",
+            "title": "Others",
+            "icon": "none",
+            "icon_text": "",
+            "highlighted": false
+          }
+        },
+        "features_TQAmCQ": {
+          "type": "features",
+          "settings": {
+            "iconone": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 256 256\"><rect width=\"256\" height=\"256\" fill=\"none\"></rect><path d=\"M54.46,201.54c-9.2-9.2-3.1-28.53-7.78-39.85C41.82,150,24,140.5,24,128s17.82-22,22.68-33.69C51.36,83,45.26,63.66,54.46,54.46S83,51.36,94.31,46.68C106.05,41.82,115.5,24,128,24S150,41.82,161.69,46.68c11.32,4.68,30.65-1.42,39.85,7.78s3.1,28.53,7.78,39.85C214.18,106.05,232,115.5,232,128S214.18,150,209.32,161.69c-4.68,11.32,1.42,30.65-7.78,39.85s-28.53,3.1-39.85,7.78C150,214.18,140.5,232,128,232s-22-17.82-33.69-22.68C83,204.64,63.66,210.74,54.46,201.54Z\" opacity=\"0.2\"></path><path d=\"M54.46,201.54c-9.2-9.2-3.1-28.53-7.78-39.85C41.82,150,24,140.5,24,128s17.82-22,22.68-33.69C51.36,83,45.26,63.66,54.46,54.46S83,51.36,94.31,46.68C106.05,41.82,115.5,24,128,24S150,41.82,161.69,46.68c11.32,4.68,30.65-1.42,39.85,7.78s3.1,28.53,7.78,39.85C214.18,106.05,232,115.5,232,128S214.18,150,209.32,161.69c-4.68,11.32,1.42,30.65-7.78,39.85s-28.53,3.1-39.85,7.78C150,214.18,140.5,232,128,232s-22-17.82-33.69-22.68C83,204.64,63.66,210.74,54.46,201.54Z\" fill=\"white\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"16\"></path><polyline points=\"88 136 112 160 168 104\" fill=\"none\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"16\"></polyline></svg>",
+            "feature_title": "Core feature",
+            "feature_have_a": "true",
+            "feature_have_b": "false"
+          }
+        },
+        "features_fkh8qh": {
+          "type": "features",
+          "settings": {
+            "iconone": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 256 256\"><rect width=\"256\" height=\"256\" fill=\"none\"></rect><path d=\"M54.46,201.54c-9.2-9.2-3.1-28.53-7.78-39.85C41.82,150,24,140.5,24,128s17.82-22,22.68-33.69C51.36,83,45.26,63.66,54.46,54.46S83,51.36,94.31,46.68C106.05,41.82,115.5,24,128,24S150,41.82,161.69,46.68c11.32,4.68,30.65-1.42,39.85,7.78s3.1,28.53,7.78,39.85C214.18,106.05,232,115.5,232,128S214.18,150,209.32,161.69c-4.68,11.32,1.42,30.65-7.78,39.85s-28.53,3.1-39.85,7.78C150,214.18,140.5,232,128,232s-22-17.82-33.69-22.68C83,204.64,63.66,210.74,54.46,201.54Z\" opacity=\"0.2\"></path><path d=\"M54.46,201.54c-9.2-9.2-3.1-28.53-7.78-39.85C41.82,150,24,140.5,24,128s17.82-22,22.68-33.69C51.36,83,45.26,63.66,54.46,54.46S83,51.36,94.31,46.68C106.05,41.82,115.5,24,128,24S150,41.82,161.69,46.68c11.32,4.68,30.65-1.42,39.85,7.78s3.1,28.53,7.78,39.85C214.18,106.05,232,115.5,232,128S214.18,150,209.32,161.69c-4.68,11.32,1.42,30.65-7.78,39.85s-28.53,3.1-39.85,7.78C150,214.18,140.5,232,128,232s-22-17.82-33.69-22.68C83,204.64,63.66,210.74,54.46,201.54Z\" fill=\"white\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"16\"></path><polyline points=\"88 136 112 160 168 104\" fill=\"none\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"16\"></polyline></svg>",
+            "feature_title": "Feature",
+            "feature_have_a": "true",
+            "feature_have_b": "false"
+          }
+        },
+        "features_xNNbXm": {
+          "type": "features",
+          "settings": {
+            "iconone": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 256 256\"><rect width=\"256\" height=\"256\" fill=\"none\"></rect><path d=\"M54.46,201.54c-9.2-9.2-3.1-28.53-7.78-39.85C41.82,150,24,140.5,24,128s17.82-22,22.68-33.69C51.36,83,45.26,63.66,54.46,54.46S83,51.36,94.31,46.68C106.05,41.82,115.5,24,128,24S150,41.82,161.69,46.68c11.32,4.68,30.65-1.42,39.85,7.78s3.1,28.53,7.78,39.85C214.18,106.05,232,115.5,232,128S214.18,150,209.32,161.69c-4.68,11.32,1.42,30.65-7.78,39.85s-28.53,3.1-39.85,7.78C150,214.18,140.5,232,128,232s-22-17.82-33.69-22.68C83,204.64,63.66,210.74,54.46,201.54Z\" opacity=\"0.2\"></path><path d=\"M54.46,201.54c-9.2-9.2-3.1-28.53-7.78-39.85C41.82,150,24,140.5,24,128s17.82-22,22.68-33.69C51.36,83,45.26,63.66,54.46,54.46S83,51.36,94.31,46.68C106.05,41.82,115.5,24,128,24S150,41.82,161.69,46.68c11.32,4.68,30.65-1.42,39.85,7.78s3.1,28.53,7.78,39.85C214.18,106.05,232,115.5,232,128S214.18,150,209.32,161.69c-4.68,11.32,1.42,30.65-7.78,39.85s-28.53,3.1-39.85,7.78C150,214.18,140.5,232,128,232s-22-17.82-33.69-22.68C83,204.64,63.66,210.74,54.46,201.54Z\" fill=\"white\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"16\"></path><polyline points=\"88 136 112 160 168 104\" fill=\"none\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"16\"></polyline></svg>",
+            "feature_title": "Feature",
+            "feature_have_a": "true",
+            "feature_have_b": "false"
+          }
+        },
+        "features_dQjybt": {
+          "type": "features",
+          "settings": {
+            "iconone": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 256 256\"><rect width=\"256\" height=\"256\" fill=\"none\"></rect><path d=\"M54.46,201.54c-9.2-9.2-3.1-28.53-7.78-39.85C41.82,150,24,140.5,24,128s17.82-22,22.68-33.69C51.36,83,45.26,63.66,54.46,54.46S83,51.36,94.31,46.68C106.05,41.82,115.5,24,128,24S150,41.82,161.69,46.68c11.32,4.68,30.65-1.42,39.85,7.78s3.1,28.53,7.78,39.85C214.18,106.05,232,115.5,232,128S214.18,150,209.32,161.69c-4.68,11.32,1.42,30.65-7.78,39.85s-28.53,3.1-39.85,7.78C150,214.18,140.5,232,128,232s-22-17.82-33.69-22.68C83,204.64,63.66,210.74,54.46,201.54Z\" opacity=\"0.2\"></path><path d=\"M54.46,201.54c-9.2-9.2-3.1-28.53-7.78-39.85C41.82,150,24,140.5,24,128s17.82-22,22.68-33.69C51.36,83,45.26,63.66,54.46,54.46S83,51.36,94.31,46.68C106.05,41.82,115.5,24,128,24S150,41.82,161.69,46.68c11.32,4.68,30.65-1.42,39.85,7.78s3.1,28.53,7.78,39.85C214.18,106.05,232,115.5,232,128S214.18,150,209.32,161.69c-4.68,11.32,1.42,30.65-7.78,39.85s-28.53,3.1-39.85,7.78C150,214.18,140.5,232,128,232s-22-17.82-33.69-22.68C83,204.64,63.66,210.74,54.46,201.54Z\" fill=\"white\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"16\"></path><polyline points=\"88 136 112 160 168 104\" fill=\"none\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"16\"></polyline></svg>",
+            "feature_title": "Feature",
+            "feature_have_a": "true",
+            "feature_have_b": "false"
+          }
+        },
+        "features_AiUQKJ": {
+          "type": "features",
+          "settings": {
+            "iconone": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 256 256\"><rect width=\"256\" height=\"256\" fill=\"none\"></rect><path d=\"M54.46,201.54c-9.2-9.2-3.1-28.53-7.78-39.85C41.82,150,24,140.5,24,128s17.82-22,22.68-33.69C51.36,83,45.26,63.66,54.46,54.46S83,51.36,94.31,46.68C106.05,41.82,115.5,24,128,24S150,41.82,161.69,46.68c11.32,4.68,30.65-1.42,39.85,7.78s3.1,28.53,7.78,39.85C214.18,106.05,232,115.5,232,128S214.18,150,209.32,161.69c-4.68,11.32,1.42,30.65-7.78,39.85s-28.53,3.1-39.85,7.78C150,214.18,140.5,232,128,232s-22-17.82-33.69-22.68C83,204.64,63.66,210.74,54.46,201.54Z\" opacity=\"0.2\"></path><path d=\"M54.46,201.54c-9.2-9.2-3.1-28.53-7.78-39.85C41.82,150,24,140.5,24,128s17.82-22,22.68-33.69C51.36,83,45.26,63.66,54.46,54.46S83,51.36,94.31,46.68C106.05,41.82,115.5,24,128,24S150,41.82,161.69,46.68c11.32,4.68,30.65-1.42,39.85,7.78s3.1,28.53,7.78,39.85C214.18,106.05,232,115.5,232,128S214.18,150,209.32,161.69c-4.68,11.32,1.42,30.65-7.78,39.85s-28.53,3.1-39.85,7.78C150,214.18,140.5,232,128,232s-22-17.82-33.69-22.68C83,204.64,63.66,210.74,54.46,201.54Z\" fill=\"white\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"16\"></path><polyline points=\"88 136 112 160 168 104\" fill=\"none\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"16\"></polyline></svg>",
+            "feature_title": "Feature",
+            "feature_have_a": "true",
+            "feature_have_b": "false"
+          }
+        }
+      },
+      "block_order": [
+        "table_heading_yNfHe3",
+        "table_heading_QAqqa8",
+        "features_TQAmCQ",
+        "features_fkh8qh",
+        "features_xNNbXm",
+        "features_dQjybt",
+        "features_AiUQKJ"
+      ],
+      "name": "Comparison table - PDP",
+      "settings": {
+        "heading": "Why Choose",
+        "heading_highlight": "Us?",
+        "subheading": "Here's why we're the industry leader",
+        "color_scheme": "scheme-1"
+      }
+    },
+    "pdp_statistics_column_z4K6HW": {
+      "type": "pdp-statistics-column",
+      "blocks": {
+        "statistics_TjCt4w": {
+          "type": "statistics",
+          "settings": {
+            "count": "98%",
+            "title": "Happy Customers",
+            "paragraph": "Customers trust us with their business worldwide"
+          }
+        },
+        "statistics_rqgP4w": {
+          "type": "statistics",
+          "settings": {
+            "count": "99%",
+            "title": "Satisfaction Rate",
+            "paragraph": "Customer satisfaction is our top priority"
+          }
+        },
+        "statistics_CXcYRj": {
+          "type": "statistics",
+          "settings": {
+            "count": "87%",
+            "title": "Recovery",
+            "paragraph": "Round-the-clock customer support when you need it"
+          }
+        }
+      },
+      "block_order": [
+        "statistics_TjCt4w",
+        "statistics_rqgP4w",
+        "statistics_CXcYRj"
+      ],
+      "name": "Statistics columns - PDP",
+      "settings": {
+        "color_scheme": "",
+        "heading": "Our Impact",
+        "heading_highlight": "Statistics",
+        "disclaimer": "* Based on internal studies and customer feedback surveys.",
+        "image": ""
+      }
+    },
+    "marquee_Kpey3p": {
+      "type": "marquee",
+      "blocks": {
+        "marquee_NFKHUH": {
+          "type": "marquee",
+          "settings": {
+            "image": "",
+            "text": "\"These aren't just shoes—they're your competitive edge.\""
+          }
+        },
+        "marquee_cz4bkp": {
+          "type": "marquee",
+          "settings": {
+            "image": "",
+            "text": "\"These aren't just shoes—they're your competitive edge.\""
+          }
+        },
+        "marquee_pYpHdq": {
+          "type": "marquee",
+          "settings": {
+            "image": "",
+            "text": "\"These aren't just shoes—they're your competitive edge.\""
+          }
+        },
+        "marquee_eb8W7y": {
+          "type": "marquee",
+          "settings": {
+            "image": "",
+            "text": "\"These aren't just shoes—they're your competitive edge.\""
+          }
+        }
+      },
+      "block_order": [
+        "marquee_NFKHUH",
+        "marquee_cz4bkp",
+        "marquee_pYpHdq",
+        "marquee_eb8W7y"
+      ],
+      "name": "marquee",
+      "settings": {
+        "background_color": "#121212"
+      }
+    },
+    "img_with_txt_fdVHBc": {
+      "type": "img-with-txt",
+      "blocks": {
+        "title_gqxAKn": {
+          "type": "title",
+          "settings": {
+            "title": "Transform Your Running <span>Experience Today</span>"
+          }
+        },
+        "paragraph_4dhQn9": {
+          "type": "paragraph",
+          "settings": {
+            "paragraph": "Don't settle for ordinary shoes. Experience the perfect blend of breathability, cushioning, and style."
+          }
+        },
+        "button_6fEkwf": {
+          "type": "button",
+          "settings": {
+            "text": "Shop All Products",
+            "link": "shopify://collections"
+          }
+        }
+      },
+      "block_order": [
+        "title_gqxAKn",
+        "paragraph_4dhQn9",
+        "button_6fEkwf"
+      ],
+      "name": "Image with text",
+      "settings": {
+        "image_alignment": "right",
+        "image": "",
+        "color_scheme": "scheme-1"
+      }
+    },
+    "faq_Kgq36b": {
+      "type": "faq",
+      "blocks": {
+        "text_7nhK4X": {
+          "type": "text",
+          "settings": {
+            "question": "How do I place an order?",
+            "answer": "<p>ASJDFASFJAFKWEFWAEFJWEFAWKFWAEJFWAEKFJWAEKFAWFKJAWEFKJWEKFJAWKFAWEKFJAWEKFJAWKEFAWKFJAWKEFJAWKEFJAWKJFAWKEFAWKEFJAWKEFJWEKFJAWKEFAWEKJFAWEJFAWKFAWJKFAWJFAKWEFJKAWEFJ</p><p>- ASJDFASFJAFKWEFWAEFJWEFAWKFWAEJFWAEKFJWAEKFAWFKJAWEFKJWEKFJAWKFAWEKFJAWEKFJAWKEFAWKFJAWKEFJAWKEFJAWKJFAWKEFAWKEFJAWKEFJWEKFJAWKEFAWEKJFAWEJFAWKFAWJKFAWJFAKWEFJKAWEFJ</p><p>- ASJDFASFJAFKWEFWAEFJWEFAWKFWAEJFWAEKFJWAEKFAWFKJAWEFKJWEKFJAWKFAWEKFJAWEKFJAWKEFAWKFJAWKEFJAWKEFJAWKJFAWKEFAWKEFJAWKEFJWEKFJAWKEFAWEKJFAWEJFAWKFAWJKFAWJFAKWEFJKAWEFJ</p><p>-ASJDFASFJAFKWEFWAEFJWEFAWKFWAEJFWAEKFJWAEKFAWFKJAWEFKJWEKFJAWKFAWEKFJAWEKFJAWKEFAWKFJAWKEFJAWKEFJAWKJFAWKEFAWKEFJAWKEFJWEKFJAWKEFAWEKJFAWEJFAWKFAWJKFAWJFAKWEFJKAWEFJ</p>"
+          }
+        },
+        "text_tEpcTJ": {
+          "type": "text",
+          "settings": {
+            "question": "What payment methods do you accept?",
+            "answer": "<p>We accept major credit cards, PayPal, Shop Pay, and Apple Pay for your convenience and security.</p>"
+          }
+        },
+        "text_r6xrX8": {
+          "type": "text",
+          "settings": {
+            "question": "How long does shipping take?",
+            "answer": "<p>Standard shipping typically takes 3-5 business days within the continental US. International shipping times vary by location.</p>"
+          }
+        },
+        "text_K76bML": {
+          "type": "text",
+          "settings": {
+            "question": "What is your return policy?",
+            "answer": "<p>We offer a 30-day return policy. If you're not satisfied with your purchase, you can return it within 30 days for a full refund or exchange.</p>"
+          }
+        }
+      },
+      "block_order": [
+        "text_7nhK4X",
+        "text_tEpcTJ",
+        "text_r6xrX8",
+        "text_K76bML"
+      ],
+      "name": "faq",
+      "settings": {
+        "heading": "Frequently Asked Questions",
+        "subhding": "<p>Find answers to common questions about our products, shipping, returns, and more.</p>"
+      }
+    }
+  },
+  "order": [
+    "main",
+    "header_with_marquee_B8fi3m",
+    "timeline_points_gzih3F",
+    "pdp_benefits_VxM8kw",
+    "image_faq_H7BmEQ",
+    "pdp_comparison_table_dACQCp",
+    "pdp_statistics_column_z4K6HW",
+    "marquee_Kpey3p",
+    "img_with_txt_fdVHBc",
+    "faq_Kgq36b"
+  ]
+}

@@ -1,0 +1,19 @@
+{% assign free_shipping_threshold = settings.free_shipping_threshold %}
+{% assign cart_total_rupees = cart.total_price | divided_by: 100 %}
+{% assign gross_price = free_shipping_threshold | times:100 %}
+{% assign balance_release = gross_price | minus:cart.total_price %}
+{% assign progress_percent = cart_total_rupees | times: 100 | divided_by: free_shipping_threshold %}
+{% if progress_percent > 100 %}
+{% assign progress_percent = 100 %}
+{% endif %}
+<div class="cartProgress__barwp">
+    {% if cart_total_rupees < free_shipping_threshold %}
+        <p>{{ settings.after_shipping_threshold_prfx }} <b>{{ balance_release | money }}</b> {{ settings.after_shipping_threshold_sufx }}</p>
+        <div class="cartProgress__barwp_int">
+            <div class="cartProgress__barwp_bar" style="width: {{ progress_percent }}%;"></div>
+        </div>
+    {% else %}
+        <p>{{ settings.after_shipping_threshold_txt }}</p>
+        <div class="cartProgress__barwp_int"><div class="cartProgress__barwp_bar cartProgress__barwp_full" style="width: 100%;"></div></div>
+    {% endif %}
+</div>

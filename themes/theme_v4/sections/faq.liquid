@@ -1,0 +1,64 @@
+{% schema %}
+{ "name": "Faq", "class": "custom-faq faqimg", "settings": [
+    { "type": "text", "id": "heading", "label": "Heading","default":"Foire aux questions" },
+    { "type": "liquid", "id": "subhding", "label": "subhding","default":"Trouvez les réponses aux questions courantes sur nos produits, les expéditions, les retours et plus encore." },
+  ],
+  "blocks": [
+    { "type": "text", "name": "faq", "settings": [
+        { "type": "text", "id": "question", "label": "Question","default":"Est-ce que cela fonctionne avec mon routeur actuel ?" },
+        { "type": "liquid", "id": "answer", "label": "Answer","default":"Oui ! Compatible avec tous les routeurs et fournisseurs d'accès Internet. Plug and play." }
+    ] } ],
+  "presets": [ { "name": "Faq","blocks": [{"type": "text"},{"type": "text"},{"type": "text"},{"type": "text"},{"type": "text"}] } ]
+}
+{% endschema %}
+
+{{ 'faq.css' | asset_url | stylesheet_tag }}
+
+<div class="store-faq-section faq-wp-{{ section.id }}" data-section-type="faq">
+  <div class="store-faq-container">
+    <div class="page-width faq-flex-container center-no-image">
+      <div class="faq-header-column">
+        {%- if section.settings.heading != blank -%}<h2 class="store-faq-heading">{{ section.settings.heading }}</h2>{%- endif -%}
+        {%- if section.settings.subhding != blank -%}<div class="store-faq-subtitle">{{ section.settings.subhding }}</div>{%- endif -%}
+        <div class="store-faq">
+          {% comment %} <!-- Single Column Layout (Default) --> {% endcomment %}
+          <div class="faq-container">
+            {% for block in section.blocks %}
+              <div class="faq-item">
+                {%- if block.settings.question != blank -%}
+                    <div class="faq-question">
+                        <span>{{ block.settings.question }}</span>
+                        <span class="faq-toggle">+</span>
+                    </div>
+                {%- endif -%}
+                {%- if block.settings.answer != blank -%}
+                    <div class="faq-answer">
+                        <div class="faqAnswerMn">{{ block.settings.answer }}</div>
+                    </div>
+                {%- endif -%}
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{%- javascript -%}
+    document.addEventListener('DOMContentLoaded', function() {
+        const faqItems = document.querySelectorAll('.faq-item');
+        faqItems.forEach(item => {
+            const question = item.querySelector('.faq-question');
+            const answer = item.querySelector('.faq-answer');
+            question.addEventListener('click', function() {
+                faqItems.forEach(i => {
+                    if (i !== item) {
+                    i.classList.remove('active');
+                    }
+                });
+                item.classList.toggle('active');
+            });
+        });
+    });
+{%- endjavascript -%}

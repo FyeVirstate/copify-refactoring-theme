@@ -1,0 +1,48 @@
+/* scroller section css start */
+.squeeze_scroller_main {
+    width: 100%;
+    /* background-color: #f8f8f8; */
+    cursor: pointer;
+}
+.squeeze_scroller_data {
+    width: 100%;
+    padding: 30px 0;
+    /* background: #000; */
+}
+.squeeze_scroller_box {
+    width: 100%;
+    overflow: hidden;
+    position: relative;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+}
+.squeeze_scroller_inner {
+    display: inline-flex;
+    gap: 40px;
+}
+.squeeze_scroller_item {
+    display: flex;
+    align-items: center;
+    gap: 0 10px;
+}
+.squeeze_scroller_image {
+    width: 100px;
+    height: 30px;
+}
+.squeeze_scroller_image img,
+.squeeze_scroller_image svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+    object-fit: contain;
+    filter: invert(1);
+}
+.squeeze_scroller_para {
+    color: #fff;
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 21px;
+    margin: 0;
+}
+/* scroller section css end */

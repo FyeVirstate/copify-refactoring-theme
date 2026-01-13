@@ -1,0 +1,77 @@
+{%- comment -%}
+  Image Resolver Snippet
+  Handles both shopify:// URLs and asset filenames for images
+
+  Usage:
+    {% render 'image-resolver', image: section.settings.image, alt: 'Alt text', class: 'img-class', width: 800 %}
+
+  Parameters:
+    - image: The image value (can be shopify:// URL, asset filename, or full URL)
+    - alt: Alt text for the image (optional)
+    - class: CSS class for the img tag (optional)
+    - width: Image width (optional)
+    - height: Image height (optional)
+    - loading: Loading attribute - 'lazy' or 'eager' (optional, default: 'lazy')
+    - sizes: Sizes attribute for responsive images (optional)
+{%- endcomment -%}
+
+{%- liquid
+  assign img_alt = alt | default: ''
+  assign img_class = class | default: ''
+  assign img_width = width | default: nil
+  assign img_height = height | default: nil
+  assign img_loading = loading | default: 'lazy'
+  assign img_sizes = sizes | default: '100vw'
+-%}
+
+{%- if image != blank -%}
+  {%- comment -%} Check what type of image reference we have {%- endcomment -%}
+
+  {%- if image.src -%}
+    {%- comment -%} Image is an object with src property (Shopify media object) {%- endcomment -%}
+    <img
+      src="{{ image | image_url: width: img_width }}"
+      alt="{{ image.alt | default: img_alt | escape }}"
+      {% if img_class != blank %}class="{{ img_class }}"{% endif %}
+      {% if img_width %}width="{{ img_width }}"{% endif %}
+      {% if img_height %}height="{{ img_height }}"{% endif %}
+      loading="{{ img_loading }}"
+      sizes="{{ img_sizes }}"
+    >
+
+  {%- elsif image contains 'shopify://' -%}
+    {%- comment -%} Shopify CDN URL - use image_url filter {%- endcomment -%}
+    {%- assign resolved_image = image | image_url: width: img_width -%}
+    <img
+      src="{{ resolved_image }}"
+      alt="{{ img_alt | escape }}"
+      {% if img_class != blank %}class="{{ img_class }}"{% endif %}
+      {% if img_width %}width="{{ img_width }}"{% endif %}
+      {% if img_height %}height="{{ img_height }}"{% endif %}
+      loading="{{ img_loading }}"
+      sizes="{{ img_sizes }}"
+    >
+
+  {%- elsif image contains '://' -%}
+    {%- comment -%} External URL - use as-is {%- endcomment -%}
+    <img
+      src="{{ image }}"
+      alt="{{ img_alt | escape }}"
+      {% if img_class != blank %}class="{{ img_class }}"{% endif %}
+      {% if img_width %}width="{{ img_width }}"{% endif %}
+      {% if img_height %}height="{{ img_height }}"{% endif %}
+      loading="{{ img_loading }}"
+    >
+
+  {%- else -%}
+    {%- comment -%} Asset filename - use asset_url filter {%- endcomment -%}
+    <img
+      src="{{ image | asset_url }}"
+      alt="{{ img_alt | escape }}"
+      {% if img_class != blank %}class="{{ img_class }}"{% endif %}
+      {% if img_width %}width="{{ img_width }}"{% endif %}
+      {% if img_height %}height="{{ img_height }}"{% endif %}
+      loading="{{ img_loading }}"
+    >
+  {%- endif -%}
+{%- endif -%}

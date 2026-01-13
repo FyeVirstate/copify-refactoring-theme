@@ -1,0 +1,66 @@
+ <div id="review-Slider-{{ section.id }}">
+  {% for i in (1..3) %}
+    
+                   {% assign text = "text_" | append: i %}
+{% assign image = "image_" | append: i %}
+    {% assign author = "author_" | append: i %}
+    
+                   {% if block.settings[text] != "" %}
+
+ <div class="review-item ">
+            {%- unless block.settings[image] == blank -%}
+              <div class="review-item__image">
+                <img
+                  src="{{ block.settings[image] | image_url }}"
+                  alt="{{ block.settings[author] }}"
+                  width="auto"
+                  height="auto"
+                  loading="lazy"
+                >
+              </div>
+            {%- endunless -%}
+            <div class="review-item__right">
+              <div class="review-item__text">
+                {{ block.settings[text] }}
+              </div>
+<div class="review-item__author-and-stars">
+                  {%- unless block.settings[author] == blank -%}
+                    <p class="review-item__author">
+                      {{ block.settings[author] }}
+                    </p>
+                  {%- endunless -%}
+                     <span class="review-item__stars"
+                    {%- if block.settings.override_mini_review_star_color -%}
+                      style="color: {{ block.settings.mini_review_star_color }};"
+                    {%- endif -%}
+                    >
+                      ★★★★★
+                    </span>
+</div>
+            </div>
+                      </div>
+                   {% endif %}
+                   
+ {% endfor %}
+
+
+ </div>
+ <script>
+function setupreviewSliderJs{{ section.id | replace: '-', '' }}() {
+   $('#review-Slider-{{ section.id }}').slick({
+        slidesToShow: 1,
+        slidesToScroll: 1,
+        dots: true,
+        autoplay: true,
+    autoplaySpeed: 100000,
+        focusOnSelect: true
+        });
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  setTimeout(setupreviewSliderJs{{ section.id | replace: '-', '' }}, 550);
+});
+
+document.addEventListener('shopify:section:unload', setupreviewSliderJs{{ section.id | replace: '-', '' }});
+document.addEventListener('shopify:section:load', setupreviewSliderJs{{ section.id | replace: '-', '' }});
+</script>

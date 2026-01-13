@@ -1,0 +1,159 @@
+/*
+ * ------------------------------------------------------------
+ * IMPORTANT: The contents of this file are auto-generated.
+ *
+ * This file may be updated by the Shopify admin theme editor
+ * or related systems. Please exercise caution as any changes
+ * made to this file may be overwritten.
+ * ------------------------------------------------------------
+ */
+{
+  "sections": {
+    "main": {
+      "type": "main-product",
+      "blocks": {
+        "title_iJ9Mt6": {
+          "type": "title",
+          "settings": {}
+        },
+        "price_HjnMQf": {
+          "type": "price",
+          "settings": {}
+        },
+        "variant_picker_J7ckWj": {
+          "type": "variant_picker",
+          "settings": {
+            "picker_type": "button",
+            "swatch_shape": "circle"
+          }
+        },
+        "buy_buttons_qXHX9n": {
+          "type": "buy_buttons",
+          "settings": {
+            "show_dynamic_checkout": false,
+            "show_gift_card_recipient": true
+          }
+        },
+        "description_KbeURg": {
+          "type": "description",
+          "settings": {}
+        }
+      },
+      "block_order": [
+        "title_iJ9Mt6",
+        "price_HjnMQf",
+        "variant_picker_J7ckWj",
+        "buy_buttons_qXHX9n",
+        "description_KbeURg"
+      ],
+      "settings": {
+        "enable_sticky_info": true,
+        "color_scheme": "",
+        "media_size": "medium",
+        "constrain_to_viewport": true,
+        "media_fit": "contain",
+        "gallery_layout": "thumbnail_slider",
+        "mobile_thumbnails": "show",
+        "media_position": "left",
+        "image_zoom": "lightbox",
+        "hide_variants": false,
+        "enable_video_looping": false,
+        "padding_top": 36,
+        "padding_bottom": 36
+      }
+    },
+    "h_tickers_Va7Uai": {
+      "type": "h-tickers",
+      "blocks": {
+        "text_fwqer9": {
+          "type": "text",
+          "settings": {
+            "title": "gekkiii",
+            "image": ""
+          }
+        },
+        "text_hAtUVh": {
+          "type": "text",
+          "settings": {
+            "title": "",
+            "image": ""
+          }
+        },
+        "text_qjhrya": {
+          "type": "text",
+          "settings": {
+            "title": "",
+            "image": ""
+          }
+        },
+        "text_BXeBnJ": {
+          "type": "text",
+          "settings": {
+            "title": "",
+            "image": ""
+          }
+        },
+        "text_dH3rKK": {
+          "type": "text",
+          "settings": {
+            "title": "",
+            "image": ""
+          }
+        },
+        "text_DryriH": {
+          "type": "text",
+          "settings": {
+            "title": "",
+            "image": ""
+          }
+        },
+        "text_8XAFCt": {
+          "type": "text",
+          "settings": {
+            "title": "",
+            "image": ""
+          }
+        },
+        "text_rLNUKG": {
+          "type": "text",
+          "settings": {
+            "title": "",
+            "image": ""
+          }
+        },
+        "text_P9VN3y": {
+          "type": "text",
+          "settings": {
+            "title": "",
+            "image": ""
+          }
+        }
+      },
+      "block_order": [
+        "text_fwqer9",
+        "text_hAtUVh",
+        "text_qjhrya",
+        "text_BXeBnJ",
+        "text_dH3rKK",
+        "text_DryriH",
+        "text_8XAFCt",
+        "text_rLNUKG",
+        "text_P9VN3y"
+      ],
+      "name": "Horizontal Ticker",
+      "settings": {
+        "color_scheme": "scheme-2",
+        "show_store_name": false,
+        "speed": 1.5,
+        "text_spacing": 3,
+        "text_size": "2.5",
+        "italic_text": false,
+        "uppercase_text": false,
+        "bold_text": false,
+        "padding_top": 20,
+        "padding_bottom": 20
+      }
+    }
+  },
+  "order": ["main", "h_tickers_Va7Uai"]
+}

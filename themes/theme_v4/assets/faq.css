@@ -1,0 +1,273 @@
+.store-faq-section {
+    padding: 60px 0;
+    background: #fff;
+    overflow-x: hidden;
+}
+.store-faq-container {
+    width: 100%;
+    max-width: 1200px;
+    padding: 0 15px;
+    margin: 0 auto;
+}
+.faq-flex-container {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-width: 100%;
+}
+.faq-header-column {
+    margin-bottom: 30px;
+    width: 100%;
+    max-width: 100%;
+}
+.faq-content-column {
+    width: 100%;
+    max-width: 100%;
+}
+.store-faq-heading {
+    margin: 0 0 15px;
+    letter-spacing: -2px;
+    font-size: 36px;
+    /* color: #1773b0; */
+    font-weight: 700;
+    line-height: 1.1;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    /* text-align: center; */
+}
+.store-faq-subtitle {
+    font-size: 16px;
+    line-height: 1.5;
+    max-width: 90%;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    letter-spacing: -0.3px;
+    margin: 16px 0;
+}
+.faq-flex-container.center-no-image .store-faq-subtitle {
+    margin: 16px auto;
+}
+.store-faq-subtitle p {
+    line-height: 1.4;
+    color: #121212 ;
+    font-size: 16px;
+}
+.store-faq {
+    width: 100%;
+    margin: 0 auto;
+    max-width: 100%;
+}
+.store-faq .faq-container {
+    overflow: hidden;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    /* border: 1px solid;
+    border-radius: 8px; */
+}
+.faq-item {
+    border-bottom: 1px solid #000;
+    width: 100%;
+}
+.store-faq .faq-question {
+    /* color: #1773b0; */
+    /* background-color: #ffffff; */
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 14px 0px;
+    cursor: pointer;
+    font-weight: 400;
+    letter-spacing: -0.3px;
+    position: relative;
+    font-size: 16px;
+    width: 100%;
+    box-sizing: border-box;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    text-align: left;
+    line-height: 1.3;
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+.store-faq .faq-question span {
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    word-break: break-word;
+    max-width: calc(100% - 30px);
+    text-align: right;
+    align-self: flex-start;
+}
+.store-faq .faq-toggle {
+    font-size: 20px;
+    font-weight: 300;
+    transition: transform 0.3s ease;
+    flex-shrink: 0;
+    display: block;
+    width: 20px;
+    text-align: center;
+    align-self: flex-start;
+    margin-top: 2px;
+    position: relative;
+    top: -2px;
+} 
+.faq-answer {
+    line-height: 1.4;
+    box-sizing: border-box;
+    overflow-wrap: break-word;
+    word-break: break-word;
+    /* color: #1773b0;
+    background-color: #ffffff; */
+    max-height: 0;
+    overflow: hidden;
+    letter-spacing: -0.3px;
+    transition: max-height 0.3s ease, padding 0.3s ease;
+    font-size: 14px;
+    width: 100%;
+    text-align: left;
+}
+.faqAnswerMn {
+    padding: 0px 0px 15px;
+}
+.store-faq .faq-item.active .faq-toggle {
+    transform: rotate(45deg);
+}
+.store-faq .faq-item.active .faq-answer {
+    max-height: 300px;
+    overflow-y: auto;
+    text-align: left;
+    overflow-x: hidden;
+    box-sizing: border-box;
+}
+.store-faq .faq-answer p {
+    max-width: 100%;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    word-break: break-word;
+    margin-top: 0;
+    margin-bottom: 1em;
+    line-height: 1.4;
+}
+.store-faq .faq-answer p:last-child {
+    margin-bottom: 0;
+}
+.faq-content-column .image-faq img {
+    width: 100%;
+    height: auto;
+    display: block;
+    border-radius: 8px;
+}
+.faq-content-column .image-faq {
+    margin: 20px 0 0;
+}
+.faq-two-columns .faq-item:last-child, .faq-container .faq-item:last-child {
+    border: none;
+}
+@media (min-width: 750px) {
+.store-faq {
+    padding: 20px 0 0;
+}
+.template-faq-custom .faq-flex-container.center-no-image .faq-header-column {
+    max-width: 1000px;
+}
+.faq-flex-container.center-no-image.flex-display .faq-header-column {
+    max-width: 100%;
+    display: flex;
+    text-align: left;
+}
+.faq-flex-container.center-no-image.flex-display .faq-header-column .store-faq-subtitle,.faq-flex-container.left-display .faq-header-column .store-faq-subtitle{
+    max-width: 100%;
+}
+.faq-flex-container.left-display {
+    justify-content: start !important;
+}
+.faq-flex-container.left-display .faq-header-column {
+    text-align: left !important;
+}
+.faq-flex-container.center-no-image.flex-display .faq-header-column .faq-header-inner {
+    width: 50%;
+}
+.faq-flex-container.center-no-image.flex-display .faq-header-column .store-faq {
+    width: 50%;
+}
+.faq-flex-container .faq-two-columns {
+    display: flex;
+    gap: 10px;
+    width: 100%;
+}
+.faq-flex-container .faq-two-columns .faq-column-1, .faq-flex-container .faq-two-columns .faq-column-2 {
+    flex: 1;
+    width: 50%;
+}
+.faq-flex-container.center-no-image .faq-header-column {
+    flex: 0 0 100%;
+    max-width: 800px;
+    text-align: center;
+}
+.store-faq .faq-item.active .faq-answer {
+    max-height: 400px;
+}
+.store-faq .faq-toggle {
+    font-size: 20px;
+    line-height: 1;
+}
+.store-faq .faq-question {
+    padding: 16px 0px;
+}
+.faq-flex-container {
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 40px;
+}
+.faq-flex-container.center-no-image {
+    justify-content: center;
+}
+.faq-content-column {
+    flex: 0 0 48%;
+    display: flex;
+    justify-content: center;
+    max-width: 48%;
+}
+.faq-header-column {
+    flex: 0 0 48%;
+    margin-bottom: 0;
+    padding-top: 20px;
+    max-width: 48%;
+}
+.faq-flex-container.center-no-image .faq-content-column {
+    display: none;
+}
+}
+@media (max-width: 749px) {
+.store-faq-container {
+    padding: 0;
+}
+.faq-flex-container .faq-container.faq-column-2 {
+    display: none;
+}
+.faq-header-column {
+    text-align: center;
+    margin-left: auto;
+    margin-right: auto;
+}
+.store-faq-heading {
+    font-size: 34px;
+    line-height: 1.1;
+}
+.store-faq-subtitle {
+    font-size: 14px;
+    max-width: 100%;
+    margin: 14px 0;
+}
+.faq-flex-container.center-no-image .store-faq-subtitle {
+    margin: 14px auto;
+}
+.store-faq .faq-toggle {
+    font-size: 18px;
+}
+.store-faq .faq-question {
+    font-size: 14px;
+}
+.faq-answer {
+    font-size: 13px;
+}
+}

@@ -1,0 +1,47 @@
+<div class="selling-out-fast-block sellingFast__bar-wp-{{ block.id }}">
+    {%- if block.settings.title != blank -%}
+	<div class="selling-out-fast-main-text">
+		<span class="selling-out-fast-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path fill-rule="evenodd" d="M11.176 11.53c.546-.767.485-1.575.106-3.028-.749-2.873-.45-4.448 2.133-6.313l1.26-.91.306 1.525c.324 1.62.856 2.623 2.223 4.55l.108.154C19.281 10.285 20 11.96 20 15c0 3.688-3.729 7-8 7-4.272 0-8-3.311-8-7 0-.069 0-.067-.012-.372-.09-2.356.346-4.2 2.11-6.192q.557-.63 1.272-1.212l1.052-.855.506 1.258q.563 1.391 1.307 2.195.627.68.94 1.708M7.594 9.762c-1.357 1.533-1.68 2.899-1.607 4.79.013.352.013.34.013.448 0 2.528 2.784 5 6 5s6-2.473 6-5c0-2.542-.568-3.865-2.32-6.335l-.108-.154c-1.063-1.5-1.697-2.543-2.117-3.71-.685.82-.644 1.636-.237 3.197.749 2.873.45 4.448-2.133 6.313l-1.473 1.063-.11-1.813c-.07-1.159-.333-1.945-.737-2.383a8 8 0 0 1-1.081-1.515z"/></svg>
+		</span>
+		<span class="selling-out-fast-title">{{ block.settings.title }}</span>
+	</div>
+    {%- endif -%}
+	{%- if block.settings.paragraph != blank -%}<div class="selling-out-fast-subtitle">{{ block.settings.paragraph }}</div>{%- endif -%}
+    {%- if block.settings.text != blank -%}
+	<div class="selling-out-fast-progress-container">
+		{%- if block.settings.percentage != blank -%}<div class="selling-out-fast-progress-bar"></div>{%- endif -%}
+		<div class="selling-out-fast-progress-text-overlay">{{ block.settings.percentage | append:'%' }}&nbsp;{{ block.settings.text }}</div>
+	</div>
+    {%- endif -%}
+</div>
+
+{%- style -%}
+    body .sellingFast__bar-wp-{{ block.id }}{
+        margin: {{ block.settings.margin_top }}px 0px {{ block.settings.margin_bottom }}px 0px;
+        background: rgb(var(--color-innerHighlight));
+        border-radius: {{ block.settings.bd__radius | append:'px' }};
+        border: 1px solid rgba(var(--color-foreground));
+    }
+    body .sellingFast__bar-wp-{{ block.id }} .selling-out-fast-icon svg{
+        fill: rgba(var(--color-foreground));
+    }
+    body .sellingFast__bar-wp-{{ block.id }} .selling-out-fast-title{
+        color: rgba(var(--color-foreground));
+    }
+    body .sellingFast__bar-wp-{{ block.id }} .selling-out-fast-subtitle{
+        color: rgba(var(--color-foreground));
+    }
+    body .sellingFast__bar-wp-{{ block.id }} .selling-out-fast-progress-container{
+        background: rgb(var(--color-innerHighlight));
+        border-radius: {{ block.settings.empty_bd_radius | append:'px' }};
+        border: 1px solid rgba(var(--color-foreground));
+    }    
+    body .sellingFast__bar-wp-{{ block.id }} .selling-out-fast-progress-bar{
+        background: rgb(var(--color-background-contrast));
+        width: {{ block.settings.percentage | append:'%' }};
+    }
+    body .sellingFast__bar-wp-{{ block.id }} .selling-out-fast-progress-text-overlay{
+        color: rgba(var(--color-foreground));
+    }                   
+{%- endstyle -%}

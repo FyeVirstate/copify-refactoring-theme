@@ -1,0 +1,84 @@
+{%- if block.settings.design_mode == 'design_a' -%}
+    <div class="award-badge-container design_mode_a awardBadges-wp-{{ block.id }}">
+        <div class="award-gradient-border">
+            <div class="award-badge-content">
+                {%- if block.settings.number_dsg_a != blank -%}<div class="award-number-badge">{{ block.settings.number_dsg_a }}</div>{%- endif -%}
+                <div class="award-text-container">
+                    {%- if block.settings.bestseller_dsg_a != blank -%}<div class="award-title">{{ block.settings.bestseller_dsg_a }}</div>{%- endif -%}
+                    {%- if block.settings.subtitle_dsg_a != blank -%}<div class="award-subtitle">{{ block.settings.subtitle_dsg_a }}</div>{%- endif -%}
+                </div>
+            </div>
+        </div>
+    </div>
+    {%- style -%}
+        body .awardBadges-wp-{{ block.id }}.design_mode_a{
+            margin: {{ block.settings.margin_top }}px 0px {{ block.settings.margin_bottom }}px 0px;
+        }
+        body .awardBadges-wp-{{ block.id }} .award-number-badge{
+            background-color: rgb(var(--color-innerHighlight));
+            color: rgba(var(--color-foreground));
+        }
+        body .awardBadges-wp-{{ block.id }} .award-gradient-border{
+            border-color: rgba(var(--color-highliter));
+        }
+    {%- endstyle -%}    
+{%- elsif block.settings.design_mode == 'design_b' -%}
+    <div class="BadgeWithCustom__wrapper design_mode_b awardBadges-wp-{{ block.id }}">  
+        <div class="BadgeWithCustom__container">
+          <div class="BadgeWithCustom__content">
+            {%- if block.settings.icon_dsg_b != 'none' or block.settings.title_dsg_b != blank -%}  
+              <div class="BadgeWithCustom__divider">
+                <div class="BadgeWithCustom__text-main">
+                    {%- if block.settings.icon_dsg_b != 'none' -%}  
+                        <div class="BadgeWithCustom__text-icon">
+                            {% render 'icons-list', icon: block.settings.icon_dsg_b %}
+                        </div>
+                    {%- endif -%}
+                    {%- if block.settings.title_dsg_b != blank -%}
+                        <div class="BadgeWithCustom__main-text-content"><p><strong>{{ block.settings.title_dsg_b }}</strong></p></div>
+                    {%- endif -%}
+                </div>
+                <div class="divider-line"></div>
+              </div>
+            {%- endif -%}
+            {%- if block.settings.paragraph_dsg_b != blank -%}  
+              <div class="BadgeWithCustom__description">
+                <p>{{ block.settings.paragraph_dsg_b }}</p>
+              </div>
+            {%- endif -%}
+          </div>
+        </div>
+    </div> 
+    {%- style -%}
+        body .awardBadges-wp-{{ block.id }}.design_mode_b{
+            margin: {{ block.settings.margin_top }}px 0px {{ block.settings.margin_bottom }}px 0px;
+            background-color: rgb(var(--color-innerHighlight));
+        }
+    {%- endstyle -%}     
+{%- elsif block.settings.design_mode == 'design_c' -%}
+    <div class="BadgeWithCustom__wrapper design_mode_c awardBadges-wp-{{ block.id }}">
+        <div class="BadgeWithCustom__container">
+          <div class="BadgeWithCustom__content">
+              <div class="BadgeWithCustom__text-main">
+                {%- if block.settings.icon_dsg_c != 'none' -%}  
+                    <div class="BadgeWithCustom__text-icon">
+                        {% render 'icons-list', icon: block.settings.icon_dsg_c %}
+                    </div>
+                {%- endif -%}
+                {%- if block.settings.paragraph_dsg_c != blank -%}
+                    <div class="BadgeWithCustom__main-text-content">
+                        <p>{{ block.settings.paragraph_dsg_c }}</p>
+                    </div>
+                {%- endif -%}
+              </div>
+          </div>
+        </div>
+    </div>   
+    {%- style -%}
+        body .awardBadges-wp-{{ block.id }}.design_mode_c{
+            margin: {{ block.settings.margin_top }}px 0px {{ block.settings.margin_bottom }}px 0px;
+            background-color: rgb(var(--color-innerHighlight));
+        }
+    {%- endstyle -%}             
+{%- endif -%}
+

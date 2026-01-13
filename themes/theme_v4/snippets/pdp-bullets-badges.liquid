@@ -1,0 +1,46 @@
+<div class="pdp_BulletsList_mainwrapper bulletsBadges__wp-{{ block.id }}">
+  <ul class="pdp_BulletsList_container">
+      {%- if block.settings.texta_dsg_a | is_not_blank -%}
+        <li class="pdp_BulletsList_-item">
+          {%- if block.settings.icona_dsg_a != 'none' -%}<div class="pdp_BulletsList_-icon">{% render 'icons-list', icon: block.settings.icona_dsg_a %}</div>{%- endif -%}
+          <span class="pdp_BulletsList_-text">{{ block.settings.texta_dsg_a }}</span>
+        </li>
+      {%- endif -%}
+      {%- if block.settings.textb_dsg_a | is_not_blank -%}
+        <li class="pdp_BulletsList_-item">
+          {%- if block.settings.iconb_dsg_a != 'none' -%}<div class="pdp_BulletsList_-icon">{% render 'icons-list', icon: block.settings.iconb_dsg_a %}</div>{%- endif -%}
+          <span class="pdp_BulletsList_-text">{{ block.settings.textb_dsg_a }}</span>
+        </li>
+      {%- endif -%}
+      {%- if block.settings.textc_dsg_a | is_not_blank -%}
+        <li class="pdp_BulletsList_-item">
+          {%- if block.settings.iconc_dsg_a != 'none' -%}<div class="pdp_BulletsList_-icon">{% render 'icons-list', icon: block.settings.iconc_dsg_a %}</div>{%- endif -%}
+          <span class="pdp_BulletsList_-text">{{ block.settings.textc_dsg_a }}</span>
+        </li>
+      {%- endif -%}
+      {%- if block.settings.textd_dsg_a | is_not_blank -%}
+        <li class="pdp_BulletsList_-item">
+          {%- if block.settings.icond_dsg_a != 'none' -%}<div class="pdp_BulletsList_-icon">{% render 'icons-list', icon: block.settings.icond_dsg_a %}</div>{%- endif -%}
+          <span class="pdp_BulletsList_-text">{{ block.settings.textd_dsg_a }}</span>
+        </li>
+      {%- endif -%}
+      {%- if block.settings.texte_dsg_a | is_not_blank -%}
+        <li class="pdp_BulletsList_-item">
+          {%- if block.settings.icone_dsg_a != 'none' -%}<div class="pdp_BulletsList_-icon">{% render 'icons-list', icon: block.settings.icone_dsg_a %}</div>{%- endif -%}
+          <span class="pdp_BulletsList_-text">{{ block.settings.texte_dsg_a }}</span>
+        </li>
+      {%- endif -%}
+  </ul>
+</div>
+
+{%- style -%}
+    body .bulletsBadges__wp-{{ block.id }}{
+      margin: {{ block.settings.margin_top }}px 0px {{ block.settings.margin_bottom }}px 0px;
+    }
+    body .bulletsBadges__wp-{{ block.id }} .pdp_BulletsList_-item{
+      background-color: rgb(var(--color-innerHighlight));
+    }
+    body .bulletsBadges__wp-{{ block.id }} .pdp_BulletsList_-text{
+      color: rgba(var(--color-foreground));
+    }    
+{%- endstyle -%}

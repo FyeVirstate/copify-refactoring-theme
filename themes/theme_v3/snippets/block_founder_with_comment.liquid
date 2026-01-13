@@ -1,0 +1,109 @@
+<!--snippet->block_founder_with_comment-->
+
+    
+    <div class="notification">
+
+        {% if block.settings.author_image != blank %}
+          {% assign userImage = block.settings.author_image | img_url: '40x' %}
+            <img src="{{ userImage }}" alt="{{ block.settings.reviewer_name }}" class="profile-picture">
+        {% endif %}
+
+       <div class="notification-content">
+            <div class="username">
+              {{  block.settings.author_name }} <img src="{{ 'Twitter_Verified_Badge.svg' | asset_url }}" alt="Verified Badge" class="verified-icon">
+            </div>
+            <div class="offer-text">
+             {{  block.settings.content }}   
+            </div>
+        </div>
+        <div  class="time-left">
+            <span>{{  block.settings.time_left }} </span>
+        <span id="countdown"> </span></div>
+    </div>
+    <style>
+        .notification {
+            position: relative;
+            display: flex;
+            align-items: center;
+            border: 2px dashed rgb(var(--color-foreground),0.5);
+            color:rgb(var(--color-foreground));
+            border-radius: 10px;
+           padding: 5px 8px;
+            background-color:rgb(var(--color-background));
+            width: fit-content;
+            margin-top:10px;
+            font-size: 12px;
+            max-width: 100%;
+        }
+        .profile-picture {
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin-right: 10px;
+        }
+        .notification-content {
+            display: flex;
+            flex-direction: column;
+        }
+        .username {
+            font-weight: bold;
+            margin-bottom: 2px;
+            display: flex;
+            align-items: center;
+        }
+        .verified-icon {
+            margin-left: 5px;
+            width: 14px;
+            height: 14px;
+        }
+        .offer-text {
+            font-size: 13px;
+            color:rgb(var(--color-foreground),0.8);
+        }
+.time-left {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    font-size: 8px;
+    color:rgb(var(--color-button-text));
+    font-weight: 800;
+    border: 1px solid rgb(var(--color-button),0.5);
+    border-radius: 4px;
+    padding: 1px 3px;
+    background-color:rgb(var(--color-button));
+    line-height: 15px;
+    letter-spacing: 1px;
+}
+    </style>
+
+    <script>
+  function startCountdown(duration, display) {
+    let timer = duration, hours, minutes, seconds;
+    setInterval(function () {
+      hours = parseInt(timer / 3600, 10);
+      minutes = parseInt((timer % 3600) / 60, 10);
+      seconds = parseInt(timer % 60, 10);
+
+      hours = hours < 10 ? "0" + hours : hours;
+      minutes = minutes < 10 ? "0" + minutes : minutes;
+      seconds = seconds < 10 ? "0" + seconds : seconds;
+
+      display.textContent = hours + ":" + minutes + ":" + seconds;
+
+      if (--timer < 0) {
+        display.textContent = "00:00:00"; // when finished
+      }
+    }, 1000);
+  }
+
+  window.onload = function () {
+    const twoHours = {{block.settings.time_set}} * 60 * 60, // 2 hours in seconds
+          display = document.getElementById("countdown");
+    startCountdown(twoHours, display);
+  };
+</script>
+
+
+
+    

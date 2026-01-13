@@ -1,0 +1,75 @@
+<div class="premiumAttachment__kitmainwrapper premiumAttachment__wp-{{ block.id }}">
+  {% comment %} <!-- Header --> {% endcomment %}
+  <div class="premiumAttachment__header">
+    <div class="premiumAttachment__left__row">
+        <div class="premiumAttachment__title-row">
+          {%- if block.settings.title != blank -%}<div class="premiumAttachment__title">{{ block.settings.title }}</div>{%- endif -%}
+          {%- if block.settings.items_count != blank -%}<span class="premiumAttachment__item-count">{{ block.settings.items_count }}</span>{%- endif -%}
+        </div>
+    </div>
+
+    <div class="premiumAttachment__price">
+        <span class="premiumAttachment__free-badge">
+            {%- if block.settings.icon != 'none' -%}{% render 'icons-list', icon: block.settings.icon %}{%- endif -%}
+            {%- if block.settings.any_txt -%}<span class="premiumAttachment__any__txt">{{ block.settings.any_txt }}</span>{%- endif -%}
+            {%- if block.settings.text -%}<span class="premiumAttachment__free__txt">{{ block.settings.text }}</span>{%- endif -%}
+        </span>
+    </div>
+  </div>
+
+  {% comment %} <!-- Items List --> {% endcomment %}
+  <ul class="premiumAttachment__items">
+    {%- for free_product in block.settings.free_products -%}
+        <li class="premiumAttachment__item">
+            {%- if free_product.featured_media != blank -%}
+                <div class="premiumAttachment__item-image">
+                    {{ free_product.featured_media | image_url:width:free_product.featured_media.width | image_tag:preload:true, class:'premiumAttachment__icon' }}
+                </div>
+            {%- endif -%}
+            <div class="premiumAttachment__item-details">
+                <p class="premiumAttachment__item-name">{{ free_product.title }}</p>
+                <div class="premiumAttachment__item-pricing">
+                    {%- if free_product.selected_or_first_available_variant.compare_at_price > free_product.selected_or_first_available_variant.price -%}
+                        <span class="premiumAttachment__item-compare-price">{{ free_product.selected_or_first_available_variant.compare_at_price | money }}</span>
+                    {%- endif -%}
+                    <span class="premiumAttachment__item-price">{{ free_product.selected_or_first_available_variant.price | money }}</span>
+                </div>
+            </div>
+        </li>
+    {%- endfor -%}
+    </ul>
+</div>
+
+{%- style -%}
+body .premiumAttachment__wp-{{ block.id }}{
+    margin: {{ block.settings.margin_top }}px 0px {{ block.settings.margin_bottom }}px 0px;
+    background-color: rgb(var(--color-innerHighlight));
+    border: 1.5px solid rgba(var(--color-foreground));
+    border-radius: {{ block.settings.bd_radius | append:'px' }};    
+}
+body .premiumAttachment__wp-{{ block.id }} .premiumAttachment__item{
+    background-color:  rgb(var(--color-innerHighlight));
+}
+body .premiumAttachment__wp-{{ block.id }} .premiumAttachment__title{
+    color: rgba(var(--color-foreground));
+}
+body .premiumAttachment__wp-{{ block.id }} .premiumAttachment__item-count{
+    color: rgba(var(--color-foreground));
+}
+body .premiumAttachment__wp-{{ block.id }} .premiumAttachment__any__txt{
+    color: rgba(var(--color-foreground));
+}
+body .premiumAttachment__wp-{{ block.id }} .premiumAttachment__item .premiumAttachment__item-name{
+    color: rgba(var(--color-foreground));
+}
+body .premiumAttachment__wp-{{ block.id }} .premiumAttachment__item-compare-price{
+    color: rgba(var(--color-foreground));
+}
+body .premiumAttachment__wp-{{ block.id }} .premiumAttachment__item-price{
+    color: rgba(var(--color-highliter));
+}
+body .premiumAttachment__wp-{{ block.id }} .premiumAttachment__free__txt{
+    background-color: rgb(var(--color-innerHighlight));
+    color: rgba(var(--color-highliter));
+}
+{%- endstyle -%}

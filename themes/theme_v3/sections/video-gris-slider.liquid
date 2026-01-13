@@ -1,0 +1,343 @@
+<style>
+
+
+  .activeColor,
+  .icon_text_cls_guarantee svg path {
+    fill: rgb(var(--color-primary));
+  }
+
+  .section-{{ section.id }}-padding .sr-stars svg:not(.half_star) path {
+    fill: rgb(var(--color-primary));
+  }
+
+  .section-{{ section.id }}
+  -padding .sr-star svg {
+    stroke: rgb(var(--color-primary));
+  }
+
+  .section-{{ section.id }}
+  -padding .sr-stars svg.empty_star path {
+    fill: transparent;
+    stroke: rgb(var(--color-primary));
+    stroke-width: 1;
+    /* keep outline thin */
+    vector-effect: non-scaling-stroke;
+  }
+
+  .section-{{ section.id }}
+  -padding .sr-stars svg.half_star {
+    stroke: rgb(var(--color-primary));
+  }
+
+  .section-{{ section.id }}-padding .sr-stars svg path.half_star_path,
+  .activeColor,
+  .icon_text_cls_guarantee svg path {
+    fill: rgb(var(--color-primary));
+  }
+
+  .section-{{ section.id }}
+  -padding .sr-stars svg.half_star {
+    stroke: rgb(var(--color-primary));
+  }
+  .section-{{ section.id }}
+  -padding .sr-stars svg path.half_star_border {
+    stroke: rgb(var(--color-primary));
+  }
+  .section-{{ section.id }}
+  -padding .sr-stars svg path.half_star_border {
+    stroke: rgb(var(--color-primary));
+  }
+
+  .section-{{ section.id }}
+  -padding strong {
+    color: var(--color-highliter);
+  }
+
+
+  video-slider-reviews .slick-next:before,
+  video-slider-reviews .slick-prev:before {
+    content: "";
+  }
+
+  .image-grid-container {
+    display: grid;
+    grid-template-columns: repeat({{ section.blocks.size }}, 1fr);
+    gap: 1rem;
+    max-width: calc(var(--page-width) / 1.2);
+    margin: 0 auto;
+    padding: 3rem 1rem 1rem;
+  }
+
+  .image-item {
+    width: 100%;
+    aspect-ratio: 1;
+    overflow: hidden;
+    border-radius: 8px;
+  }
+
+  .image-wrapper {
+    width: 100%;
+    height: 100%;
+    position: relative;
+  }
+
+  .review-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .placeholder-image {
+    width: 100%;
+    height: 100%;
+    background: #f5f5f5;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px dashed #ccc;
+    border-radius: 8px;
+  }
+
+  .placeholder-image p {
+    color: #666;
+    font-size: 14px;
+    text-align: center;
+    margin: 0;
+  }
+
+  @media screen and (max-width: 750px) {
+    .image-grid-container {
+      display: flex;
+      gap: 1rem;
+      overflow-x: auto;
+      padding: 0 1rem;
+      scrollbar-width: thin;
+      cursor: grab;
+    }
+
+    .image-item {
+      flex: 0 0 200px;
+      height: 200px;
+    }
+
+    .image-grid-container::-webkit-scrollbar {
+      height: 4px;
+    }
+
+    .image-grid-container::-webkit-scrollbar-track {
+      background: #f1f1f1;
+    }
+
+    .image-grid-container::-webkit-scrollbar-thumb {
+      background: #888;
+      border-radius: 2px;
+    }
+  }
+  .section-{{ section.id }}
+  -padding {
+    padding-top: {{ section.settings.padding_top | times: 0.75 | round: 0 }}px;
+    padding-bottom: {{ section.settings.padding_bottom | times: 0.75 | round: 0 }}px;
+  }
+  @media screen and (min-width: 750px) {
+    .section-{{ section.id }}-padding {
+      padding-top: {{ section.settings.padding_top }}px;
+      padding-bottom: {{ section.settings.padding_bottom }}px;
+    }
+
+  }
+
+</style>
+<div class="videos-grid section-{{ section.id }} section-{{ section.id }}-padding color-{{ section.settings.section_color_scheme }}">
+  <div class="review-sec-video">
+    <div class="head-top">
+      <div class="rating-box">
+        {% if section.settings.show_stars %}
+
+          {% assign stars = section.settings.review_stars | default: 5 %}
+          {% render 'star-rating-block'
+            , rating: stars %}
+
+        {% endif %}
+        <p class="m-0">{{ section.settings.rating_text }}</p>
+      </div>
+      {%- assign title_size = section.settings.heading_size | default: 'h2' -%}
+      <h2 class="{{ title_size }}">{{ section.settings.heading | escape }}</h2>
+      <p>{{ section.settings.subheading }}</p>
+    </div>
+
+    <div id="imageReview-{{ section.id }}" class="image-grid-container">
+      {% assign image_index = 0 %}
+      {% for block in section.blocks limit: 4 %}
+        {% assign image_index = forloop.index %}
+        <div class="image-item">
+          <div class="image-wrapper">
+            {% comment %} Try to get image from block settings first, then fallback to theme settings {% endcomment %}
+            {% assign has_image = false %}
+            {% assign imgUrl = '' %}
+
+            {% comment %} Map block index to corresponding video_review_poster setting {% endcomment %}
+            {% case image_index %}
+              {% when 1 %}
+                {% assign fallback_setting = settings.video_review_poster_1 %}
+              {% when 2 %}
+                {% assign fallback_setting = settings.video_review_poster_2 %}
+              {% when 3 %}
+                {% assign fallback_setting = settings.video_review_poster_3 %}
+              {% when 4 %}
+                {% assign fallback_setting = settings.video_review_poster_4 %}
+            {% endcase %}
+
+            {% if fallback_setting != blank %}
+              {% assign imgUrl = fallback_setting | asset_url %}
+              {% assign has_image = true %}
+            {% endif %}
+
+            {% if block.settings.image_file != blank %}
+              {% comment %} Handle both Shopify image objects and direct URLs {% endcomment %}
+              {%- if block.settings.image_file contains '://' -%}
+                {% assign imgUrl = block.settings.image_file %}
+              {%- else -%}
+                {% assign imgUrl = block.settings.image_file | img_url: '800x' %}
+              {%- endif -%}
+              {% assign has_image = true %}
+            {% endif %}
+
+            {% if has_image %}
+              <img
+                src="{{ imgUrl }}"
+                alt="Review image"
+                class="review-image">
+            {% else %}
+              <div class="placeholder-image">
+                <p>No image selected</p>
+              </div>
+            {% endif %}
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<script>
+  // No JavaScript needed for image-only section
+</script>
+{% schema %}
+  {
+    "name": "Text with Image Slider",
+    "settings": [
+      {
+        "type": "header",
+        "content": "t:sections.image-with-text.settings.header_colors.content"
+      },
+      {
+        "type": "color_scheme",
+        "id": "section_color_scheme",
+        "label": "t:sections.all.colors.label",
+        "default": "scheme-1"
+      },
+      {
+        "type": "checkbox",
+        "id": "show_stars",
+        "label": "Show star rating",
+        "default": true
+      },
+      {
+        "type": "range",
+        "id": "review_stars",
+        "label": "Review Stars",
+        "min": 1,
+        "max": 5,
+        "step": 0.5,
+        "default": 4.5
+      }, {
+        "type": "text",
+        "id": "rating_text",
+        "label": "Rating text",
+        "default": "Rated 4.8 (21,883+ happy customers)"
+      }, {
+        "type": "text",
+        "id": "heading",
+        "label": "Heading",
+        "default": "Customers can't stop raving about Dreeam"
+      }, {
+        "type": "select",
+        "id": "heading_size",
+        "options": [
+          {
+            "value": "h4",
+            "label": "t:sections.all.heading_size.options__1.label"
+          },
+          {
+            "value": "h3",
+            "label": "t:sections.all.heading_size.options__2.label"
+          },
+          {
+            "value": "h2",
+            "label": "t:sections.all.heading_size.options__3.label"
+          },
+          {
+            "value": "h1",
+            "label": "t:sections.all.heading_size.options__4.label"
+          }, {
+            "value": "h0",
+            "label": "t:sections.all.heading_size.options__5.label"
+          }
+        ],
+        "default": "h2",
+        "label": "Heading Size"
+      }, {
+        "type": "textarea",
+        "id": "subheading",
+        "label": "Subheading",
+        "default": "From waking up with neck and back pain to better mornings. These stories prove that Dreeam is doing miracles."
+      }, {
+        "type": "range",
+        "id": "padding_top",
+        "min": 0,
+        "max": 100,
+        "step": 4,
+        "unit": "px",
+        "label": "t:sections.all.padding.padding_top",
+        "default": 40
+      }, {
+        "type": "range",
+        "id": "padding_bottom",
+        "min": 0,
+        "max": 100,
+        "step": 4,
+        "unit": "px",
+        "label": "t:sections.all.padding.padding_bottom",
+        "default": 40
+      }
+    ],
+    "blocks": [
+      {
+        "type": "image",
+        "name": "Review Image",
+        "settings": [
+          {
+            "type": "image_picker",
+            "id": "image_file",
+            "label": "Upload Review Image",
+            "info": "300x300 recommended"
+          }
+        ]
+      }
+    ],
+    "presets": [
+      {
+        "name": "Text with Image Slider",
+        "blocks": [
+          {
+            "type": "image"
+          }, {
+            "type": "image"
+          }, {
+            "type": "image"
+          }
+        ]
+      }
+    ]
+  }
+{% endschema %}

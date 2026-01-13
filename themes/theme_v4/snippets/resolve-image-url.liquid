@@ -1,0 +1,31 @@
+{%- comment -%}
+  Resolve Image URL Snippet
+  Returns the correct URL for an image setting (shopify://, asset filename, or full URL)
+
+  Usage:
+    {% capture img_url %}{% render 'resolve-image-url', image: section.settings.image %}{% endcapture %}
+    <img src="{{ img_url | strip }}">
+
+  Or for inline use:
+    style="background-image: url('{% render 'resolve-image-url', image: section.settings.image %}')"
+
+  Parameters:
+    - image: The image value (can be shopify:// URL, asset filename, or full URL)
+    - width: Optional width for image_url filter (for shopify:// images)
+{%- endcomment -%}
+
+{%- if image != blank -%}
+  {%- if image.src -%}
+    {%- comment -%} Image object with src property {%- endcomment -%}
+    {{- image | image_url: width: width -}}
+  {%- elsif image contains 'shopify://' -%}
+    {%- comment -%} Shopify CDN URL {%- endcomment -%}
+    {{- image | image_url: width: width -}}
+  {%- elsif image contains '://' -%}
+    {%- comment -%} External URL - output as-is {%- endcomment -%}
+    {{- image -}}
+  {%- else -%}
+    {%- comment -%} Asset filename - use asset_url {%- endcomment -%}
+    {{- image | asset_url -}}
+  {%- endif -%}
+{%- endif -%}

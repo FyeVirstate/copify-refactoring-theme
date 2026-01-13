@@ -1,0 +1,127 @@
+.pdp-benefits_mainwrapper {
+    padding: 50px 25px;
+    /* background: linear-gradient(90deg, #fff6e7, #e8582d); */
+}
+.pdp-benefits_mainouter {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0;
+    width: 100%;
+    display: block;
+}
+.pdp-benefits_container {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+.pdp-benefits_header_content.onlyShowMob {
+    order: 1;
+    text-align: center;
+}
+.pdp-benefits_content-column {
+    order: 3;
+}
+.pdp-benefits_header_heading {
+    font-size: 34px;
+    /* color: #121212; */
+    letter-spacing: -2px;
+    line-height: 1.1;
+    font-weight: 700;
+    margin: 0 0 12px;
+} 
+.pdp-benefits_header_heading .hgt___tag_heading {
+    background: linear-gradient(90deg, rgb(var(--color-sale-badge)), rgb(var(--color-sale-badge)));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-left: 0px !important;
+    padding: 2px 4px;
+    font-style: italic;
+}
+.custom-subtitle {
+    font-size: 16px;
+    letter-spacing: -.3px;
+    line-height: 1.4;
+}
+/* .pdp-benefits_listwp {
+    background: linear-gradient(180deg, rgba(46, 46, 46, 1), rgba(27, 27, 27, 1) 99%);
+    border-radius: 10px;
+    padding: 20px;
+    max-width: 450px;
+    margin: 0 auto;
+    border: 1px solid #cbecd6;
+} */
+.pdp-benefits-item {
+    margin-bottom: 25px;
+}
+.pdp-benefits-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 5px;
+}
+.pdp-benefits-icon {
+    margin-right: 10px;
+    flex-shrink: 0;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+}
+.pdp-benefits-icon img {
+    filter: invert(1);
+    width: 100%;
+    height: 100%;
+}
+.pdp-benefits-title {
+    font-size: 18px;
+    /* color: #fdffff; */
+    font-weight: 700;
+    line-height: 1.4;
+}
+.pdp-benefits-description {
+    font-size: 16px;
+    /* color: #fdffff; */
+    letter-spacing: -0.3px;
+    line-height: 1.4;
+}
+.pdp-benefits_image-column {
+    order: 2;
+}
+.pdp-benefits-feature-image {
+    width: 100%;
+    height: 0;
+    padding-bottom: 100%;
+    position: relative;
+    border-radius: 8px;
+    overflow: hidden;
+}
+.pdp-benefits-feature-image img {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 8px;
+}
+@media (min-width: 750px) {
+.pdp-benefits-description-container {
+    padding-left: 35px;
+}
+.pdp-benefits_container {
+    flex-direction: row;
+    align-items: center;
+    gap: 40px;
+}
+.pdp-benefits_content-column, .pdp-benefits_image-column {
+    flex: 1;
+    order: 0;
+}
+.pdp-benefits_header_content.onlyShowDesk {
+    display: block;
+    text-align: left;
+    margin-bottom: 30px;
+}
+.pdp-benefits_header_heading {
+    font-size: 36px;
+}
+}

@@ -1,0 +1,90 @@
+{%- liquid
+  if use_variant
+    assign target = product.selected_or_first_available_variant
+  elsif placeholder
+    assign target = null
+  else
+    assign target = product
+  endif
+
+  assign compare_at_price = target.compare_at_price
+  assign price = target.price | default: 1999
+  assign price_min = product.price_min
+  assign price_max = product.price_max
+  assign available = target.available | default: false
+  assign money_price = price | money
+  assign money_price_min = price_min | money
+  assign money_price_max = price_max | money
+
+  if settings.currency_code_enabled
+    assign money_price = price | money_with_currency
+    assign money_price_min = price_min | money_with_currency
+    assign money_price_max = price_max | money_with_currency
+  endif
+
+  if target == product and product.price_varies
+    assign money_price = 'products.product.price.from_price_html' | t: price: money_price
+  endif
+
+  comment
+    --- Calculate savings ---
+  endcomment
+  if compare_at_price > price
+    assign savings = compare_at_price | minus: price
+    assign money_savings = savings | money
+    if settings.currency_code_enabled
+      assign money_savings = savings | money_with_currency
+    endif
+  endif
+-%}
+
+{%- unless target == null and placeholder == null -%}
+  <div
+    class="price
+      {%- if price_class %} {{ price_class }}{% endif -%}
+      {%- if available == false %} price--sold-out{% endif -%}
+      {%- if compare_at_price > price and product.quantity_price_breaks_configured? != true %} price--on-sale{% endif -%}
+      {%- if compare_at_price > price and product.quantity_price_breaks_configured? %} volume-pricing--sale-badge{% endif -%}
+      {%- if product.price_varies == false and product.compare_at_price_varies %} price--no-compare{% endif -%}
+      {%- if show_badges %} price--show-badge{% endif -%}
+    "
+  >
+    <div class="price__container">
+      <div class="price__regular">
+        <span class="visually-hidden visually-hidden--inline">{{ 'products.product.price.regular_price' | t }}</span>
+        <span class="price-item price-item--regular">
+          {{ money_price }}
+        </span>
+      </div>
+
+      {%- if compare_at_price > price -%}
+        <div class="price__sale">
+          <span class="visually-hidden visually-hidden--inline">{{ 'products.product.price.regular_price' | t }}</span>
+          <span class="price-item price-item--sale price-item--last">
+            {{ money_price }}
+          </span>
+          <span>
+            <s class="price-item price-item--regular">
+              {% if settings.currency_code_enabled %}
+                {{ compare_at_price | money_with_currency }}
+              {% else %}
+                {{ compare_at_price | money }}
+              {% endif %}
+            </s>
+          </span>
+          <span class="visually-hidden visually-hidden--inline">{{ 'products.product.price.sale_price' | t }}</span>
+          
+
+          <!-- ✅ Show "Save $X" -->
+          <span class="price-item price-item--savings">
+          {{ 'general.general_texts.product_price_save' | t }} {{ money_savings }}
+          </span>
+        </div>
+      {%- endif -%}
+
+      {%- if product.selected_or_first_available_variant.unit_price_measurement -%}
+        {% render 'unit-price', price: product.selected_or_first_available_variant.unit_price, measurement: product.selected_or_first_available_variant.unit_price_measurement %}
+      {%- endif -%}
+    </div>
+  </div>
+{% endunless %}

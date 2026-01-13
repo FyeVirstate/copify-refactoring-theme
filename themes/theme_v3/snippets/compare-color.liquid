@@ -1,0 +1,302 @@
+<button class="compare-color-btn" data-modal-type="compare-color-popup"> <span>&#8644;</span> Compare Colours</button>
+
+      
+ <script>  
+    document.addEventListener("DOMContentLoaded", function () {
+    var openBtn = document.querySelector(".compare-color-btn");
+    var popup = document.querySelector(".compare-color-popup");
+    var closeBtn = document.querySelector(".compare-color-popup-close");
+  
+    if (!openBtn || !popup || !closeBtn) {
+      console.warn("One or more required elements for the popup are missing.");
+      return;
+    }
+  
+    function openPopup() {
+      popup.classList.add("open-popup");
+      document.documentElement.style.overflow = 'hidden';
+    }
+  
+    function closePopup() {
+      popup.classList.remove("open-popup");
+      document.documentElement.style.overflow = '';
+    }
+  
+    openBtn.addEventListener("click", openPopup);
+    closeBtn.addEventListener("click", closePopup);
+    
+    
+  });
+ </script>
+
+<style>
+.qty-container .qty-input::-webkit-inner-spin-button,
+.qty-container .qty-input::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* ✅ Hide arrows in Firefox */
+.qty-container .qty-input[type=number] {
+  -moz-appearance: textfield;
+}
+  .compareSoldOut{
+    position: absolute;
+    text-size-adjust: auto;
+    font-size: 12px;
+    padding: 0 5px;
+    background: #fafafa;
+    border-radius: 4px;
+}
+  .add-to-cart-Compare{
+  display:none;
+  }
+  .qty-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px; /* space between buttons/input */
+  margin-top: 8px;
+}
+
+.qty-container button,
+.qty-container input,
+.qty-container .qty-delete {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 32px;
+}
+
+/* input field styling */
+.qty-container .qty-input {
+  width: 50px;
+  text-align: center;
+  padding: 4px;
+  font-size: 14px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+/* plus/minus buttons */
+.qty-container .qty-minus,
+.qty-container .qty-plus {
+  background: #f5f5f5;
+  border: 1px solid #ccc;
+  padding: 0 10px;
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  border-radius: 4px;
+  transition: background 0.2s;
+}
+
+.qty-container .qty-minus:hover,
+.qty-container .qty-plus:hover {
+  background: #e0e0e0;
+}
+
+/* delete icon */
+.qty-container .qty-delete {
+  cursor: pointer;
+  padding: 6px 0;
+  border-radius: 4px;
+  transition: background 0.2s;
+}
+
+.qty-container .qty-delete:hover {
+  background: #f8d7da;
+}
+
+  .compare-color-btn {
+    border: none;
+    border-radius: 0px;
+    background-color: transparent;
+    box-sizing: border-box;
+    color: #4d5d53;
+    line-height: normal;
+    font-size: 16px;
+    font-weight:400;
+    cursor: pointer;
+    display: none;
+}
+.compare-color-btn svg {
+  width: 22px;
+  margin-right: 5px;
+  fill: currentColor !important;
+}
+.compare-color-btn:hover {
+  background-color: transparent;
+  box-sizing: border-box;
+  border-bottom:2px solid;
+}
+.compare-color-popup.open-popup {
+  opacity: 1;
+  visibility: visible;
+  z-index: 101;
+}
+.rt-compare-color-popup.product-popup-modal__content {
+  max-width: 80%;
+  text-align:center;
+  width: calc(100% - 10px);
+  padding: 8px 20px 8px 20px;
+  height: unset;
+  max-height: 90%;
+  margin-top: 0;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  overflow-y: auto;
+  overflow-x: hidden;
+  border-radius: 5px;
+}
+.compare-color-popup-close.product-popup-modal__toggle {
+  color: #ffffff !important;
+  background-color: #4d5d53 !important;
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  z-index: 102;
+}
+.size-chart-page-content.product-popup-modal__content-info {
+  padding-right: 0;
+  color: #333333;
+  font-size: 13px;
+  text-align: left;
+  line-height: normal;
+}
+.size-chart-image {
+  width: 100%;
+  object-fit: cover;
+}
+</style>
+
+
+
+
+<script>
+  const colours = [
+    {% assign swatchCompare_option_index = 0 %}
+    {% for option in product.options_with_values %}
+      {% assign option_name = option.name | downcase %}
+      {% assign swatchCompare_option_key = 'option' | append: forloop.index %}
+      {% if option_name == 'color' or option_name == 'colour' %}
+        {% assign swatchCompare_option_index = forloop.index %}
+        {% for value in option.values %}
+          {% assign swatchCompare_value_downcased = value | downcase %}
+          {% for variant in product.variants %}
+            {% assign option_value_downcased = variant[swatchCompare_option_key] | downcase %}
+            {% if option_value_downcased == swatchCompare_value_downcased %}
+              {% if variant.metafields.custom.swatch_image or variant.image %}
+                {% if variant.metafields.custom.swatch_image %}
+                  {% assign swatchCompare_image = variant.metafields.custom.swatch_image %}
+                {% else %}
+                  {% assign swatchCompare_image = variant.image %}
+                {% endif %}
+                {
+                  id: {{ variant.id }},
+                  variant_available:{{ variant.available }},
+                  name: "{{ variant.title | escape }}",
+                  thumb: "{{ swatchCompare_image | image_url: width: 100 }}",
+                  full: "{{ variant.featured_image | image_url: width: 600 }}"
+                }{% unless forloop.last and forloop.parentloop.last %},{% endunless %}
+                {% break %}
+              {% endif %}
+            {% endif %}
+          {% endfor %}
+        {% endfor %}
+      {% endif %}
+    {% endfor %}
+  ];
+
+ 
+</script>
+<style>
+   .swatchCompare-container {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 1rem;
+      margin-top: 1rem;
+    }
+
+    .swatchCompare {
+      width: 50px;
+      height: 50px;
+      border-radius: 8px;
+      overflow: hidden;
+      position: relative;
+      cursor: pointer;
+      border: 2px solid transparent;
+      transition: border 0.2s ease;
+    }
+
+    .swatchCompare img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .swatchCompare.selected {
+      border-color: #00c292;
+    }
+
+    .checkmark {
+      position: absolute;
+      top: 5px;
+      right: 5px;
+      background: #00c292;
+      color: white;
+      border-radius: 50%;
+      width: 18px;
+      height: 18px;
+      font-size: 12px;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 5px 3px 4px 4px;
+    }
+
+    .swatchCompare.selected .checkmark {
+      display: flex;
+    }
+
+    .selected-images {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 15px;
+      margin-top: 2rem;
+      margin-bottom: 2rem;
+    }
+
+    .selected-images img {
+      width: 120px;
+      max-width:100px;
+      border-radius: 8px;
+      object-fit: cover;
+      box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+    }
+
+    .max-message {
+      color: red;
+      font-size: 14px;
+      display: none;
+      margin-top: 1rem;
+    }
+
+  @media screen and (max-width: 767px) {
+  
+.selected-images > div {
+  width: 47% !important;
+    box-sizing: border-box;
+    padding: 0.5rem;
+}
+}
+  @media screen and (min-width: 991px) {
+.selected-images > div {
+  width: 17%; /* 5 items per row */
+}
+}
+</style>

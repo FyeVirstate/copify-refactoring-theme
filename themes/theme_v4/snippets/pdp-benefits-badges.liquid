@@ -1,0 +1,36 @@
+<div class="bg-benefits-grid benefitsGrid__wp-{{ block.id }}">
+    {%- assign suffix_faq_key = "a,b,c,d" | split: "," -%}
+    {%- for key in suffix_faq_key -%}
+        {%- liquid
+            assign icon_key = "icon_" | append:key
+            assign title_key = "title_" | append:key
+        -%}
+    {%- if block.settings[icon_key] != blank or block.settings[title_key] != blank -%}
+        <div class="bg-benefit-item">
+            {%- if block.settings[icon_key] != blank -%}<div class="bg-benefit-icon">{{ block.settings[icon_key] }}</div>{%- endif -%}
+            {%- if block.settings[title_key] != blank -%}<div class="bg-benefit-text">{{ block.settings[title_key] }}</div>{%- endif -%}
+        </div>
+    {%- endif -%}
+    {%- endfor -%}
+</div>
+
+{%- style -%}
+    body .benefitsGrid__wp-{{ block.id }}{
+       margin: {{ block.settings.margin_top_faq }}px 0 {{ block.settings.margin_bottom_faq }}px 0; 
+    }
+    body .benefitsGrid__wp-{{ block.id }} .bg-benefit-icon{
+        background: {{ block.settings.icon_bg__color }};
+        color: {{ block.settings.icon___color }};  
+        border-radius: {{ block.settings.icon_bd__radius | append:'px' }};
+        {% if block.settings.icon_border %}
+        border: 1px solid {{ block.settings.icon___color }};
+        {% endif %}
+    }
+    body .benefitsGrid__wp-{{ block.id }} .bg-benefit-icon svg {
+        fill: {{ block.settings.icon___color }};
+    }
+    body .benefitsGrid__wp-{{ block.id }} .bg-benefit-text{
+        color: {{ block.settings.txt__color }}; 
+        font-weight: {{ block.settings.txt_font_weight }}; 
+    }    
+{%- endstyle -%}

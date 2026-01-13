@@ -1,0 +1,1 @@
+<img src="{{ 'Product_section_1_center_img.png' | asset_url }}" alt="My Image">

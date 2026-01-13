@@ -1,0 +1,60 @@
+<div class="seeinaction__carouselWrapper carouselWrapper-{{ block.id }}">
+    {%- if block.settings.heading != blank -%}<div class="seeinaction__carouselWrapper_heading">{{ block.settings.heading }}</div>{%- endif -%}
+    {%- if block.settings.svg_icon != blank or block.settings.text != blank -%}
+        <div class="seeinaction__carousel_icon">
+            {% render 'icons-list', icon: block.settings.svg_icon %}
+            <span class="seeinaction__carousel_txt">{{ block.settings.text }}</span>
+        </div>
+    {%- endif -%}
+  
+  <div class="seeinaction__videoCarouselWrapper">
+    {%- assign suffix_video_key = "a,b,c,d,e" | split: "," -%}
+    {%- for key in suffix_video_key -%}
+        {%- liquid
+            assign video_key = "video_" | append:key
+        -%}   
+        {%- if block.settings[video_key] != blank -%} 
+        <div class="seeinaction__video__item">
+            <div class="seeinaction__video__item_thumbnail">
+                <div class="gradient-overlay"></div>
+                <div class="seeinaction__video__item_placeholder seeinaction__videoCarousel-video">
+                    <div class="seeinaction__video__item_interior">
+                        {{ block.settings[video_key] | video_tag:preload:true, muted:true, playsinline:true, loop:true, poster:"" }}
+                    </div>
+                </div>
+                <button type="button" class="play-button force-visible" aria-label="Play video">
+                    <svg viewBox="0 0 24 24" width="24" height="24"><circle cx="12" cy="12" r="12" fill="#211a28"/><path fill="#fff" d="m10 8 6 4-6 4z"/></svg>
+                </button>
+            </div>
+        </div>
+        {%- endif -%}
+    {%- endfor -%}
+  </div>
+</div>
+
+{%- style -%}
+    body .carouselWrapper-{{ block.id }}{
+        margin: {{ block.settings.margin_top_faq }}px 0px {{ block.settings.margin_bottom_faq }}px 0px;
+    }
+    body .carouselWrapper-{{ block.id }} .seeinaction__carouselWrapper_heading{
+        color: rgba(var(--color-foreground));
+    }
+    body .carouselWrapper-{{ block.id }} .seeinaction__carousel_icon{
+        position: relative !important;
+        background: rgba(var(--color-foreground));
+    }
+    body .carouselWrapper-{{ block.id }} .seeinaction__carousel_txt{
+        color: rgba(var(--color-foreground));          
+    }        
+    body .carouselWrapper-{{ block.id }} .seeinaction__carousel_icon::before {
+        content: '' !important;
+        position: absolute !important;
+        top: -1px !important;
+        right: -1px !important;
+        bottom: -1px !important;
+        left: -1px !important;
+        z-index: -1 !important;
+        border-radius: 999px !important;        
+        background: rgba(var(--color-foreground)); 
+    }    
+{%- endstyle -%}

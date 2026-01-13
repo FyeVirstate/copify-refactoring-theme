@@ -1,0 +1,50 @@
+
+                {% style %}
+                  {% if block.settings.override_text_color %}
+                    #emoji-benefits-{{block.id }} .bullet-point-text  {
+                      color: {{ block.settings.bullet_text_color }};
+                    }
+                  {% endif %}
+                  #emoji-benefits-{{block.id }}{
+                    padding-top: {{block.settings.padding_top }}px;
+                    padding-bottom: {{block.settings.padding_bottom }}px;
+                  }
+                {% endstyle %}
+                <div class="emoji-benefits-container" id="emoji-benefits-{{block.id }}" {{ block.shopify_attributes }}>
+                  <ul style="gap: {{ block.settings.emoji_bullet_vertical_gap }}px !important">
+                    <li>
+                      {% comment %}
+                       <span class="benefit_icon">
+                      {%- render 'icon-accordion', icon: block.settings.bullet_image_1 -%}
+                       </span>
+                       {% endcomment %}
+                      <div
+                        class="bullet-point-text sw-base-text-color"
+                        style=" font-size: {{ block.settings.bullet_font_size }}px ; font-weight: {% if block.settings.bold_bullet_text %}bold{% else %}500{% endif %} !important;"
+                      >
+                        {{ block.settings.point1 }}
+                      </div>
+                    </li>
+                    <li>
+                     
+                      <div
+                        class="bullet-point-text sw-base-text-color"
+                        style=" font-size: {{ block.settings.bullet_font_size }}px ; font-weight: {% if block.settings.bold_bullet_text %}bold{% else %}500{% endif %} !important;"
+                      >
+                        {{ block.settings.point2 }}
+                      </div>
+                    </li>
+                    <li>
+                       
+                      
+                      <div
+                        class="bullet-point-text sw-base-text-color"
+                        style=" font-size: {{ block.settings.bullet_font_size }}px ; font-weight: {% if block.settings.bold_bullet_text %}bold{% else %}500{% endif %} !important;"
+                      >
+                        {{ block.settings.point3 }}
+                      </div>
+                    </li>
+                  </ul>
+                </div>
+
+             

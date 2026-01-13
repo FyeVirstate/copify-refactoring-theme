@@ -1,0 +1,1021 @@
+<style>
+  .sectionMargin{{ section.id }} {
+    margin-top: {{ section.settings.section_margin_top}}px;
+    margin-bottom: {{ section.settings.section_margin_bottom}}px;
+  }
+  .sectionPadding{{ section.id }} {
+    padding-top: {{ section.settings.section_padding_top }}px;
+    padding-bottom: {{ section.settings.section_padding_bottom }}px;
+    padding-left: {{ section.settings.section_padding_sides_mobile }}px;
+    padding-right: {{ section.settings.section_padding_sides_mobile }}px;
+   /* background:{{section.settings.bgcolor}};*/
+  }
+h2.title.image-with-text__heading{
+color: {{section.settings.section_heading_color}}  
+}
+  .sectionHeading{{ section.id }} {
+    {% if section.settings.override_section_heading_size %}
+    font-size: {{ section.settings.section_heading_size_mobile }}px;
+    line-height: {{ section.settings.section_heading_size_mobile | plus: 10 }}px;
+    {% endif %}
+    text-align: center;
+    {% if section.settings.override_section_heading_color %}
+    color: {{ section.settings.section_heading_color }};
+    {% endif %}
+  }
+
+  .overallRatingContainer{{ section.id }} {
+    margin-top: {{ section.settings.overall_rating_text_margin_top }}px;
+    display: flex;
+    align-items: center;
+    width: fit-content;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .overallRatingText{{ section.id }} {
+    font-size: {{ section.settings.overall_rating_text_size_mobile }}px;
+    line-height: {{ section.settings.overall_rating_text_size_mobile | plus: 10 }}px;
+   /* color: {{ section.settings.overall_rating_text_color }};*/
+  }
+
+  .starsOuterContainer{{ section.id }} {
+      width: fit-content;
+      margin-left: auto;
+      margin-right: auto;
+  }
+
+  .stars{{ section.id }} {
+    display: flex;
+    align-items: center;
+  }
+
+  .stars{{ section.id }} svg {
+    width: {{ section.settings.star_size_mobile }}px;
+    height: {{ section.settings.star_size_mobile }}px;
+  }
+  
+  .stars{{ section.id }} img {
+    width: {{ section.settings.star_size_mobile }}px;
+    height: {{ section.settings.star_size_mobile }}px;
+    object-fit: cover;
+  }
+
+  .swiperSliderOuterContainer{{ section.id }} {
+    margin-top: {{ section.settings.slider_margin_top }}px;
+  }
+
+
+  .leftRightButton{{ section.id }} {
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: {{ section.settings.left_right_background_color }};
+    position: absolute;
+    z-index: 999;
+    border-radius: 100%;
+    transform: translateY(-50%);
+    top: 50%;
+    border: 1px solid rgba(0,0,0,0.15);
+    width: {{ section.settings.left_right_button_size_mobile }}px;
+    height: {{ section.settings.left_right_button_size_mobile }}px;
+  }
+
+
+  .reviewNameText{{ section.id }} {
+    margin-top: 15px;
+    font-size: {{ section.settings.review_name_text_size_mobile }}px;
+    line-height: {{ section.settings.review_name_text_size_mobile |  plus: 10 }}px;
+    color: {{ section.settings.review_name_text_color }};
+    width: fit-content;
+    margin-left: auto;
+    margin-right: auto;
+    font-weight: 650;
+  }
+
+
+  .slideHeading{{ section.id }} {
+    font-weight: 700;
+    margin-top: {{ section.settings.review_slide_heading_margin_top }}px;
+    /*color: {{ section.settings.review_slide_heading_color }};
+    */font-size: {{ section.settings.review_heading_size_mobile }}px;
+    line-height: 1;
+    text-align: center;
+  }
+
+  .slideText{{ section.id }} {
+    margin-top: 15px;
+    line-height: {{ section.settings.review_slide_text_size_mobile |  plus: 10 }}px;
+   /* color: {{ section.settings.review_slide_text_color }};
+    */font-size: {{ section.settings.review_slide_text_size_mobile }}px;
+    text-align: center;
+  }
+
+ 
+
+
+  
+
+  
+  .prevButton{{ section.id }} svg {
+    transform: translateX(1.5%);
+  }
+  
+  .nextButton{{ section.id }} svg {
+    transform: translateX(-1.5%);
+  }
+  
+  .prevButton{{ section.id }} {
+    left: 2px;
+  }
+
+  .nextButton{{ section.id }} {
+    right: 2px;
+  }
+
+  .prevButton{{ section.id }} svg path,
+  .nextButton{{ section.id }} svg path {
+    fill: {{ section.settings.left_right_icon_color }};
+  }
+
+  .prevButton{{ section.id }},
+  .nextButton{{ section.id }} {
+    display: flex;
+    {% if section.settings.show_left_right_buttons_on_mobile %}
+      visibility: visible;
+    {% else %}
+      visibility: hidden;
+    {% endif %}
+  }
+
+
+  .reviewSlideContainer{{ section.id }}.swiper-slide {
+    opacity: 0.5;
+    transition: opacity 350ms;
+  }
+
+  .reviewSlideContainer{{ section.id }}.swiper-slide-active {
+    transition: opacity 350ms;
+    opacity: 1;
+  }
+
+  .reviewSlideContainer{{ section.id }} {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: {{ section.settings.review_slide_padding_vertical_mobile }}px {{ section.settings.review_slide_padding_horizontal_mobile }}px;
+    border-radius: {{ section.settings.reviews_slide_border_radius }}px;
+    background-color: {{ section.settings.slide_background_color }};
+    box-sizing: border-box;
+    height: auto;
+    {% comment %}
+    {% if section.settings.slide_box_shadow %}
+    box-shadow: 0px 0px 18px 0px {{ section.settings.slide_box_shadow_color | hex_to_rgba: 0.18 }};
+    {% endif %}
+    {% endcomment %}
+  }
+  
+  @media(max-width: 767px) {
+    .reviewSlideContainer{{ section.id }}.swiper-slide-prev {
+      margin-left: -{{ section.settings.slides_gap_mobile }}px;
+    }
+    .reviewSlideContainer{{ section.id }}.swiper-slide-active {
+      margin-left: {{ section.settings.slides_gap_mobile }}px;
+      margin-right: {{ section.settings.slides_gap_mobile }}px;
+    }
+
+    .prevButton{{ section.id }} {
+      left: {{ section.settings.left_right_button_horizontal_position_mobile }}px;
+    }
+
+    .nextButton{{ section.id }} {
+      right: {{ section.settings.left_right_button_horizontal_position_mobile }}px;
+    }
+  }
+
+  @media(min-width: 767px) {
+    .sectionPadding{{ section.id }} {
+      padding-top: {{ section.settings.section_padding_top }}px;
+      padding-bottom: {{ section.settings.section_padding_bottom }}px;
+      padding-left: {{ section.settings.section_padding_sides_desktop }}px;
+      padding-right: {{ section.settings.section_padding_sides_desktop }}px;
+    }
+
+    .swiperSliderOuterContainer{{ section.id }} {
+      margin-top: {{ section.settings.slider_margin_top }}px;
+      width: 100%;
+      max-width: {{ section.settings.slider_swiper_width }}%;
+      margin-right: auto;
+      margin-left: auto;
+    }
+
+
+
+    {% if section.settings.override_section_heading_size %}
+      .sectionHeading{{ section.id }} {
+        font-size: {{ section.settings.section_heading_size }}px;
+        line-height: {{ section.settings.section_heading_size |  plus: 10 }}px;
+      }
+    {% endif %}
+    
+    .reviewNameText{{ section.id }} {
+      font-size: {{ section.settings.review_name_text_size }}px;
+      line-height: {{ section.settings.review_name_text_size |  plus: 10 }}px;
+    }
+    .slideText{{ section.id }} {
+      margin-top: {{ section.settings.card_text_margin_top }}px;
+      font-size: {{ section.settings.review_slide_text_size }}px;
+      line-height: {{ section.settings.review_slide_text_size |  plus: 10 }}px;
+    }
+
+    .reviewSlideContainer{{ section.id }} {
+      padding: {{ section.settings.review_slide_padding_vertical }}px {{ section.settings.review_slide_padding_horizontal }}px;
+    }
+
+    .slideHeading{{ section.id }} {
+      margin-top: {{ section.settings.review_slide_heading_margin_top }}px;
+      font-size: {{ section.settings.review_heading_size }}px;
+      line-height: 1;
+    }
+
+    .overallRatingText{{ section.id }} {
+      font-size: {{ section.settings.overall_rating_text_size }}px;
+      line-height: {{ section.settings.overall_rating_text_size | plus: 8 }}px;
+    }
+
+    .stars{{ section.id }} svg {
+      width: {{ section.settings.star_size }}px;
+      height: {{ section.settings.star_size }}px;
+    }
+
+    .stars{{ section.id }} img {
+      width: {{ section.settings.star_size }}px;
+      height: {{ section.settings.star_size }}px;
+    }
+    
+
+    
+
+  
+
+    .prevButton{{ section.id }},
+    .nextButton{{ section.id }} {
+      width: {{ section.settings.left_right_button_size }}px;
+      height: {{ section.settings.left_right_button_size }}px;
+    }
+
+    .prevButton{{ section.id }},
+    .nextButton{{ section.id }} {
+      {% if section.settings.show_left_right_buttons_on_desktop %}
+      visibility: visible;
+      {% else %}
+      visibility: hidden;
+      {% endif %}
+    }
+
+
+    {% if section.settings.slider_slides_to_show_at_once == 0 %}
+      .reviewSlideContainer{{ section.id }}.swiper-slide-visible {
+        transition: opacity 350ms;
+        opacity: 1;
+      }
+      .reviewSlideContainer{{ section.id }}.swiper-slide-visible.swiper-slide-prev {
+        transition: opacity 350ms;
+        opacity: 0.5;
+      }
+    {% else %}
+      .reviewSlideContainer{{ section.id }}.swiper-slide-visible.swiper-slide-prev,
+      .reviewSlideContainer{{ section.id }}.swiper-slide-visible.swiper-slide-next {
+        transition: opacity 350ms;
+        opacity: 1;
+      }
+
+      .reviewSlideContainer{{ section.id }}.swiper-slide-visible.swiper-slide-prev {
+        transition: opacity 350ms;
+        opacity: 1;
+      }
+    {% endif %}
+
+    .reviewSlideContainer{{ section.id }}.swiper-slide-visible.swiper-slide-prev,
+    .reviewSlideContainer{{ section.id }}.swiper-slide-visible.swiper-slide-next {
+      transition: opacity 350ms;
+      opacity: 1;
+    }
+
+  }
+</style>
+
+<div
+class="sectionMargin{{ section.id }} testimonials-sec sectionPadding{{ section.id }} color-{{ section.settings.color_scheme }}"
+style=" overflow: hidden; "
+>
+<h2 class="title image-with-text__heading sectionHeading{{ section.id }}">{{ section.settings.section_heading }}</h2>
+{% if section.settings.show_overall_rating %}
+  <div class="overallRatingContainer{{ section.id }}">
+    {% if section.settings.overall_rating_num_stars != 0 %}
+      <div class="stars{{ section.id }}" style="margin-right: 12px;">
+        {% if section.settings.custom_star_icon != blank %}
+          {% for item in (1..section.settings.overall_rating_num_stars) %}
+            <img src="{{ section.settings.custom_star_icon | image_url }}">
+          {% endfor %}
+        {% else %}
+          {% for i in (1..section.settings.overall_rating_num_stars) %}
+            <svg height="32px" width="32px" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 260 245">
+              <path 
+                {% if section.settings.override_star_color %}
+                fill="{{ section.settings.star_color }}"
+                {% else %}
+                fill="rgb(var(--color-base-{{ section.settings.star_color }}))"
+                {% endif %}
+                d="m56,237 74-228 74,228L10,96h240"/>
+            </svg>
+          {% endfor %}
+        {% endif %}
+      </div>
+    {% endif %}
+    <div class="overallRatingText{{ section.id }}" style="font-weight: 700;">{{ section.settings.overall_rating_value }} / 5</div>
+  </div>
+{% endif %}
+
+<div class="swiperSliderOuterContainer{{ section.id }} swipper-testi-sec">
+  <div class=" ">
+    
+    <div id="swiperSliderContainer{{ section.id }}" class="swiperSliderContainer{{ section.id }} swiper-wrapper">
+      {% for block in section.blocks %}
+        <div class="reviewSlideContainer{{ section.id }} swiper-slide">
+          <div class="starsOuterContainer{{ section.id }}">
+            {% if block.settings.num_stars != 0 %}
+              <div class="stars{{ section.id }}">
+                {% if section.settings.custom_star_icon != blank %}
+                  {% for item in (1..block.settings.num_stars) %}
+                    <img src="{{ section.settings.custom_star_icon | image_url }}">
+                  {% endfor %}
+                {% else %}
+                  {% for i in (1..block.settings.num_stars) %}
+                    <svg height="32px" width="32px" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 260 245">
+                      <path 
+                        {% if section.settings.override_star_color %}
+                        fill="{{ section.settings.star_color }}"
+                        {% else %}
+                        fill="rgb(var(--color-base-{{ section.settings.stars_color_scheme }}))"
+                        {% endif %}
+                        d="m56,237 74-228 74,228L10,96h240"/>
+                    </svg>
+                  {% endfor %}
+                {% endif %}
+              </div>
+            {% endif %}
+          </div>
+          <div class="slideHeading{{ section.id }}">{{ block.settings.review_heading }}</div>
+          <div class="slideText{{ section.id }}">
+            {{ block.settings.review_text }}
+          </div>
+          
+          <div class="reviewNameText{{ section.id }}">{{ block.settings.review_name }}</div>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+</div>
+
+
+<script>
+function setupSwiperJs{{ section.id | replace: '-', '' }}() {
+  $('#swiperSliderContainer{{ section.id }}').slick({
+    slidesToShow: 3,
+    slidesToScroll: 1,
+    dots: true,
+    centerMode: true,
+    focusOnSelect: true,
+    spaceBetween: 30,
+    nextArrow: `
+      <button type="button" class="slick-next custom-arrow">
+        <svg width="10" height="17" viewBox="0 0 10 17" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M1.75 15.375L8.625 8.5L1.75 1.625" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+    `,
+    prevArrow: `
+      <button type="button" class="slick-prev custom-arrow">
+        <svg width="10" height="17" viewBox="0 0 10 17" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M8.25 1.625L1.375 8.5L8.25 15.375" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+    `,
+    responsive: [
+      {
+        breakpoint: 767,
+        settings: {
+          centerMode: false,
+          slidesToShow: 1,
+          slidesToScroll: 1
+        }
+      }
+    ]
+  });
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  setTimeout(setupSwiperJs{{ section.id | replace: '-', '' }}, 550);
+});
+
+document.addEventListener('shopify:section:unload', setupSwiperJs{{ section.id | replace: '-', '' }});
+document.addEventListener('shopify:section:load', setupSwiperJs{{ section.id | replace: '-', '' }});
+</script>
+
+{% schema %}
+{
+"name": "Testimonials #2",
+"class": "section",
+"tag": "section",
+"disabled_on": {
+  "groups": ["header", "footer"]
+},
+"settings": [
+  {
+    "type": "header",
+    "content": "Section Heading"
+  },{
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:sections.all.colors.label",
+      "info": "t:sections.all.colors.has_cards_info",
+      "default": "scheme-1"
+    },
+
+  {
+    "type": "text",
+    "id": "section_heading",
+    "label": "Section Heading",
+    "default": "Customer Reviews"
+  },
+  {
+    "type": "checkbox",
+    "id": "override_section_heading_size",
+    "label": "Override Section Heading Size",
+    "default": false
+  },
+  {
+    "type": "range",
+    "id": "section_heading_size",
+    "step": 1,
+    "min": 18,
+    "max": 54,
+    "unit": "px",
+    "label": "Section Heading Size",
+    "default": 45
+  },
+  {
+    "type": "range",
+    "id": "section_heading_size_mobile",
+    "step": 1,
+    "min": 18,
+    "max": 54,
+    "unit": "px",
+    "label": "Section Heading Size (mobile)",
+    "default": 28
+  },
+  {
+    "type": "checkbox",
+    "id": "override_section_heading_color",
+    "label": "Override Section Heading Color",
+    "default": false
+  },
+  {
+    "type": "color",
+    "label": "Heading Color",
+    "id": "section_heading_color",
+    "default": "#000000"
+  },
+  {
+    "type": "header",
+    "content": "Overall Rating"
+  },
+  {
+    "type": "checkbox",
+    "id": "show_overall_rating",
+    "label": "Show Overall Rating",
+    "default": true
+  },
+  {
+    "type": "range",
+    "id": "overall_rating_value",
+    "step": 0.1,
+    "min": 0,
+    "max": 5,
+    "label": "Overall Rating",
+    "default": 4.9
+  },
+  {
+    "type": "range",
+    "id": "overall_rating_num_stars",
+    "step": 1,
+    "min": 0,
+    "max": 5,
+    "label": "Number of Stars",
+    "default": 5
+  },
+  {
+    "type": "range",
+    "id": "overall_rating_text_size",
+    "step": 1,
+    "min": 16,
+    "max": 54,
+    "unit": "px",
+    "label": "Overall Rating Text Size",
+    "default": 25
+  },
+  {
+    "type": "range",
+    "id": "overall_rating_text_size_mobile",
+    "step": 1,
+    "min": 16,
+    "max": 54,
+    "unit": "px",
+    "label": "Overall Rating Text Size (mobile)",
+    "default": 21
+  },
+  {
+    "type": "color",
+    "id": "overall_rating_text_color",
+    "label": "Rating Text Color",
+    "default": "#000000"
+  },
+  {
+    "type": "range",
+    "id": "overall_rating_text_margin_top",
+    "step": 1,
+    "min": 10,
+    "max": 100,
+    "unit": "px",
+    "label": "Overall Rating Text Margin Top",
+    "default": 26
+  },
+  {
+    "type": "header",
+    "content": "Stars"
+  },
+  {
+    "type": "checkbox",
+    "label": "Override Stars Color",
+    "id": "override_star_color",
+    "default": true
+  },
+  {
+    "type": "color",
+    "label": "Stars Color",
+    "id": "star_color",
+    "default": "#4e7a99"
+  },
+  {
+    "type": "image_picker",
+    "label": "Custom Star Icon",
+    "id": "custom_star_icon",
+    "info": "Replaces the default stars icon"
+  },
+  {
+    "type": "range",
+    "id": "star_size",
+    "step": 1,
+    "min": 10,
+    "max": 100,
+    "label": "Star Size",
+    "default": 30
+  },
+  {
+    "type": "range",
+    "id": "star_size_mobile",
+    "step": 1,
+    "min": 10,
+    "max": 100,
+    "label": "Star Size (mobile)",
+    "default": 26
+  },
+  {
+    "type": "header",
+    "content": "Review Slide Heading"
+  },
+  {
+    "type": "range",
+    "id": "review_heading_size",
+    "step": 1,
+    "min": 18,
+    "max": 54,
+    "unit": "px",
+    "label": "Review Heading Size",
+    "default": 23
+  },
+  {
+    "type": "range",
+    "id": "review_heading_size_mobile",
+    "step": 1,
+    "min": 18,
+    "max": 54,
+    "unit": "px",
+    "label": "Review Heading Size (mobile)",
+    "default": 20
+  },
+  {
+    "type": "color",
+    "label": "Slide Heading Color",
+    "id": "review_slide_heading_color",
+    "default": "#000000"
+  },
+  {
+    "type": "range",
+    "id": "review_slide_heading_margin_top",
+    "step": 1,
+    "min": 10,
+    "max": 100,
+    "unit": "px",
+    "label": "Slide Heading Margin Top",
+    "default": 15
+  },
+  {
+    "type": "header",
+    "content": "Review Slide Text"
+  },
+  {
+    "type": "color",
+    "label": "Review Text Color",
+    "id": "review_slide_text_color",
+    "default": "#000000"
+  },
+  {
+    "type": "range",
+    "id": "review_slide_text_size",
+    "step": 1,
+    "min": 14,
+    "max": 32,
+    "unit": "px",
+    "label": "Review Text Size",
+    "default": 14
+  },
+  {
+    "type": "range",
+    "id": "review_slide_text_size_mobile",
+    "step": 1,
+    "min": 14,
+    "max": 32,
+    "unit": "px",
+    "label": "Review Text Size (mobile)",
+    "default": 14
+  },
+  {
+    "type": "header",
+    "content": "Review Name"
+  },
+  {
+    "type": "range",
+    "id": "review_name_text_size",
+    "step": 1,
+    "min": 14,
+    "max": 32,
+    "unit": "px",
+    "label": "Review Name Text Size",
+    "default": 16
+  },
+  {
+    "type": "range",
+    "id": "review_name_text_size_mobile",
+    "step": 1,
+    "min": 14,
+    "max": 32,
+    "unit": "px",
+    "label": "Review Name Text Size (mobile)",
+    "default": 15
+  },
+  {
+    "type": "color",
+    "label": "Review Name Text Color",
+    "id": "review_name_text_color",
+    "default": "#000000"
+  },
+  {
+    "type": "header",
+    "content": "Review Slide"
+  },
+  {
+    "type": "color",
+    "label": "Slide Background Color",
+    "id": "slide_background_color",
+    "default": "#FFFFFF"
+  },
+  {
+    "type": "checkbox",
+    "id": "slide_box_shadow",
+    "label": "Slide Box Shadow",
+    "default": true
+  },
+  {
+    "type": "color",
+    "label": "Slide Box-Shadow Color",
+    "id": "slide_box_shadow_color",
+    "default": "#595959"
+  },
+  {
+    "type": "range",
+    "id": "review_slide_padding_vertical",
+    "step": 1,
+    "min": 10,
+    "max": 50,
+    "unit": "px",
+    "label": "Slide Padding Vertical",
+    "default": 30
+  },
+  {
+    "type": "range",
+    "id": "review_slide_padding_vertical_mobile",
+    "step": 1,
+    "min": 10,
+    "max": 50,
+    "unit": "px",
+    "label": "Slide Padding Vertical (mobile)",
+    "default": 25
+  },
+  {
+    "type": "range",
+    "id": "review_slide_padding_horizontal",
+    "step": 1,
+    "min": 10,
+    "max": 50,
+    "unit": "px",
+    "label": "Slide Padding Horizontal",
+    "default": 35
+  },
+  {
+    "type": "range",
+    "id": "review_slide_padding_horizontal_mobile",
+    "step": 1,
+    "min": 10,
+    "max": 50,
+    "unit": "px",
+    "label": "Slide Padding Horizontal (mobile)",
+    "default": 25
+  },
+  {
+    "type": "range",
+    "id": "reviews_slide_border_radius",
+    "step": 1,
+    "min": 0,
+    "max": 50,
+    "unit": "px",
+    "label": "Slide Border Radius",
+    "default": 15
+  },
+  {
+    "type": "header",
+    "content": "Left/Right Buttons"
+  },
+  {
+    "type": "range",
+    "id": "left_right_button_size",
+    "step": 1,
+    "min": 30,
+    "max": 100,
+    "unit": "px",
+    "label": "Left/Right Button Size",
+    "default": 48
+  },
+  {
+    "type": "range",
+    "id": "left_right_button_size_mobile",
+    "step": 1,
+    "min": 30,
+    "max": 100,
+    "unit": "px",
+    "label": "Left/Right Size (mobile)",
+    "default": 35
+  },
+  {
+    "type": "range",
+    "id": "left_right_button_horizontal_position_mobile",
+    "step": 1,
+    "min": -50,
+    "max": 50,
+    "unit": "px",
+    "label": "Left/Right Button Horizontal Position (mobile)",
+    "default": -15
+  },
+  {
+    "type": "checkbox",
+    "id": "show_left_right_buttons_on_desktop",
+    "label": "Show on Desktop",
+    "default": true
+  },
+  {
+    "type": "checkbox",
+    "id": "show_left_right_buttons_on_mobile",
+    "label": "Show on Mobile",
+    "default": true
+  },
+  {
+    "type": "color",
+    "label": "Left/Right Button Arrow Color",
+    "id": "left_right_icon_color",
+    "default": "#000000"
+  },
+  {
+    "type": "color",
+    "label": "Left/Right Button Background color",
+    "id": "left_right_background_color",
+    "default": "#FFFFFF"
+  },
+  {
+    "type": "header",
+    "content": "Carousel"
+  },
+  {
+    "type": "range",
+    "id": "slider_swiper_width",
+    "step": 1,
+    "min": 0,
+    "max": 100,
+    "unit": "%",
+    "label": "Slider Width (desktop)",
+    "default": 82
+  },
+  {
+    "type": "range",
+    "id": "slider_slides_to_show_at_once",
+    "min": 1,
+    "max": 3,
+    "step": 1,
+    "label": "Slides To Show at Once",
+    "default": 3
+  },
+  {
+    "type": "range",
+    "id": "slides_gap",
+    "step": 1,
+    "min": 10,
+    "max": 100,
+    "unit": "px",
+    "label": "Slides Gap",
+    "default": 18
+  },
+  {
+    "type": "range",
+    "id": "slides_gap_mobile",
+    "step": 1,
+    "min": 10,
+    "max": 100,
+    "unit": "px",
+    "label": "Slides Gap (mobile)",
+    "default": 25
+  },
+  {
+    "type": "range",
+    "id": "slider_margin_top",
+    "step": 1,
+    "min": 10,
+    "max": 100,
+    "unit": "px",
+    "label": "Slider Margin Top",
+    "default": 35
+  },
+  {
+    "type": "header",
+    "content": "Section"
+  },
+  {
+    "type": "range",
+    "id": "section_margin_top",
+    "step": 2,
+    "min": 0,
+    "max": 200,
+    "unit": "px",
+    "label": "Section Margin Top",
+    "default": 0
+  },
+  {
+    "type": "range",
+    "id": "section_margin_bottom",
+    "step": 2,
+    "min": 0,
+    "max": 200,
+    "unit": "px",
+    "label": "Section Margin Bottom",
+    "default": 0
+  },
+  {
+    "type": "range",
+    "id": "section_padding_top",
+    "step": 2,
+    "min": 0,
+    "max": 200,
+    "unit": "px",
+    "label": "Section Padding Top",
+    "default": 58
+  },
+  {
+    "type": "range",
+    "id": "section_padding_bottom",
+    "step": 2,
+    "min": 0,
+    "max": 200,
+    "unit": "px",
+    "label": "Section Padding Bottom",
+    "default": 58
+  },
+  {
+    "type": "range",
+    "id": "section_padding_sides_desktop",
+    "step": 1,
+    "min": 0,
+    "max": 100,
+    "unit": "px",
+    "label": "Section Padding Sides (desktop)",
+    "default": 0
+  },
+  {
+    "type": "range",
+    "id": "section_padding_sides_mobile",
+    "step": 1,
+    "min": 0,
+    "max": 100,
+    "unit": "px",
+    "label": "Section Padding Sides (mobile)",
+    "default": 24
+  },
+  {
+    "type": "color",
+    "id": "bgcolor",
+    "label": "Section Background Color"
+  }
+],
+"blocks": [
+  {
+    "type": "slide",
+    "name": "Review Slide",
+    "settings": [
+      {
+        "type": "range",
+        "id": "num_stars",
+        "min": 0,
+        "max": 5,
+        "step": 1,
+        "label": "Number of Stars",
+        "default": 5
+      },
+      {
+        "type": "text",
+        "id": "review_heading",
+        "label": "Review Heading"
+      },
+      {
+        "type": "text",
+        "id": "review_text",
+        "label": "Review Text"
+      },
+      {
+        "type": "text",
+        "id": "review_name",
+        "label": "Review Name"
+      }
+    ]
+  }
+],
+"presets": [
+  {
+    "name": "Testimonials #2",
+    "blocks": [
+      {
+        "type": "slide",
+        "settings": {
+          "review_heading": "Great Product!",
+          "review_text": "I never thought I'd find something better than what I was using before, but this has completely blown me away! It's reliable, well-designed, and priced perfectly. I'm thoroughly impressed with the performance and how easy it is to use.",
+          "review_name": "John"
+        }
+      },
+      {
+        "type": "slide",
+        "settings": {
+          "review_heading": "Very Satisfied!",
+          "review_text": "I never thought I'd find something better than what I was using before, but this has completely blown me away! It's reliable, well-designed, and priced perfectly. I'm thoroughly impressed with the performance and how easy it is to use.",
+          "review_name": "James"
+        }
+      },
+      {
+        "type": "slide",
+        "settings": {
+          "review_heading": "In love with it! ❤️",
+          "review_text": "I never thought I'd find something better than what I was using before, but this has completely blown me away! It's reliable, well-designed, and priced perfectly. I'm thoroughly impressed with the performance and how easy it is to use.",
+          "review_name": "Jim"
+        }
+      },
+      {
+        "type": "slide",
+        "settings": {
+          "review_heading": "A must have!",
+          "review_text": "I never thought I'd find something better than what I was using before, but this has completely blown me away! It's reliable, well-designed, and priced perfectly. I'm thoroughly impressed with the performance and how easy it is to use.",
+          "review_name": "Jared"
+        }
+      }
+    ]
+  }
+]
+}
+{% endschema %}

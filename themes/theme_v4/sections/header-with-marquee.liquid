@@ -1,0 +1,91 @@
+{% schema %}
+{"name": "Marquee auto slider","settings": [
+  { "type": "liquid", "id": "heading", "label": "Heading","default":"Avis des clients" },
+  { "type": "color_scheme", "id": "color_scheme", "label": "t:sections.all.colors.label", "default": "scheme-1" },
+],"blocks": [ { "type": "marquee", "name": "marquee", "settings": [
+  { "type": "liquid", "id": "name", "label": "Name & Credentials","default":"Jackson"},
+  { "type": "text", "id": "profession", "label": "Profession","default":"Matériau respirant et look élégant, idéal pour les longues promenades."},
+  { "type": "image_picker", "id": "image", "label": "Profile Image"}
+]}],"presets": [{"name": "Marquee auto slider","blocks": [{"type":"marquee"},{"type":"marquee"},{"type":"marquee"},{"type":"marquee"},{"type":"marquee"}]}],"enabled_on": {"templates": ["index","product"]}}
+{% endschema %}
+{{ 'header-with-marquee.css' | asset_url | stylesheet_tag }}
+{%- capture header_with_marquee -%}<div class="scrolling__card_marquee marq-{{  section.id }} gradient color-{{ section.settings.color_scheme }}" data-section-type="header-with-marquee" data-section-id="{{- section.id -}}">
+  <div class="scrolling__card_container">
+    {%- if section.settings.heading != blank -%}<div class="scrolling__card_heading"><div class="scrolling__heading">{{ section.settings.heading }}</div></div>{%- endif -%}
+    <div class="scrolling__card_main">
+      <div class="fade-overlay"></div>
+      <div class="scrolling__card_content" id="marqueeContent">
+        {%- for block in section.blocks -%}
+          <div class="scrolling__card_item">
+            <div class="scrolling__card_interior">
+              {%- if block.settings.name != blank -%}<div class="item-heading">{{ block.settings.name }}</div>{%- endif -%}
+              {%- if block.settings.profession != blank -%}<div class="profession">{{ block.settings.profession }}</div>{%- endif -%}
+            </div>
+            {%- if block.settings.image != blank -%}
+              <div class="marquee-img">{{ block.settings.image | image_url:width:block.settings.image.width | image_tag:loading:'lazy' }}</div>
+            {%- else -%}
+              <div class="marquee-img">{{ 'collection-1' | placeholder_svg_tag }}</div>
+            {%- endif -%}
+          </div>
+        {%- endfor -%}
+      </div>
+    </div>
+  </div>
+</div>{%- endcapture -%}{{- header_with_marquee | strip_newlines -}}
+<script>
+  document.addEventListener('DOMContentLoaded', ()=>{
+    if( document.querySelectorAll('.scrolling__card_content').length > 0 ){
+      const parentElScroll = '{{ section.id }}';
+      const scrollingContent = document.querySelector(`[data-section-id="${parentElScroll}"] .scrolling__card_content`);
+      scrollingContent.innerHTML += scrollingContent.innerHTML;
+      let x = 0;
+      let scrollSpeed = 0.4;
+      let isPaused = false;
+      function animate() {
+        if (!isPaused) {
+          x -= scrollSpeed;
+          if (Math.abs(x) >= scrollingContent.scrollWidth / 2) {
+            x = 0;
+          }
+          scrollingContent.style.transform = `translateX(${x}px)`;
+        }
+        requestAnimationFrame(animate);
+      }
+      document.querySelector(`[data-section-id="${parentElScroll}"] .scrolling__card_content`).addEventListener("mouseenter", () => isPaused = true);
+      document.querySelector(`[data-section-id="${parentElScroll}"] .scrolling__card_content`).addEventListener("mouseleave", () => isPaused = false);
+      animate();
+    }
+  });
+  document.addEventListener("shopify:section:load", () => {
+    if( document.querySelectorAll('.scrolling__card_content').length > 0 ){
+      const parentElScroll = '{{ section.id }}';
+      const scrollingContent = document.querySelector(`[data-section-id="${parentElScroll}"] .scrolling__card_content`);
+      scrollingContent.innerHTML += scrollingContent.innerHTML;
+      let x = 0;
+      let scrollSpeed = 0.4;
+      let isPaused = false;
+      function animate() {
+        if (!isPaused) {
+          x -= scrollSpeed;
+          if (Math.abs(x) >= scrollingContent.scrollWidth / 2) {
+            x = 0;
+          }
+          scrollingContent.style.transform = `translateX(${x}px)`;
+        }
+        requestAnimationFrame(animate);
+      }
+      document.querySelector(`[data-section-id="${parentElScroll}"] .scrolling__card_content`).addEventListener("mouseenter", () => isPaused = true);
+      document.querySelector(`[data-section-id="${parentElScroll}"] .scrolling__card_content`).addEventListener("mouseleave", () => isPaused = false);
+      animate();
+    }
+  })
+</script>
+
+<style>
+  .marq-{{ section.id }} .scrolling__card_item{
+    background: rgb(var(--color-innerHighlight));
+  }
+  .marq-{{ section.id }} .scrolling__card_heading{
+    color: rgb(var( --color-primary)) !important;
+  }
+</style>

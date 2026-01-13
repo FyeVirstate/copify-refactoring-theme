@@ -1,0 +1,125 @@
+/* scrolling__card css start */
+.scrolling__card_marquee {
+    width: 100%;
+    background-color: #ffffff;
+}
+.scrolling__card_container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 0 20px 70px;
+}
+.scrolling__card_heading {
+    position: relative;
+    z-index: 2;
+    width: 100%;
+    max-width: 450px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+.scrolling__card_heading em {
+    font-style: italic;
+}
+.scrolling__card_main {
+    position: relative;
+    overflow: hidden;
+    width: 100%;
+}
+.fade-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 100%;
+    background: linear-gradient(90deg, #ffffff 0.31%, rgba(255, 255, 255, 0) 14%);
+    pointer-events: none;
+    z-index: 1;
+}
+.scrolling__heading {
+    font-weight: 400;
+    font-size: 20px;
+    line-height: 28px;
+    /* color: #1f2322; */
+    margin: 0;
+    letter-spacing: -.015em;
+}
+.scrolling__card_content {
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    height: 100%;
+    cursor: pointer;
+    will-change: transform;
+}
+.scrolling__card_item {
+    padding: 8px;
+    border-radius: 10px;
+    gap: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-right: 18px;
+    background: rgb(var(--color-innerHighlight));
+    width: 311px;
+    flex-shrink: 0;
+}
+.scrolling__card_interior {
+    width: calc(100% - 67px);
+}
+.item-heading {
+    white-space: normal;
+    margin: 0;
+    font-weight: 400;
+    font-size: 14px;
+    line-height: 18px;
+    /* color: #1f2322; */
+}
+.marquee-img {
+    width: 55px;
+}
+.marquee-img img {
+    width: 55px;
+    height: 55px;
+    object-fit: cover;
+    display: block;
+    border-radius: 6px;
+}
+.profession {
+    white-space: pre-line;
+    font-style: Italic;
+    font-size: 12px;
+    line-height: 15px;
+    /* color: #1f2322; */
+    margin: 0;
+    font-weight: 300;
+    padding: 4px 0 0;
+}
+/* scrolling__card css end */
+@media (min-width: 951px) {
+.fade-overlay {
+    display: block !important;
+}
+}
+@media (max-width: 1279px) {
+/* scrolling__card css start */
+.scrolling__card_container {
+    padding: 20px 0 20px 30px;
+}
+/* scrolling__card css end */
+}
+@media (max-width: 950px) {
+/* scrolling__card css start */
+.scrolling__card_container {
+    flex-direction: column;
+    padding-left: 0;
+}
+.scrolling__heading {
+    margin: 0 0 25px;
+}
+.fade-overlay {
+    display: none;
+}
+/* scrolling__card css end */
+}

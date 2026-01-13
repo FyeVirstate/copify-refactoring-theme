@@ -1,0 +1,159 @@
+{%- if block.settings.heading != blank -%}
+    <div class="headingOption__wrapper">
+        <div class="headingOption__wrapper__header">
+            <div class="headingOption__wrapper__title">{{ block.settings.heading }}</div>
+            <div class="headingOption__wrapper__divider dashed___line"></div>
+        </div>
+    </div>
+{%- endif -%}
+
+<div class="quantity-break-container qty-bk-wp-{{ block.id }}" data-custom-price="true">
+  <div class="quantity-break-form">
+
+    {%- assign suffix_qty_breakdown = "a,b,c" | split:',' -%}
+    {%- for key in suffix_qty_breakdown -%}
+        {%- liquid
+            assign quantity_key = 'qty_' | append:key
+            assign off_price_key = 'off_price_' | append:key
+            assign image_key = 'mg_' | append:key
+            assign title_key = 'title_' | append:key
+            assign badge_key = 'badge_' | append:key
+            assign variant_key = 'sw_variant_' | append:key
+            assign qty_value = block.settings[quantity_key] | default: 1 | plus: 0
+            assign total_off = block.settings[off_price_key] | times:100
+            if product.compare_at_price > product.price
+              assign after_off_price = product.compare_at_price | times: qty_value
+              assign after_off_price = after_off_price | minus:total_off
+            else
+              assign after_off_price = product.price | times: qty_value
+              assign after_off_price = after_off_price | minus:total_off
+            endif
+        -%}
+        <div class="quantity-break-option-container" data-option-quantity="{{ qty_value }}" data-variant-id="{{ product.first_available_variant.id }}">
+          <label class="quantity-break-option {% if forloop.first %}selected{% endif %}" for="quantity-break-option{{- forloop.index0 -}}-{{- product.id -}}">
+            <div class="quantity-break-main-content">
+              {%- if block.settings[badge_key] != blank -%}
+                <div class="quantity-break-badge">{{ block.settings[badge_key] }}</div>              
+              {%- endif -%}
+              <input type="radio" id="quantity-break-option{{- forloop.index0 -}}-{{- product.id -}}" name="quantity-break-{{- product.id -}}" value="{{ qty_value }}" class="quantity-break-input" data-price="">
+              <div class="quantity-break-radio-container">
+                <div class="quantity-break-radio-circle"><div class="quantity-break-radio-dot"></div></div>
+              </div>
+              <div class="quantity-break-content-wrapper">
+                <div class="quantity-break-image-details-group">
+                  <div class="quantity-break-image">
+                    {%- if block.settings[image_key] != blank -%}
+                      {{ block.settings[image_key] | image_url:width:block.settings[image_key].width | image_tag:preload:true }}
+                    {%- elsif product.featured_image != blank -%}
+                      {{ product.featured_image | image_url:width:product.featured_image.width | image_tag:preload:true }}
+                    {%- endif -%}
+                  </div>
+                  <div class="quantity-break-details">
+                    <div class="quantity-break-title-container">
+                      {%- if block.settings[title_key] != blank -%}<div class="quantity-break-title">{{ block.settings[title_key] }}</div>{%- endif -%}
+                      {%- liquid
+                          if block.settings[off_price_key] != blank and product.selected_or_first_available_variant.compare_at_price > product.selected_or_first_available_variant.price
+                            assign original_price = product.selected_or_first_available_variant.compare_at_price | times: qty_value
+                            assign sale_price = after_off_price
+                            assign discount = original_price | minus: sale_price
+                            assign discount_percent = discount | times: 100.0 | divided_by: original_price
+                          elsif product.selected_or_first_available_variant.compare_at_price > product.selected_or_first_available_variant.price
+                            assign original_price = product.selected_or_first_available_variant.compare_at_price | times: qty_value
+                            assign sale_price = product.selected_or_first_available_variant.price
+                            assign discount = original_price | minus: sale_price
+                            assign discount_percent = discount | times: 100.0 | divided_by: original_price
+                          endif
+                          if discount_percent
+                            assign rounded_discount = discount_percent | floor
+                            assign decimal_part = discount_percent | minus: rounded_discount
+                            if decimal_part >= 0.5
+                                assign rounded_discount = rounded_discount | plus: 1
+                            endif
+                          endif
+                      -%}  
+                      {%- if discount_percent -%}
+                        <div class="quantity-break-save-badge">Save&nbsp;{{ rounded_discount }}%</div>     
+                      {%- endif -%}             
+                    </div>
+                  </div>
+                </div>
+                <div class="quantity-break-price-container">
+                  {%- if block.settings[off_price_key] != blank -%}
+                    <div class="quantity-break-price">{{ after_off_price | money }}</div>
+                  {%- else -%}
+                    <div class="quantity-break-price">{{ product.price | times: qty_value | money }}</div>
+                  {%- endif -%}
+                  {%- if product.compare_at_price > product.price -%}
+                    <div class="quantity-break-cpprice">{{ product.compare_at_price | times: qty_value | money }}</div>
+                  {%- elsif block.settings[off_price_key] != blank -%}
+                    <div class="quantity-break-cpprice">{{ product.price | times: qty_value | money }}</div>
+                  {%- endif -%}
+                </div>
+              </div>
+            </div>
+            {%- if block.settings[variant_key] == true -%}
+            {% comment %} VARIANT CONTAINER FOR PRODUCT {% endcomment %}
+            <div class="quantity-break-variant-container" data-has-custom-selectors="true">
+              <div class="quantity-break-variant-selection">
+                {% comment %} REPEAT SELECTOR - using fixed range and checking index {% endcomment %}
+                {%- assign qty_int = qty_value | round -%}
+                {%- for i in (1..10) -%}
+                  {%- if i <= qty_int -%}
+                    {%- assign item_idx = i | minus: 1 -%}
+                    <div class="quantity-break-variant-selectors" data-quantity-option="{{ qty_int }}" data-item-index="{{ item_idx }}">
+                      <div class="quantity-break-variant-left">
+                        <div class="quantity-break-variant-image">
+                          {%- if product.featured_image != blank -%}
+                            {{ product.featured_image | image_url:width:product.featured_image.width | image_tag:preload:true }}
+                          {%- endif -%}
+                        </div>
+                        <div class="quantity-break-variant-label">
+                          <span class="quantity-number">1x</span>
+                            {{ product.title }}
+                          <div class="selected-variant-name" data-variant-display>({{ product.selected_or_first_available_variant.title }})</div>
+                        </div>
+                      </div>
+                      <cus-qty-bk class="quantity-break-variant-right" data-index="{{ item_idx }}">
+                        <div class="quantity-break-variant-option">
+                          {%- for option in product.options_with_values -%}
+                            <select id="option-{{ qty_int }}-{{ item_idx }}-{{ forloop.parentloop.index }}-{{ option.name | handle }}" class="quantity-break-variant-select" data-option-selector="{{ forloop.index0 }}" data-item-index="{{ item_idx }}" data-quantity-option="{{ qty_int }}" data-option-name="Flavor">
+                              {%- for value in option.values -%}
+                                <option value="{{ value }}">{{ value }}</option>
+                              {%- endfor -%}
+                            </select>
+                          {%- endfor -%}
+                        </div>
+                        <script type="application/json">
+                          {{ product.variants | json }}
+                        </script>
+                      </cus-qty-bk>
+                    </div>
+                  {%- endif -%}
+                {%- endfor -%}
+                {% comment %} REPEAT SELECTOR {% endcomment %}
+              </div>
+            </div>
+            {% comment %} VARIANT CONTAINER FOR PRODUCT {% endcomment %}
+            {%- endif -%}
+          </label>
+        </div>
+      {%- endfor -%}
+
+  </div>
+</div>
+{%- style -%}
+  .qty-bk-wp-{{ block.id }} .quantity-break-option.selected {
+      border: 1px solid rgba(var(--color-button)) !important;
+      background: rgba(var(--color-innerHighlight));
+  }
+  .qty-bk-wp-{{ block.id }} .quantity-break-option {
+      border: 1px solid rgba(var(--color-innerHighlight));
+      background-color: rgba(var(--color-innerHighlight));
+  } 
+  .qty-bk-wp-{{ block.id }} .quantity-break-save-badge {
+    background-color: rgba(var(--color-sale-badge));
+    color: rgba(var(--color-innerHighlight));
+  } 
+{%- endstyle -%}
+
+

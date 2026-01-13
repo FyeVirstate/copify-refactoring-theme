@@ -1,0 +1,260 @@
+{% schema %}
+{ "name": "Timeline points", "settings": [
+  { "type": "liquid", "id": "heading", "label": "Heading","default":"<strong>Optez pour un confort et des performances supérieurs :</strong> ce ne sont pas seulement des chaussures, c'est votre avantage concurrentiel. La maille respirante, le rembourrage épais et le soutien élastique s'associent pour offrir un confort inégalé." },
+  { "type": "image_picker", "id": "image", "label": "Image" },
+  { "type": "video", "id": "video", "label": "Video" },
+  { "type": "color_scheme", "id": "color_scheme", "label": "t:sections.multirow.settings.container_color_scheme.label", "default": "scheme-1" },
+], "blocks": [ { "type": "point", "name": "Timeline Point", "settings": [
+  { "type": "text", "id": "timeframe", "label": "Timeframe","default":"Matériaux de haute qualité" },
+  { "type": "textarea", "id": "description", "label": "Description","default":"Made with premium materials that are built to last and deliver exceptional performance"}
+] } ],"presets": [{"name": "Timeline points","blocks": [{"type":"point"},{"type":"point"},{"type":"point"},{"type":"point"},{"type":"point"}]}]}
+{% endschema %}
+{{ 'timeline-points.css' | asset_url | stylesheet_tag }}
+{%- capture timeline_points -%}<div class="timeline__main__wrapper timline-{{section.id}} gradient color-{{ section.settings.color_scheme }}" data-section-type="timeline-points" data-section-id="{{- section.id -}}">
+  <div class="timeline__main__container">
+    <div class="timeline__ct_content">
+      {%- if section.settings.heading != blank -%}<div class="header-section">{{ section.settings.heading }}</div>{%- endif -%}
+    </div>    
+    <div class="timeline__interior_layout">
+      <div class="timeline__image_sticky">
+        {%- if section.settings.video != blank -%}
+          {{ section.settings.video | video_tag:muted:true, autoplay:true, loop:true, plasyinline:true,oncontextmenu:"return false;" }}
+        {%- elsif section.settings.image -%}
+          {%- if section.settings.image contains '://' -%}
+            {{ section.settings.image | image_url:width:800 | image_tag:loading:'lazy',class:'timeline-image' }}
+          {%- else -%}
+            <img src="{{ section.settings.image | asset_url }}" loading="lazy" class="timeline-image">
+          {%- endif -%}
+        {%- else -%}
+          {{ 'collection-1' | placeholder_svg_tag }}
+        {%- endif -%}
+      </div>
+      <div class="timeline__outer_container">
+        <div class="timeline-wrapper">
+          <div class="progress-container">
+            <div class="progress-bar progress___bar" id="progressBar"></div>
+            <div class="progress-dots" id="progressDots">
+              {%- for block in section.blocks -%}
+                <div class="progress-dot" style="top: {{ 100.0 | divided_by: section.blocks.size | times: forloop.index0 }}%;"></div>
+              {%- endfor -%}
+            </div>
+          </div>
+          <div class="timeline-container" id="timeline">
+            <div class="timline_main_wrapper">
+              {% for block in section.blocks %}
+                <div class="timeline-item">
+                  {%- if block.settings.timeframe != blank -%}<div class="timeline__title">{{ block.settings.timeframe }}</div>{%- endif -%}
+                  {%- if block.settings.description != blank -%}<div class="timeline__dsc">{{ block.settings.description }}</div>{%- endif -%}
+                </div>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+        {%- if section.settings.button_text != blank -%}<div class="btn-container">{{ section.settings.button_text | link_to: section.settings.button_link }}</div>{%- endif -%}
+      </div>
+    </div>
+  </div>
+</div>{%- endcapture -%}{{- timeline_points | strip_newlines -}}
+{%- style -%}
+  .timline-{{section.id}} strong{color: rgb(var(--color-sale-badge)) !important;}  
+{%- endstyle -%}
+
+<script>
+  document.addEventListener('DOMContentLoaded', ()=>{
+    const parentElTimeline = '{{ section.id }}';
+    const timelineItems = document.querySelectorAll(`[data-section-id="${parentElTimeline}"] .timeline-item`);
+    const progressDots = document.querySelectorAll(`[data-section-id="${parentElTimeline}"] .progress-dot`);
+    const progressBar = document.querySelector(`[data-section-id="${parentElTimeline}"] .progress___bar`);
+    const progressContainer = document.querySelector(`[data-section-id="${parentElTimeline}"] .progress-container`);
+  
+    if (progressContainer || progressBar || timelineItems.length != 0 || progressDots.length != 0){
+      function debounce(func, wait = 100) {
+        let timeout;
+        return function (...args) {
+          clearTimeout(timeout);
+          timeout = setTimeout(() => func.apply(this, args), wait);
+        };
+      }
+      function alignDotsToItems() {
+        let cumulativeHeight = 0;
+        timelineItems.forEach((item, index) => {
+          const itemHeight = item.offsetHeight;
+          const itemStyle = window.getComputedStyle(item);
+          const marginBottom = parseFloat(itemStyle.marginBottom) || 0;
+          if (progressDots[index]) {
+            progressDots[index].style.top = `${cumulativeHeight}px`;
+          }
+          cumulativeHeight += itemHeight + marginBottom;
+        });
+        updateProgressBarHeight();
+        adjustProgressContainerHeight();
+      }
+  
+      function updateProgressBarHeight() {
+        const activeDots = Array.from(progressDots).filter(dot => dot.classList.contains('active'));
+        if (activeDots.length === 0) {
+          progressBar.style.height = '0px';
+          return;
+        }
+        const firstTop = parseFloat(progressDots[0].style.top) || 0;
+        const lastActiveDot = activeDots[activeDots.length - 1];
+        const lastTop = parseFloat(lastActiveDot.style.top) || 0;
+        progressBar.style.top = `${firstTop}px`;
+        progressBar.style.height = `${lastTop - firstTop}px`;
+      }
+  
+      function setActiveDotByScroll() {
+        const viewportCenter = window.innerHeight / 2;
+        let activeIndex = 0;
+        let minDistance = Infinity;
+        timelineItems.forEach((item, index) => {
+          const rect = item.getBoundingClientRect();
+          const itemMiddle = rect.top + rect.height / 2;
+          const distance = Math.abs(itemMiddle - viewportCenter);
+          if (distance < minDistance) {
+            minDistance = distance;
+            activeIndex = index;
+          }
+        });
+        timelineItems.forEach((item, index) => {
+          const isActive = index <= activeIndex;
+          item.classList.toggle('center-stage', index === activeIndex);
+          progressDots[index]?.classList.toggle('active', isActive);
+        });
+        updateProgressBarHeight();
+      }
+  
+      function adjustProgressContainerHeight() {
+        const firstDotTop = progressDots[0].offsetTop;
+        const lastDot = progressDots[progressDots.length - 1];
+        const lastDotTop = lastDot.offsetTop;
+        const lastDotHeight = lastDot.offsetHeight;
+        const lastDotStyle = window.getComputedStyle(lastDot);
+        const lastDotMarginBottom = parseFloat(lastDotStyle.marginBottom) || 0;
+        const height = (lastDotTop + lastDotHeight + lastDotMarginBottom) - firstDotTop;
+        progressContainer.style.height = `${height}px`;
+      }
+      const updateLayout = () => {
+        alignDotsToItems();
+        setActiveDotByScroll();
+      };
+      const debouncedUpdate = debounce(updateLayout, 100);
+      window.addEventListener('scroll', debounce(setActiveDotByScroll, 50));
+      window.addEventListener('resize', debouncedUpdate);
+      requestAnimationFrame(() => {
+        debouncedUpdate();
+        setTimeout(debouncedUpdate, 150);
+      });
+      const observer = new ResizeObserver(debouncedUpdate);
+      timelineItems.forEach(item => observer.observe(item));
+      let tries = 0;
+      const maxTries = 10;
+      const retryLoop = () => {
+        debouncedUpdate();
+        if (++tries < maxTries) {
+          setTimeout(retryLoop, 300);
+        }
+      };
+      retryLoop();
+    }
+  });
+
+  document.addEventListener("shopify:section:load", () => {
+    const parentElTimeline = '{{ section.id }}';
+    const timelineItems = document.querySelectorAll(`[data-section-id="${parentElTimeline}"] .timeline-item`);
+    const progressDots = document.querySelectorAll(`[data-section-id="${parentElTimeline}"] .progress-dot`);
+    const progressBar = document.querySelector(`[data-section-id="${parentElTimeline}"] .progress___bar`);
+    const progressContainer = document.querySelector(`[data-section-id="${parentElTimeline}"] .progress-container`);
+  
+    if (progressContainer || progressBar || timelineItems.length != 0 || progressDots.length != 0){
+      function debounce(func, wait = 100) {
+        let timeout;
+        return function (...args) {
+          clearTimeout(timeout);
+          timeout = setTimeout(() => func.apply(this, args), wait);
+        };
+      }
+      function alignDotsToItems() {
+        let cumulativeHeight = 0;
+        timelineItems.forEach((item, index) => {
+          const itemHeight = item.offsetHeight;
+          const itemStyle = window.getComputedStyle(item);
+          const marginBottom = parseFloat(itemStyle.marginBottom) || 0;
+          if (progressDots[index]) {
+            progressDots[index].style.top = `${cumulativeHeight}px`;
+          }
+          cumulativeHeight += itemHeight + marginBottom;
+        });
+        updateProgressBarHeight();
+        adjustProgressContainerHeight();
+      }
+  
+      function updateProgressBarHeight() {
+        const activeDots = Array.from(progressDots).filter(dot => dot.classList.contains('active'));
+        if (activeDots.length === 0) {
+          progressBar.style.height = '0px';
+          return;
+        }
+        const firstTop = parseFloat(progressDots[0].style.top) || 0;
+        const lastActiveDot = activeDots[activeDots.length - 1];
+        const lastTop = parseFloat(lastActiveDot.style.top) || 0;
+        progressBar.style.top = `${firstTop}px`;
+        progressBar.style.height = `${lastTop - firstTop}px`;
+      }
+  
+      function setActiveDotByScroll() {
+        const viewportCenter = window.innerHeight / 2;
+        let activeIndex = 0;
+        let minDistance = Infinity;
+        timelineItems.forEach((item, index) => {
+          const rect = item.getBoundingClientRect();
+          const itemMiddle = rect.top + rect.height / 2;
+          const distance = Math.abs(itemMiddle - viewportCenter);
+          if (distance < minDistance) {
+            minDistance = distance;
+            activeIndex = index;
+          }
+        });
+        timelineItems.forEach((item, index) => {
+          const isActive = index <= activeIndex;
+          item.classList.toggle('center-stage', index === activeIndex);
+          progressDots[index]?.classList.toggle('active', isActive);
+        });
+        updateProgressBarHeight();
+      }
+  
+      function adjustProgressContainerHeight() {
+        const firstDotTop = progressDots[0].offsetTop;
+        const lastDot = progressDots[progressDots.length - 1];
+        const lastDotTop = lastDot.offsetTop;
+        const lastDotHeight = lastDot.offsetHeight;
+        const lastDotStyle = window.getComputedStyle(lastDot);
+        const lastDotMarginBottom = parseFloat(lastDotStyle.marginBottom) || 0;
+        const height = (lastDotTop + lastDotHeight + lastDotMarginBottom) - firstDotTop;
+        progressContainer.style.height = `${height}px`;
+      }
+      const updateLayout = () => {
+        alignDotsToItems();
+        setActiveDotByScroll();
+      };
+      const debouncedUpdate = debounce(updateLayout, 100);
+      window.addEventListener('scroll', debounce(setActiveDotByScroll, 50));
+      window.addEventListener('resize', debouncedUpdate);
+      requestAnimationFrame(() => {
+        debouncedUpdate();
+        setTimeout(debouncedUpdate, 150);
+      });
+      const observer = new ResizeObserver(debouncedUpdate);
+      timelineItems.forEach(item => observer.observe(item));
+      let tries = 0;
+      const maxTries = 10;
+      const retryLoop = () => {
+        debouncedUpdate();
+        if (++tries < maxTries) {
+          setTimeout(retryLoop, 300);
+        }
+      };
+      retryLoop();
+    }
+  })
+</script>

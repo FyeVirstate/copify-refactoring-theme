@@ -1,0 +1,11 @@
+{%- if icon != 'none' -%}
+    {%- case icon -%}
+    {%- when 'shield' -%}
+        <svg width="15" height="14" viewBox="0 0 15 14" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3.186 2.184 7.5 1.225l4.314.959a.525.525 0 0 1 .411.512V7.94a3.15 3.15 0 0 1-1.403 2.621L7.5 12.775 4.178 10.56a3.15 3.15 0 0 1-1.403-2.62V2.696a.525.525 0 0 1 .411-.512m.639.933V7.94a2.1 2.1 0 0 0 .935 1.748l2.74 1.827 2.74-1.827a2.1 2.1 0 0 0 .935-1.747V3.117L7.5 2.301z" fill="#757575" fill-opacity=".4"/></svg>
+    {%- when 'tick' -%}
+        <svg width="15" height="14" viewBox="0 0 15 14" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="m6.45 8.665 4.826-4.826.743.742L6.45 10.15 3.109 6.809l.742-.743z" fill="#757575" fill-opacity=".4"/></svg>  
+    {% else %}
+        {%- assign file = icon | replace: '_', '-' | prepend: 'icon-' | append: '.svg' -%}
+        {{ file | inline_asset_content }}
+    {% endcase %}
+{%- endif -%}

@@ -1,0 +1,120 @@
+{
+    "name": "t:sections.footer.name",
+    "type": "footer",
+    "sections": {
+        "newsletter_7AtEdH": {
+            "type": "newsletter",
+            "blocks": {
+                "heading_7cqpQd": {
+                    "type": "heading",
+                    "settings": {
+                        "heading": "S\u2019abonner \u00e0 nos e-mails",
+                        "heading_size": "h1"
+                    }
+                },
+                "paragraph_YzBpTt": {
+                    "type": "paragraph",
+                    "settings": {
+                        "text": "<p>Faites partie des premi\u00e8res personnes \u00e0 \u00eatre inform\u00e9es des nouvelles collections et des offres exclusives.</p>"
+                    }
+                },
+                "email_form_DDjLPQ": {
+                    "type": "email_form",
+                    "settings": {}
+                }
+            },
+            "block_order": [
+                "heading_7cqpQd",
+                "paragraph_YzBpTt",
+                "email_form_DDjLPQ"
+            ],
+            "disabled": true,
+            "settings": {
+                "placeholder_text": "Entrez votre e-mail\u2026",
+                "color_scheme": "scheme-2",
+                "full_width": true,
+                "padding_top": 24,
+                "padding_bottom": 20
+            }
+        },
+        "footer": {
+            "type": "footer",
+            "blocks": {
+                "brand_information_z3rBiA": {
+                    "type": "brand_information",
+                    "settings": {
+                        "show_social": true,
+                        "width_desktop": 3,
+                        "width_mobile": "2",
+                        "social_icons_alignment": "flex-start"
+                    }
+                },
+                "link_list_FzfCEx": {
+                    "type": "link_list",
+                    "settings": {
+                        "heading": "",
+                        "override_text_color": false,
+                        "body_color": "#ffffff",
+                        "menu": "footer",
+                        "width_desktop": 2,
+                        "width_mobile": "2"
+                    }
+                },
+                "contact_list_HWDKGk": {
+                    "type": "contact_list",
+                    "settings": {
+                        "address": "Votre adresse ici\u2026",
+                        "tel": "+00012132323",
+                        "email": "test@test.com",
+                        "width_desktop": 3,
+                        "width_mobile": "2"
+                    }
+                },
+                "email_signup_iPYVUR": {
+                    "type": "email_signup",
+                    "settings": {
+                        "heading": "S\u2019abonner \u00e0 nos e-mails",
+                        "override_email_color": false,
+                        "email_color": "#ffffff",
+                        "subtext": "<p>Soyez le premier \u00e0 conna\u00eetre les nouvelles arriv\u00e9es, ventes flash et astuces exclusives \u2014 abonnez-vous maintenant !</p>",
+                        "button_type": "solid",
+                        "button_label": "S\u2019inscrire",
+                        "button_style_secondary": false,
+                        "width_desktop": 4,
+                        "width_mobile": "2"
+                    }
+                }
+            },
+            "block_order": [
+                "brand_information_z3rBiA",
+                "link_list_FzfCEx",
+                "contact_list_HWDKGk",
+                "email_signup_iPYVUR"
+            ],
+            "custom_css": [
+                ".newsletter-form__field-wrapper label {display: none;}",
+                ".newsletter-form__field-wrapper input {flex-flow: revert-layer; width: 100%; border: solid 1px #dfdd; color: #999; outline: none; box-shadow: none; height: 45px;}",
+                ".newsletter-form__field-wrapper input::placeholder {color: #eeeeee}",
+                ".newsletter__solid-btn {background: #ffffff !important; width: 100%; color: #000 !important;}",
+                ".newsletter-form__field-wrapper button#Subscribe {height: 47px;}"
+            ],
+            "settings": {
+                "color_scheme": "scheme-4",
+                "override_text_color": false,
+                "text_color": "#ffffff",
+                "brand_color_text": "#ffffff",
+                "enable_follow_on_shop": false,
+                "show_policy": true,
+                "enable_payment_icons": false,
+                "branding_text": "Powered by Copyfy",
+                "margin_top": 0,
+                "padding_top": 24,
+                "padding_bottom": 20
+            }
+        }
+    },
+    "order": [
+        "newsletter_7AtEdH",
+        "footer"
+    ]
+}

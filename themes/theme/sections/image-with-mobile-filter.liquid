@@ -1,0 +1,73 @@
+<div class="image-with-mobile-filter">
+  {% if section.settings.desktop_image %}
+    <img 
+      src="{{ section.settings.desktop_image | image_url: width: 2000 }}" 
+      alt="Desktop Image" 
+      class="desktop-image"
+    >
+  {% endif %}
+
+  {% if section.settings.mobile_image %}
+    <img 
+      src="{{ section.settings.mobile_image | image_url: width: 1000 }}" 
+      alt="Mobile Image" 
+      class="mobile-image"
+    >
+  {% endif %}
+</div>
+
+<style>
+.image-with-mobile-filter {
+  width: 100%;
+  height: auto;
+}
+
+.desktop-image {
+  display: none;
+  width: 100%;
+  height: auto;
+  object-fit: cover;
+}
+
+.mobile-image {
+  display: block;
+  width: 100%;
+  height: auto;
+  object-fit: cover;
+}
+
+@media (min-width: 768px) {
+  .desktop-image {
+    display: block;
+  }
+
+  .mobile-image {
+    display: none;
+  }
+}
+  
+</style>
+
+{% schema %}
+{
+  "name": "Image with Mobile Filter",
+  "settings": [
+    {
+      "type": "image_picker",
+      "id": "desktop_image",
+      "label": "Desktop Image"
+    },
+    {
+      "type": "image_picker",
+      "id": "mobile_image",
+      "label": "Mobile Image"
+    }
+  ],
+  "presets": [
+    {
+      "name": "Image with Mobile Filter",
+      "category": "Image"
+    }
+  ]
+}
+{% endschema %}

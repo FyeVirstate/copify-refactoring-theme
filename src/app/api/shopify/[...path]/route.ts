@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import * as fs from 'fs'
 import * as path from 'path'
 
-const THEMES_BASE_PATH = process.env.THEMES_PATH || 'C:/Users/Zakaria/Documents/Github/copyfy-theme/public/shopify'
+const THEMES_BASE_PATH = process.env.THEMES_PATH || path.join(process.cwd(), 'themes')
 
 // MIME types for common theme assets
 const MIME_TYPES: Record<string, string> = {
@@ -30,7 +30,7 @@ export async function GET(
     const resolvedParams = await params
     const assetPath = resolvedParams.path.join('/')
     
-    // Build full file path - assets are stored in copyfy-theme/public/shopify/
+    // Build full file path - assets are stored in themes/
     const filePath = path.join(THEMES_BASE_PATH, assetPath)
     
     // Security: Ensure the path doesn't escape the themes directory

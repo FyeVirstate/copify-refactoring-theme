@@ -1,0 +1,78 @@
+{% schema %}
+{ "name": "Marquee", "settings": [
+  { "type": "color", "id": "background_color", "label": "Background Color", "default": "#121212" }
+], "blocks": [ { "type": "marquee", "name": "Marquee", "settings": [
+  { "type": "image_picker", "id": "image", "label": "Image" },
+  { "type": "liquid", "id": "text", "label": "Text","default":"Ce ne sont pas seulement des chaussures, c'est votre avantage concurrentiel."}
+]}],"presets": [{"name": "Marquee","blocks": [{"type": "marquee"},{"type": "marquee"},{"type": "marquee"},{"type": "marquee"}]}]}
+{% endschema %}
+{{ 'marquee.css' | asset_url | stylesheet_tag }}
+{%- capture marquee -%}<div class="squeeze_scroller_main" data-section-type="marquee" data-section-id="{{- section.id -}}" style="background-color: {{ section.settings.background_color }}">
+  <div class="squeeze_scroller_data">
+    <div class="squeeze_scroller_box">
+      <div class="squeeze_scroller_inner" id="scrollingContent">
+        {% for block in section.blocks %}
+          <div class="squeeze_scroller_item">
+            {%- if block.settings.image != blank -%}
+              <div class="squeeze_scroller_image">{{ block.settings.image | image_url:width:block.settings.image.width | image_tag:loading:'lazy' }}</div>
+            {%- else -%}
+              <div class="squeeze_scroller_image">
+                {{ 'icon-gurantee.svg' | inline_asset_content }}
+              </div>
+            {%- endif -%}
+            {%- if block.settings.text != blank -%}<div class="squeeze_scroller_para">{{ block.settings.text }}</div>{%- endif -%}
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>{%- endcapture -%}{{- marquee | strip_newlines -}}
+<script>
+  document.addEventListener('DOMContentLoaded',()=>{
+    if( document.querySelectorAll('.squeeze_scroller_item').length > 0 ){
+      const parentElMarquee = '{{ section.id }}';
+      const scrollingContent = document.querySelector(`[data-section-id="${parentElMarquee}"] .squeeze_scroller_inner`);
+      scrollingContent.innerHTML += scrollingContent.innerHTML;
+      let x = 0;
+      let scrollSpeed = 0.4;
+      let isPaused = false;
+      function animate() {
+        if (!isPaused) {
+          x -= scrollSpeed;
+          if (Math.abs(x) >= scrollingContent.scrollWidth / 2) {
+            x = 0;
+          }
+          scrollingContent.style.transform = `translateX(${x}px)`;
+        }
+        requestAnimationFrame(animate);
+      }
+      document.querySelector(`[data-section-id="${parentElMarquee}"]`).addEventListener("mouseenter", () => isPaused = true);
+      document.querySelector(`[data-section-id="${parentElMarquee}"]`).addEventListener("mouseleave", () => isPaused = false);
+      animate();  
+    } 
+  })  
+  
+  document.addEventListener("shopify:section:load", () => {
+    if( document.querySelectorAll('.squeeze_scroller_item').length > 0 ){
+      const parentElMarquee = '{{ section.id }}';
+      const scrollingContent = document.querySelector(`[data-section-id="${parentElMarquee}"] .squeeze_scroller_inner`);
+      scrollingContent.innerHTML += scrollingContent.innerHTML;
+      let x = 0;
+      let scrollSpeed = 0.4;
+      let isPaused = false;
+      function animate() {
+        if (!isPaused) {
+          x -= scrollSpeed;
+          if (Math.abs(x) >= scrollingContent.scrollWidth / 2) {
+            x = 0;
+          }
+          scrollingContent.style.transform = `translateX(${x}px)`;
+        }
+        requestAnimationFrame(animate);
+      }
+      document.querySelector(`[data-section-id="${parentElMarquee}"]`).addEventListener("mouseenter", () => isPaused = true);
+      document.querySelector(`[data-section-id="${parentElMarquee}"]`).addEventListener("mouseleave", () => isPaused = false);
+      animate();  
+    }
+  })
+</script>

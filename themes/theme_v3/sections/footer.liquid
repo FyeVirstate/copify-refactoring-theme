@@ -1,0 +1,319 @@
+{% comment %}theme-check-disable UndefinedObject{% endcomment %}
+{{ 'section-footer.css' | asset_url | stylesheet_tag }}
+
+{%- style -%}
+
+  .section-{{ section.id }}-padding {
+    padding-top: {{ section.settings.padding_top | times: 0.75 | round: 0 }}px;
+    padding-bottom: {{ section.settings.padding_bottom | times: 0.75 | round: 0 }}px;
+  }
+  .section-{{ section.id }}
+  -padding h2
+  , .section-{{ section.id }}
+  -padding h4
+  , .section-{{ section.id }}
+  -padding p, {
+    fill: rgb(var(--color-foreground));
+  }
+
+  .section-{{ section.id }}
+  -padding .review-text p
+  , .section-{{ section.id }}
+  -padding .review-footer span {
+    color: rgb(var(--color-foreground), 0.7) !important;
+  }
+
+  .section-{{ section.id }}
+  -padding .review-slider .review-box {
+    background: rgb(var(--color-innerHighlight)) !important;
+  }
+
+  .section-{{ section.id }}-padding .sr-stars svg:not(.half_star) path {
+    fill: rgb(var(--color-foreground));
+  }
+  .section-{{ section.id }}
+  -padding .rating-box svg.empty_star path {
+    fill: transparent;
+    stroke: rgb(var(--color-foreground));
+  }
+  .section-{{ section.id }}
+  -padding .sr-star svg {
+    stroke: rgb(var(--color-foreground));
+  }
+
+
+  .section-{{ section.id }}
+  -padding .sr-stars svg.half_star {
+    stroke: rgb(var(--color-foreground));
+  }
+
+  .section-{{ section.id }}-padding .sr-stars svg path.half_star_path,
+  .activeColor,
+  .icon_text_cls_guarantee svg path {
+    fill: rgb(var(--color-foreground));
+  }
+
+  .section-{{ section.id }}
+  -padding .sr-stars svg.half_star {
+    stroke: rgb(var(--color-foreground));
+  }
+  .section-{{ section.id }}
+  -padding .sr-stars svg path.half_star_border {
+    stroke: rgb(var(--color-foreground));
+  }
+  .section-{{ section.id }}
+  -padding .sr-stars svg path.half_star_border {
+    stroke: rgb(var(--color-foreground));
+  }
+
+
+  .footer {
+    background: rgb(var(--color-background));
+  }
+
+  footer p.accordion-footer,
+  footer a {
+    color: rgb(var(--color-foreground));
+  }
+
+  footer input::placeholder {
+    color: white !important;
+    text-transform: uppercase;
+  }
+
+  footer input {
+    color: white !important;
+  }
+
+  /* Mobile accordion styling */
+  @media screen and (max-width: 768px) {
+    .accordion-footer {
+      cursor: pointer;
+    }
+  }
+
+
+  .footer {
+    margin-top: {{ section.settings.margin_top | times: 0.75 | round: 0 }}px;
+  }
+  .section-{{ section.id }}
+  -padding {
+    padding-top: {{ section.settings.padding_top | times: 0.75 | round: 0 }}px;
+    padding-bottom: {{ section.settings.padding_bottom | times: 0.75 | round: 0 }}px;
+  }
+  @media screen and (min-width: 750px) {
+
+    .footer {
+      margin-top: {{ section.settings.margin_top }}px;
+    }
+    .section-{{ section.id }}
+    -padding {
+      padding-top: {{ section.settings.padding_top }}px;
+      padding-bottom: {{ section.settings.padding_bottom }}px;
+    }
+  }
+{%- endstyle -%}
+
+<footer class="footer section-{{ section.id }}-padding color-{{ section.settings.section_color_scheme }}">
+  <div class="container">
+
+    <div class="footer-top">
+      <div class="footer-top-com">
+
+        <div class="left-footer">
+          {% for block in section.blocks %}
+            {% if block.type == 'link_list' %}
+              <div class="footer-menu" {{ block.shopify_attributes }}>
+                <p class="accordion-footer h6">
+                  {{ block.settings.heading }}
+                </p>
+                <div class="panel">
+                  <ul>
+                    {% for link in linklists[block.settings.menu].links %}
+                      <li>
+                        <a href="{{ link.url }}">{{ link.title | escape }}</a>
+                      </li>
+                    {% endfor %}
+                  </ul>
+                </div>
+              </div>
+            {% endif %}
+          {% endfor %}
+        </div>
+
+        <div class="right-footer">
+          <div class="footer-com-right">
+            <p class="h6" style="text-transform: uppercase;font-weight: 700;color:var(--color-foreground);">{{ section.settings.newsletter_heading }}</p>
+            {%- form 'customer'
+              , id: 'FooterNewsletter'
+              , class: 'footer__newsletter newsletter-form' -%}
+              <input
+                type="hidden"
+                name="contact[tags]"
+                value="newsletter">
+              <div class="form-search-box">
+                <input
+                  type="email"
+                  name="contact[email]"
+                  placeholder="{{ 'newsletter.label' | t }}"
+                  required>
+                <button type="submit" class="btn btn-white">{{ 'newsletter.button_label' | t }}</button>
+              </div>
+
+
+              {%- if form.errors -%}
+                <small class="newsletter-form__message form__message" id="ContactFooter-error">
+                  <span class="svg-wrapper">
+                    {{- 'icon-error.svg' | inline_asset_content -}}
+                  </span>
+                  {{- form.errors.translated_fields.email | capitalize }}
+                  {{ form.errors.messages.email -}}
+                </small>
+              {%- endif -%}
+
+              {%- if form.posted_successfully? -%}
+                <h3
+                  class="newsletter-form__message newsletter-form__message--success form__message"
+                  id="ContactFooter-success"
+                  tabindex="-1"
+                  autofocus>
+                  <span class="svg-wrapper">
+                    {{- 'icon-success.svg' | inline_asset_content -}}
+                  </span>
+                  {{- 'newsletter.success' | t }}
+                </h3>
+              {%- endif -%}
+
+
+            {%- endform -%}
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="footer-bottom">
+      <div class="copy-right-box">
+        <span>&copy; {{ 'now' | date: '%Y' }} {{ shop.name }}</span>
+        <a href="#">{{ section.settings.copyright_text }}</a>
+      </div>
+    </div>
+
+  </div>
+</footer>
+
+<script>
+  function initAccordion() {
+  var acc = document.getElementsByClassName("accordion-footer");
+  for (var i = 0; i < acc.length; i++) {
+    acc[i].addEventListener("click", function () {
+      this.classList.toggle("active");
+      var panel = this.nextElementSibling;
+      var svg = this.querySelector('svg');
+      
+      if (panel.style.maxHeight) {
+        panel.style.maxHeight = null;
+        // Switch to plus icon
+        svg.innerHTML = '<path fill="currentColor" fill-rule="evenodd" d="M1 4.51a.5.5 0 0 0 0 1h3.5l.01 3.5a.5.5 0 0 0 1-.01V5.5l3.5-.01a.5.5 0 0 0-.01-1H5.5L5.49.99a.5.5 0 0 0-1 .01v3.5l-3.5.01z" clip-rule="evenodd"/>';
+      } else {
+        panel.style.maxHeight = panel.scrollHeight + "px";
+        // Switch to minus icon
+        svg.innerHTML = '<path fill="currentColor" fill-rule="evenodd" d="M.5 1C.5.7.7.5 1 .5h8a.5.5 0 1 1 0 1H1A.5.5 0 0 1 .5 1" clip-rule="evenodd"/>';
+      }
+    });
+  }
+  }
+  if (window.innerWidth <= 768) initAccordion();
+  window.addEventListener("resize", function () {
+  if (window.innerWidth <= 768) initAccordion();
+  });
+</script>
+
+{% schema %}
+  {
+    "name": "Custom Footer",
+    "settings": [
+      {
+        "type": "header",
+        "content": "t:sections.image-with-text.settings.header_colors.content"
+      },
+      {
+        "type": "color_scheme",
+        "id": "section_color_scheme",
+        "label": "t:sections.all.colors.label",
+        "default": "scheme-1"
+      },
+      {
+        "type": "inline_richtext",
+        "id": "newsletter_heading",
+        "default": "Join Us",
+        "label": "Newsletter heading"
+      },
+      {
+        "type": "text",
+        "id": "copyright_text",
+        "default": "All Rights Reserved",
+        "label": "Copyright text"
+      }, {
+        "type": "range",
+        "id": "margin_top",
+        "min": 0,
+        "max": 100,
+        "step": 4,
+        "unit": "px",
+        "default": 0,
+        "label": "Margin top"
+      }, {
+        "type": "range",
+        "id": "padding_top",
+        "min": 0,
+        "max": 100,
+        "step": 4,
+        "unit": "px",
+        "default": 36,
+        "label": "Padding top"
+      }, {
+        "type": "range",
+        "id": "padding_bottom",
+        "min": 0,
+        "max": 100,
+        "step": 4,
+        "unit": "px",
+        "default": 36,
+        "label": "Padding bottom"
+      }
+    ],
+    "blocks": [
+      {
+        "type": "link_list",
+        "name": "Link menu",
+        "settings": [
+          {
+            "type": "text",
+            "id": "heading",
+            "default": "Menu title",
+            "label": "Heading"
+          }, {
+            "type": "link_list",
+            "id": "menu",
+            "default": "footer",
+            "label": "Select menu"
+          }
+        ]
+      }
+    ],
+    "max_blocks": 4,
+    "presets": [
+      {
+        "name": "Custom Footer",
+        "blocks": [
+          {
+            "type": "link_list"
+          }, {
+            "type": "link_list"
+          }
+        ]
+      }
+    ]
+  }
+{% endschema %}

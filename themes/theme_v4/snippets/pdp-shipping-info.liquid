@@ -1,0 +1,34 @@
+{%- assign day_after_today = block.settings.after_days | times: 86400 -%}
+{%- assign days_calculated = 'now' | date: '%s' | plus: day_after_today | date: '%B %d' -%}
+<div class="free-shipping-notice-container shippingNotice-{{ block.id }}">
+  <div class="free-shipping-notice-inner">
+    {%- if block.settings.shipping_text != blank -%}
+        <div class="free-shipping-banner">
+        <span class="free-shipping-dot"></span>
+        <span class="free-shipping-text">
+            {{ block.settings.shipping_text }}
+            <span class="free-shipping-date">{{ days_calculated }}</span>
+        </span>
+        </div>
+    {%- endif -%}
+  </div>
+</div>
+
+{%- style -%}
+    body .shippingNotice-{{ block.id }}{
+        margin: {{ block.settings.margin_top }}px 0px {{ block.settings.margin_bottom }}px 0px;
+    }
+    body .shippingNotice-{{ block.id }} .free-shipping-notice-inner{
+        background-color: rgba(var(--color-highliter));
+        border: 1px solid rgba(var(--color-foreground));
+    }
+    body .shippingNotice-{{ block.id }} .free-shipping-banner{
+        color: rgba(var(--color-foreground));
+    }
+    body .shippingNotice-{{ block.id }} .free-shipping-dot {
+        background-color: rgba(var(--color-foreground));
+    }      
+    body .shippingNotice-{{ block.id }} .free-shipping-dot::after {
+        background-color: rgba(var(--color-foreground));
+    }          
+{%- endstyle -%}

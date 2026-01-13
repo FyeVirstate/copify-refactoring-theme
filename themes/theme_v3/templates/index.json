@@ -1,0 +1,432 @@
+{
+  "sections": {
+    "image_with_text_KGw3A8": {
+      "type": "image-with-text",
+      "blocks": {
+        "review_pCJYgW": {
+          "type": "review",
+          "settings": {
+            "show_stars": true,
+            "review_stars": 4.5,
+            "rating_text": "Rated 4.8 (21,883+ happy customers)"
+          }
+        },
+        "heading_4hGMwV": {
+          "type": "heading",
+          "settings": {
+            "heading": "Sleep on Cloud and Wake Up <em>Painless</em>",
+            "highlight_italic": true,
+            "heading_size": "h2"
+          }
+        },
+        "benefit_tags_NLahgD": {
+          "type": "benefit_tags",
+          "settings": {
+            "tag1": "Better Nights",
+            "tag2": "No More Neck Pain",
+            "tag3": "Cloudy Foam",
+            "tag4": "",
+            "tag5": "",
+            "tag6": ""
+          }
+        },
+        "button_8xiaya": {
+          "type": "button",
+          "settings": {
+            "button_label": "START SLEEPING BETTER",
+            "button_link": "#",
+            "button_style_secondary": false,
+            "icon_1": "shield",
+            "text_1": "30-Night Risk-Free",
+            "icon_2": "tick",
+            "text_2": "Free Shipping",
+            "icon_3": "leather",
+            "text_3": ""
+          }
+        }
+      },
+      "block_order": [
+        "review_pCJYgW",
+        "heading_4hGMwV",
+        "benefit_tags_NLahgD",
+        "button_8xiaya"
+      ],
+      "name": "t:sections.image-with-text.presets.name",
+      "settings": {
+        "section_color_scheme": "scheme-1",
+        "color_scheme": "scheme-1",
+        "image": "shopify://shop_images/4026a6a79ece54fa7d32140a87bf9982.png",
+        "height": "medium",
+        "desktop_image_width": "medium",
+        "layout": "text_first",
+        "image_behavior": "none",
+        "content_layout": "no-overlap",
+        "desktop_content_position": "middle",
+        "desktop_content_alignment": "left",
+        "mobile_content_alignment": "center",
+        "padding_top": 0,
+        "padding_bottom": 0
+      }
+    },
+    "h_tickers_CTmri9": {
+      "type": "h-tickers",
+      "blocks": {
+        "text_QQtfmb": {
+          "type": "text",
+          "settings": {
+            "title": "",
+            "image": "shopify://shop_images/image_3_1.png"
+          }
+        },
+        "text_tmKKDk": {
+          "type": "text",
+          "settings": {
+            "title": "",
+            "image": "shopify://shop_images/image_4.png"
+          }
+        },
+        "text_DFCbBQ": {
+          "type": "text",
+          "settings": {
+            "title": "",
+            "image": "shopify://shop_images/image_5.png"
+          }
+        }
+      },
+      "block_order": [
+        "text_QQtfmb",
+        "text_tmKKDk",
+        "text_DFCbBQ"
+      ],
+      "name": "Horizontal Ticker",
+      "settings": {
+        "color_scheme": "scheme-3",
+        "show_store_name": false,
+        "speed": 3.5,
+        "text_spacing": 4,
+        "text_size": "2.5",
+        "italic_text": false,
+        "uppercase_text": false,
+        "bold_text": false,
+        "padding_top": 20,
+        "padding_bottom": 20
+      }
+    },
+    "rich_text_K9CbwA": {
+      "type": "rich-text",
+      "blocks": {
+        "heading_HUnDjU": {
+          "type": "heading",
+          "settings": {
+            "heading": "Never sleep the same again",
+            "heading_size": "h3"
+          }
+        },
+        "text_fM7hph": {
+          "type": "text",
+          "settings": {
+            "text": "<p>Enjoy superior comfort with enhanced airflow from <br/>innovative aerated foams.</p>"
+          }
+        }
+      },
+      "block_order": [
+        "heading_HUnDjU",
+        "text_fM7hph"
+      ],
+      "name": "t:sections.rich-text.presets.name",
+      "settings": {
+        "color_scheme": "scheme-1",
+        "desktop_content_position": "center",
+        "content_alignment": "center",
+        "full_width": true,
+        "padding_top": 40,
+        "padding_bottom": 40
+      }
+    },
+    "featured_product_new_P43BcG": {
+      "type": "featured-product-new",
+      "blocks": {
+        "star_heading_89gdMV": {
+          "type": "star_heading",
+          "settings": {
+            "review_stars": 4.5,
+            "rating_text": "Rated 4.8 (21,883+ happy customers)"
+          }
+        },
+        "title_yWmAFw": {
+          "type": "title",
+          "settings": {}
+        },
+        "price_raWBmr": {
+          "type": "price",
+          "settings": {}
+        },
+        "variant_picker_TXB3Rk": {
+          "type": "variant_picker",
+          "settings": {
+            "picker_type": "button",
+            "swatch_shape": "circle"
+          }
+        },
+        "buy_buttons_kcRpRM": {
+          "type": "buy_buttons",
+          "settings": {
+            "show_dynamic_checkout": false,
+            "show_gift_card_recipient": true
+          }
+        }
+      },
+      "block_order": [
+        "star_heading_89gdMV",
+        "title_yWmAFw",
+        "price_raWBmr",
+        "variant_picker_TXB3Rk",
+        "buy_buttons_kcRpRM"
+      ],
+      "name": "Featured Product New",
+      "settings": {
+        "product": "",
+        "product_title_size": "h3",
+        "enable_sticky_info": true,
+        "color_scheme": "",
+        "media_size": "medium",
+        "constrain_to_viewport": false,
+        "media_fit": "contain",
+        "gallery_layout": "thumbnail_slider",
+        "mobile_thumbnails": "hide",
+        "media_position": "left",
+        "image_zoom": "none",
+        "hide_variants": true,
+        "enable_video_looping": false,
+        "padding_top": 36,
+        "padding_bottom": 36
+      }
+    },
+    "text_and_image_icjePd": {
+      "type": "text-and-image",
+      "blocks": {
+        "heading_BBgPQb": {
+          "type": "heading",
+          "settings": {
+            "show_stars": true,
+            "review_stars": 4.5,
+            "rating_text": "Rated 4.8 (21,883+ happy customers)",
+            "heading": "The Dreeam Bedding Set",
+            "heading_size": "h3"
+          }
+        },
+        "text_ymEQMk": {
+          "type": "text",
+          "settings": {
+            "text": "<p>Cloudpillo® bedding is softer than what you’ll find in even the most luxurious five star hotels. Made from 100 percent cotton sateen with an exceptionally high thread count, it offers a level of softness and comfort that ordinary bedding simply cannot match.</p>",
+            "text_style": "body"
+          }
+        },
+        "button_Xk6B6U": {
+          "type": "button",
+          "settings": {
+            "button_label": "GET YOURS NOW",
+            "button_link": "shopify://collections/all",
+            "button_style_secondary": false,
+            "icon_1": "tick",
+            "text_1": "30-Night Risk-Free Trial",
+            "icon_2": "tick",
+            "text_2": "Free Shipping",
+            "icon_3": "tick",
+            "text_3": ""
+          }
+        }
+      },
+      "block_order": [
+        "heading_BBgPQb",
+        "text_ymEQMk",
+        "button_Xk6B6U"
+      ],
+      "name": "Text and Image",
+      "settings": {
+        "section_color_scheme": "",
+        "color_scheme": "",
+        "image": "shopify://shop_images/Collection_Image_Slider_Pillows_1.webp",
+        "height": "medium",
+        "desktop_image_width": "medium",
+        "layout": "text_first",
+        "image_behavior": "none",
+        "content_layout": "no-overlap",
+        "desktop_content_position": "middle",
+        "desktop_content_alignment": "left",
+        "mobile_content_alignment": "left",
+        "padding_top": 0,
+        "padding_bottom": 24
+      }
+    },
+    "video_gris_slider_PwkyhX": {
+      "type": "video-gris-slider",
+      "blocks": {
+        "image_KPHywV": {
+          "type": "image",
+          "settings": {
+            "image_file": "shopify://shop_images/Cloudpillo_Original_3.webp"
+          }
+        },
+        "image_iLEUkh": {
+          "type": "image",
+          "settings": {
+            "image_file": "shopify://shop_images/4026a6a79ece54fa7d32140a87bf9982.png"
+          }
+        },
+        "image_ehGJaD": {
+          "type": "image",
+          "settings": {
+            "image_file": "shopify://shop_images/Collection_Image_Slider_Pillows.webp"
+          }
+        },
+        "image_HBzDf4": {
+          "type": "image",
+          "settings": {
+            "image_file": "shopify://shop_images/Cloudpillo_Original_1.webp"
+          }
+        }
+      },
+      "block_order": [
+        "image_KPHywV",
+        "image_iLEUkh",
+        "image_ehGJaD",
+        "image_HBzDf4"
+      ],
+      "name": "Text with Image Slider",
+      "settings": {
+        "section_color_scheme": "",
+        "show_stars": true,
+        "review_stars": 4.5,
+        "rating_text": "Rated 4.8 (21,883+ happy customers)",
+        "heading": "Customers can't stop raving about Dreeam",
+        "heading_size": "h3",
+        "subheading": "From waking up with neck and back pain to better mornings. These stories prove that Dreeam is doing miracles.",
+        "padding_top": 40,
+        "padding_bottom": 40
+      }
+    },
+    "rich_text_R7k8zY": {
+      "type": "rich-text",
+      "blocks": {
+        "heading_BeY4Ng": {
+          "type": "heading",
+          "settings": {
+            "heading": "30 Nights Guarantee",
+            "heading_size": "h3"
+          }
+        },
+        "text_Wdy6WV": {
+          "type": "text",
+          "settings": {
+            "text": "<p>Our pillows come with a 30 Nights Guarantee, promising promising. 100% shape and fabric retention—lasting up to 3x longer than other <br/>brands!</p>"
+          }
+        },
+        "button_9rJTy6": {
+          "type": "button",
+          "settings": {
+            "button_label": "TRY IT RISK FREE - 50% OFF TODAY",
+            "button_link": "#",
+            "button_style_secondary": false,
+            "button_label_2": "",
+            "button_link_2": "",
+            "button_style_secondary_2": false
+          }
+        },
+        "guarantee_GwPQMV": {
+          "type": "guarantee",
+          "settings": {
+            "icon": "shield",
+            "text": "30-Night Risk-Free Trial"
+          }
+        },
+        "guarantee_TFGAxX": {
+          "type": "guarantee",
+          "settings": {
+            "icon": "truck",
+            "text": "Free Shipping"
+          }
+        }
+      },
+      "block_order": [
+        "heading_BeY4Ng",
+        "text_Wdy6WV",
+        "button_9rJTy6",
+        "guarantee_GwPQMV",
+        "guarantee_TFGAxX"
+      ],
+      "custom_css": [
+        ".rich-text.content-container {margin: 0px 0 50px 0;}",
+        ".rich-text__buttons {margin-top: 53px;}",
+        "@media screen and (max-width: 767px) {.rich-text.content-container {margin: 30px 0 0px 0; } .page-width {padding: 0; }}"
+      ],
+      "name": "t:sections.rich-text.presets.name",
+      "settings": {
+        "color_scheme": "scheme-1",
+        "desktop_content_position": "center",
+        "content_alignment": "center",
+        "full_width": false,
+        "padding_top": 40,
+        "padding_bottom": 40
+      }
+    },
+    "product_faq_qY3eqD": {
+      "type": "product-faq",
+      "blocks": {
+        "faq_zeA93U": {
+          "type": "faq",
+          "settings": {
+            "q": "Question Content",
+            "a": "<p>Lorem Ipsum Doler Sit amet</p>"
+          }
+        },
+        "faq_WbXqty": {
+          "type": "faq",
+          "settings": {
+            "q": "Question Content",
+            "a": "<p>Lorem Ipsum Doler Sit amet</p>"
+          }
+        },
+        "faq_zJpbq8": {
+          "type": "faq",
+          "settings": {
+            "q": "Question Content",
+            "a": "<p>Lorem Ipsum Doler Sit amet</p>"
+          }
+        },
+        "faq_meVFLd": {
+          "type": "faq",
+          "settings": {
+            "q": "Question Content",
+            "a": "<p>Lorem Ipsum Doler Sit amet</p>"
+          }
+        },
+        "faq_97fRNM": {
+          "type": "faq",
+          "settings": {
+            "q": "Question Content",
+            "a": "<p>Lorem Ipsum Doler Sit amet</p>"
+          }
+        }
+      },
+      "block_order": [
+        "faq_zeA93U",
+        "faq_WbXqty",
+        "faq_zJpbq8",
+        "faq_meVFLd",
+        "faq_97fRNM"
+      ],
+      "name": "Product FAQ"
+    }
+  },
+  "order": [
+    "image_with_text_KGw3A8",
+    "h_tickers_CTmri9",
+    "rich_text_K9CbwA",
+    "featured_product_new_P43BcG",
+    "text_and_image_icjePd",
+    "video_gris_slider_PwkyhX",
+    "rich_text_R7k8zY",
+    "product_faq_qY3eqD"
+  ]
+}

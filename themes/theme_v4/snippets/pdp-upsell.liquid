@@ -1,0 +1,105 @@
+<cus-pdp-upsell>
+{%- liquid
+    assign upsell_product = block.settings.product
+-%}
+    <div class="upsellProducts__grid upsellProducts_wrap-{{ block.id }}">
+        <div class="upsellProducts__gridLayout">
+            <input type="hidden" name="id" value="{{ upsell_product.selected_or_first_available_variant.id  }}">
+            {% comment %} <!-- Left column: Product image --> {% endcomment %}
+            {%- if block.settings.bubble_text != blank -%}
+                <div class="upsellProducts__grid__tag">
+                    {{ block.settings.bubble_text }}
+                </div>
+            {%- endif -%}             
+            <div class="upsellProducts__grid_media">
+                {%- if block.settings.image != blank -%}
+                    {{ block.settings.image | image_url:width:block.settings.image.width | image_tag:preload:true }}
+                {%- elsif upsell_product.featured_image != blank -%}
+                    {{ upsell_product.featured_image | image_url:width:upsell_product.featured_image.width | image_tag:preload:true }}
+                {%- else -%}
+                    {{ 'detailed-apparel-1' | placeholder_svg_tag: 'placeholder-svg' }}
+                {%- endif -%}
+            </div>
+            {% comment %} <!-- Middle column: Title and variants --> {% endcomment %}
+            <div class="upsellProducts__grid_info">
+                <div class="upsellProducts__grid_header">
+                    <div class="upsellProducts__grid__title">
+                        {%- if upsell_product != blank -%}
+                            {{ upsell_product.title }}
+                        {%- else -%}
+                            Upsell product
+                        {%- endif -%}
+                    </div>
+                </div>
+                {%- if block.settings.description != blank -%}<div class="upsellProducts__grid__description">{{ block.settings.description }}</div>{%- endif -%}
+                {%- if block.settings.price_as_button == false -%}
+                <div class="upsellProducts__grid__price">
+                {%- if upsell_product != blank -%}
+                    <span class="upsellProducts__grid__actualPrice {% if upsell_product.selected_or_first_available_variant.compare_at_price > upsell_product.selected_or_first_available_variant.price %}discounted__price{% endif %}">{{ upsell_product.selected_or_first_available_variant.price | money }}</span>
+                    {%- if upsell_product.selected_or_first_available_variant.compare_at_price > upsell_product.selected_or_first_available_variant.price -%}
+                        <span class="upsellProducts__grid__cpPrice"><s>{{ upsell_product.selected_or_first_available_variant.compare_at_price | money }}</s></span>
+                    {%- endif -%}
+                {%- else -%}
+                    <span class="upsellProducts__grid__actualPrice discounted__price">{{ 1000 | money }}</span>
+                    <span class="upsellProducts__grid__cpPrice"><s>{{ 2000 | money }}</s></span>
+                {%- endif -%}
+                </div>
+                {%- endif -%}
+                {%- unless upsell_product.has_only_default_variant -%}
+                <div class="upsellProducts__grid__variants">
+                    {%- for option in upsell_product.options_with_values -%}
+                        <select name="options[{{ option.name }}]" class="upsellProducts__grid__variants_selection">
+                            {%- for value in option.values -%}
+                                <option value="{{ value }}">{{ value }}</option>
+                            {%- endfor -%}
+                        </select>
+                    {%- endfor -%}
+                </div>
+                {%- endunless -%}
+                <div class="variants-detail" style="display:none;">
+                    {% for variant in product.variants %}
+                        <div class="var-cstm" id="{{ variant.id }}">{{ variant.title }}</div>
+                        {% endfor %}
+                </div>
+            </div>
+            {% comment %} <!-- Right column: Add button --> {% endcomment %}
+            <div class="upsellProducts__grid__action {% if block.settings.price_as_button == true %}had_priceTrue{% endif %}">
+                <div class="upsellProducts__grid__button" {% unless upsell_product.selected_or_first_available_variant.available %}style="pointer-events:none;"{% endunless %} data-add="{{ block.settings.btn_txt }}" data-sold="{{ block.settings.btn_soldout_txt }}">
+                    <span class="upsellProducts__grid__button__txt">
+                        {% if upsell_product.selected_or_first_available_variant.available %}
+                            {%- if block.settings.price_as_button == true -%}
+                            +{{ upsell_product.selected_or_first_available_variant.price | money }}
+                            {%- else -%}
+                            Add +
+                            {%- endif -%}
+                        {% else %}
+                            Sold out
+                        {% endif %}    
+                    </span>
+                </div>
+            </div>
+        </div>
+        <script type="application/json">
+            {{ upsell_product.variants | json }}
+        </script>    
+    </div>
+</cus-pdp-upsell>
+
+{%- style -%}
+    body .upsellProducts_wrap-{{ block.id }}{
+        margin: {{ block.settings.margin_top }}px 0px {{ block.settings.margin_bottom }}px 0px;
+    }
+    body .upsellProducts_wrap-{{ block.id }} .upsellProducts__grid__button{
+        background-color: rgb(var(--color-button));
+        color: rgba(var(--color-button-text));
+    }    
+    body .upsellProducts_wrap-{{ block.id }} .upsellProducts__grid__actualPrice.discounted__price{
+        color: rgba(var(--color-highliter));
+    } 
+    body .upsellProducts_wrap-{{ block.id }} .upsellProducts__grid__actualPrice{
+        color: rgba(var(--color-foreground));
+    } 
+    body .upsellProducts_wrap-{{ block.id }} .upsellProducts__grid__cpPrice s{
+        color: rgba(var(--color-foreground));
+    }             
+{%- endstyle -%}

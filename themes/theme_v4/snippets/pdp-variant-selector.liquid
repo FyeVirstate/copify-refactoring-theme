@@ -1,0 +1,151 @@
+{%- unless product.has_only_default_variant -%}
+  <variant-selects class="customVariant__selection_widget variantSlection-wp-{{ block.id }}"
+    id="variant-selects-{{ section.id }}"
+    data-section="{{ section.id }}"
+    {{ block.shopify_attributes }}
+  >
+    {%- for option in product.options_with_values -%}
+      {%- liquid
+        assign swatch_count = option.values | map: 'swatch' | compact | size
+        assign picker_type = block.settings.picker_type
+
+        if swatch_count > 0 and block.settings.swatch_shape != 'none'
+          if block.settings.picker_type == 'dropdown'
+            assign picker_type = 'swatch_dropdown'
+          else
+            assign picker_type = 'swatch'
+          endif
+        endif
+      -%}
+      {%- if picker_type == 'swatch' -%}
+        <fieldset class="js product-form__input product-form__input--swatch">
+          <div class="headingOption__wrapper">
+            {%- if block.settings.heading_will_show -%}
+            <div class="headingOption__wrapper__header">
+                <div class="headingOption__wrapper__title">{{ option.name }}</div>
+                {%- if block.settings.divider_line == 'dashed' or block.settings.divider_line == 'normal' -%}
+                <div class="headingOption__wrapper__divider {% if block.settings.divider_line == 'dashed' %}dashed___line{% endif %}"></div>
+                {%- endif -%}
+            </div>
+            {%- endif -%}
+            <div class="headingOption__wrapper__svalue hidden" data-selected-value>{{- option.selected_value -}}</div>
+          </div>
+          {% render 'product-variant-options',
+            product: product,
+            option: option,
+            block: block,
+            picker_type: picker_type
+          %}
+        </fieldset>
+      {%- elsif picker_type == 'button' -%}
+        <fieldset class="js product-form__input product-form__input--pill">
+          <div class="headingOption__wrapper">
+            {%- if block.settings.heading_will_show -%}
+            <div class="headingOption__wrapper__header">
+                <div class="headingOption__wrapper__title">{{ option.name }}</div>
+                {%- if block.settings.divider_line == 'dashed' or block.settings.divider_line == 'normal' -%}
+                <div class="headingOption__wrapper__divider {% if block.settings.divider_line == 'dashed' %}dashed___line{% endif %}"></div>
+                {%- endif -%}
+            </div>
+            {%- endif -%}
+            <div class="headingOption__wrapper__svalue hidden" data-selected-value>{{- option.selected_value -}}</div>
+          </div>
+          {% render 'product-variant-options',
+            product: product,
+            option: option,
+            block: block,
+            picker_type: picker_type
+          %}
+        </fieldset>
+      {%- else -%}
+        <div class="product-form__input product-form__input--dropdown">
+          <div class="headingOption__wrapper">
+            {%- if block.settings.heading_will_show -%}
+            <div class="headingOption__wrapper__header">
+                <div class="headingOption__wrapper__title">{{ option.name }}</div>
+                {%- if block.settings.divider_line == 'dashed' or block.settings.divider_line == 'normal' -%}
+                <div class="headingOption__wrapper__divider {% if block.settings.divider_line == 'dashed' %}dashed___line{% endif %}"></div>
+                {%- endif -%}
+            </div>
+            {%- endif -%}
+          </div>
+          <div class="select">
+            {%- if picker_type == 'swatch_dropdown' -%}
+              <span
+                data-selected-value
+                class="dropdown-swatch"
+              >
+                {% render 'swatch', swatch: option.selected_value.swatch, shape: block.settings.swatch_shape %}
+              </span>
+            {%- endif -%}
+            <select
+              id="Option-{{ section.id }}-{{ forloop.index0 }}"
+              class="select__select"
+              name="options[{{ option.name | escape }}]"
+              form="{{ product_form_id }}"
+            >
+              {% render 'product-variant-options',
+                product: product,
+                option: option,
+                block: block,
+                picker_type: picker_type
+              %}
+            </select>
+            <span class="svg-wrapper">
+              {{- 'icon-caret.svg' | inline_asset_content -}}
+            </span>
+          </div>
+        </div>
+      {%- endif -%}
+    {%- endfor -%}
+    <script type="application/json" data-selected-variant>
+      {{ product.selected_or_first_available_variant | json }}
+    </script>
+  </variant-selects>
+
+  {%- style -%}
+    body .variantSlection-wp-{{ block.id }}{
+        padding: {{ block.settings.margin_top }}px 0px {{ block.settings.margin_bottom }}px 0px;
+    }
+    body .variantSlection-wp-{{ block.id }} .headingOption__wrapper .headingOption__wrapper__title{
+        font-size: {{ block.settings.heading_font_size | append:'px' }};
+        font-weight: {{ block.settings.heading_font_weight }};
+        color: rgb(var(--color-foreground)) !important;
+    }
+    body .variantSlection-wp-{{ block.id }} .headingOption__wrapper .headingOption__wrapper__svalue{
+        font-size: {{ block.settings.s_color_font_size | append:'px' }};
+        font-weight: {{ block.settings.s_color_font_weight }};
+        color: rgb(var(--color-foreground)) !important;
+    }  
+    {%- if block.settings.divider_line == 'normal' -%} 
+    body .variantSlection-wp-{{ block.id }} .headingOption__wrapper__header .headingOption__wrapper__divider{
+        background-color: var(--color-highliter) !important;
+    }  
+    {%- endif -%}
+    {%- if block.settings.divider_line == 'dashed' -%} 
+        body .variantSlection-wp-{{ block.id }} .headingOption__wrapper__header .headingOption__wrapper__divider.dashed___line{
+            background-image: repeating-linear-gradient(to right, rgb(var(--color-foreground)) 0px, rgb(var(--color-foreground)) 8px, transparent 8px, transparent 16px);
+            background-color: transparent;
+        }  
+    {%- endif -%}        
+    body .variantSlection-wp-{{ block.id }} .product-form__input--pill input[type=radio]+label{
+        border: 1px solid {{  block.settings.bd_color }};
+        color:rgb(var(--color-primary));
+        background-color :  rgb(var(--color-button-text));
+        border-radius: {{ block.settings.bd__radius | append:'px' }};
+    }
+    body .variantSlection-wp-{{ block.id }} .product-form__input--pill input[type=radio]:checked+label{
+        border: 1px solid rgb(var(--color-button-text));
+        color: rgb(var(--color-button-text));
+        background-color : rgb(var(--color-button)) !important;
+    }
+    @media(max-width:749px){
+        body .variantSlection-wp-{{ block.id }} .headingOption__wrapper .headingOption__wrapper__title{
+            font-size: {{ block.settings.heading_font_size_mb | append:'px' }};
+        }
+        body .variantSlection-wp-{{ block.id }} .headingOption__wrapper .headingOption__wrapper__svalue{
+            font-size: {{ block.settings.s_color_font_size_mb | append:'px' }};
+        }        
+    }
+  {%- endstyle -%}
+{%- endunless -%}

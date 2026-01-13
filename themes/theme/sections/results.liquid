@@ -1,0 +1,440 @@
+{{ 'section-results.css' | asset_url | stylesheet_tag }}
+
+{%- style -%}
+  .section-{{ section.id }}-padding {
+    padding-top: {{ section.settings.padding_top | times: 0.75 | round: 0 }}px;
+    padding-bottom: {{ section.settings.padding_bottom | times: 0.75 | round: 0 }}px;
+  }
+
+  @media screen and (min-width: 750px) {
+    .section-{{ section.id }}-padding {
+      padding-top: {{ section.settings.padding_top }}px;
+      padding-bottom: {{ section.settings.padding_bottom }}px;
+    }
+  }
+
+  #section__heading-{{ section.id }}{
+    {% if section.settings.override_heading_size %}
+      font-size: {{ section.settings.heading_size }}px!important;
+      line-height: {{ section.settings.heading_size | plus: 8 }}px!important;
+    {% endif %}
+    {% if section.settings.override_heading_color %}
+      color: {{ section.settings.heading_color }};
+    {% endif %}
+  }
+
+  @media (max-width: 768px) {
+    #section__heading-{{ section.id }}{
+      {% if section.settings.override_heading_size %}
+        font-size: {{ section.settings.heading_mob_size }}px!important;
+        line-height: {{ section.settings.heading_mob_size | plus: 8 }}px!important;
+      {% endif %}
+      
+    }
+
+    .content-and-results-container-{{ section.id }} {
+      padding-left: 25px;
+      padding-right: 25px;
+    }
+  }
+
+  @media (max-width: 470px) {
+    .content-and-results-container-{{ section.id }} {
+      padding-left: 0px;
+      padding-right: 0px;
+    }
+  }
+
+  #section__heading-2-{{ section.id }}{
+    {% if section.settings.override_subheading_size %}
+      font-size: {{ section.settings.subheading_size }}px;
+      line-height: {{ section.settings.subheading_size | plus: 8 }}px;
+    {% endif %}
+    {% if section.settings.override_subheading_color %}
+      color: {{ section.settings.subheading_color }};
+    {% endif %}
+  }
+
+  @media (max-width: 768px) {
+    #section__heading-2-{{ section.id }}{
+      {% if section.settings.override_subheading_size %}
+        font-size: {{ section.settings.subheading_mob_size }}px!important;
+        line-height: {{ section.settings.subheading_mob_size | plus: 8 }}px!important;
+      {% endif %}
+      
+    }
+    
+  }
+
+  .section__text-{{ section.id }},
+  .section__text-{{ section.id }} p{
+    {% if section.settings.override_body_size %}
+      font-size: {{ section.settings.body_size }}px;
+      line-height: {{ section.settings.body_size | plus: 8 }}px;
+    {% endif %}
+    font-weight: 500;
+  }
+
+  {%- if section.settings.rounded_image_corners -%}
+    .content-and-results__image > img {
+      border-radius: 18px;
+    }
+  {%- endif -%}
+{%- endstyle -%}
+
+<div class="color-accent-1 color-{{ section.settings.color_scheme }}">
+  <div class="page-width section-{{ section.id }}-padding">
+    <div 
+      class="content-and-results-container-{{ section.id }} content-and-results{% if section.settings.layout == 'results_first' %} content-and-results--results-first{% endif %}{% if section.settings.title == blank and section.settings.text == blank and section.settings.image == blank %} content-and-results--no-content{% endif %}"
+    >
+      {%- unless section.settings.title == blank and section.settings.text == blank and section.settings.image == blank -%}
+        <div class="content-container center">
+          {%- unless section.settings.title == blank -%}
+            <h2 
+              id="section__heading-{{ section.id }}"
+              class="title {{ section.settings.heading_size }}">
+              {{ section.settings.title | escape }}
+            </h2>
+          {%- endunless -%}
+
+          {%- unless section.settings.text == blank -%}
+            <div 
+              class="body-text section__text-{{ section.id }} sw-base-text-color image-with-text__text rte body"
+            > 
+              {{ section.settings.text }}
+            </div>
+          {%- endunless -%}
+
+          {%- unless section.settings.image == blank -%}
+            <div class="content-and-results__image" style="margin-top: {{ section.settings.image_margin_top }}px;">
+              {{ section.settings.image | image_url: width: 1000 | image_tag: loading: 'lazy', width: 600 }}
+            </div>
+          {%- endunless -%}
+        </div>
+      {%- endunless -%}
+
+      <div class="results-container">
+        <div class="results" style="padding-left: 2px;">
+          {%- unless section.settings.results_headline == blank -%}
+            <h3
+              id="section__heading-2-{{ section.id }}" 
+              class="title {% if section.settings.results_headline_alignment == 'center' %} center{% endif %}"
+              {%- if section.settings.override_results_heading_size -%}
+                style="font-size: {{ section.settings.results_heading_size }}"
+              {%- endif -%}
+            >
+              {{ section.settings.results_headline | escape }}
+            </h3>
+          {%- endunless -%}
+
+          <div class="results__rows-container section__text-{{ section.id }}">
+            {%- for row in section.blocks -%}
+              <div class="results__row">
+                <div 
+                  class="results__percentage section__text-{{ section.id }} results_{{ row.id }}"
+                  style="--percentage: {{ row.settings.percentage }}%"
+                >
+                  <p>{{ row.settings.percentage }}%</p>
+                </div>
+                <div 
+                  class="results__text sw-base-text-color image-with-text__text rte body"
+                >
+                  {{ row.settings.row_text }}
+                </div>
+              </div>
+            {%- endfor -%}
+          </div>
+
+          {%- unless section.settings.caption == blank -%}
+            <div class="results__caption">
+              {{ section.settings.caption }}
+            </div>
+          {%- endunless -%}
+
+          {%- if section.settings.button_label != blank -%}
+            <a
+              {% if section.settings.link %}
+                href="{{ section.settings.link }}"
+              {% else %}
+                role="link" aria-disabled="true"
+              {% endif %}
+              class="button btn--mt-center {% if section.settings.button_style_secondary %}button--secondary{% else %}button--primary{% endif %}"
+            >
+              {{- section.settings.button_label | escape -}}
+            </a>
+          {%- endif -%}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+{% schema %}
+{
+    "name": "Results",
+    "settings": [
+          {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:sections.all.colors.label",
+      "info": "t:sections.all.colors.has_cards_info",
+      "default": "scheme-1"
+    },
+        {
+            "type": "text",
+            "id": "title",
+            "default": "Results",
+            "label": "Heading"
+        },
+       
+        {
+          "type": "checkbox",
+          "id": "override_heading_size",
+          "label": "Override Heading Size",
+          "default": false
+        },
+        {
+          "type": "range",
+          "id": "heading_size",
+          "min": 28,
+          "max": 54,
+          "step": 1,
+          "unit": "px",
+          "label": "Heading Font Size",
+          "default": 40
+        },
+        {
+          "type": "range",
+          "id": "heading_mob_size",
+          "min": 28,
+          "max": 54,
+          "step": 1,
+          "unit": "px",
+          "label": "Heading (Mobile) Font Size",
+          "default": 29
+        },
+        {
+          "type": "checkbox",
+          "id": "override_subheading_color",
+          "label": "Override Sub Heading Color",
+          "default": false
+        },
+        {
+          "type": "checkbox",
+          "id": "override_subheading_size",
+          "label": "Override Sub Heading Size",
+          "default": false
+        },
+        {
+          "type": "range",
+          "id": "subheading_size",
+          "min": 28,
+          "max": 54,
+          "step": 1,
+          "unit": "px",
+          "label": "Subheading Font Size",
+          "default": 40
+        },
+        {
+          "type": "range",
+          "id": "subheading_mob_size",
+          "min": 28,
+          "max": 54,
+          "step": 1,
+          "unit": "px",
+          "label": "Subheading (Mobile) Font Size",
+          "default": 29
+        },
+        {
+            "type": "richtext",
+            "id": "text",
+            "default": "<p>Talk about results of your customers and how your product improved their life.</p>",
+            "label": "Text"
+        },
+        {
+          "type": "checkbox",
+          "id": "override_body_size",
+          "label": "Override Text Size",
+          "default": false
+        },
+        {
+          "type": "range",
+          "id": "body_size",
+          "min": 16,
+          "max": 54,
+          "step": 1,
+          "unit": "px",
+          "label": "Text Size",
+          "default": 16
+        },
+        {
+          "type": "image_picker",
+          "id": "image",
+          "label": "Image"
+        },
+        {
+          "type": "range",
+          "id": "image_margin_top",
+          "min": 1,
+          "max": 100,
+          "step": 1,
+          "unit": "px",
+          "label": "Image Margin Top",
+          "default": 25
+        },
+        {
+          "type": "checkbox",
+          "id": "rounded_image_corners",
+          "label": "Round Image Corners",
+          "default": true
+        },
+        {
+            "type": "select",
+            "id": "layout",
+            "options": [
+                {
+                    "value": "results_first",
+                    "label": "Results first"
+                },
+                {
+                    "value": "results_second",
+                    "label": "Results second"
+                }
+            ],
+            "default": "results_second",
+            "label": "Desktop results placement"
+        },
+        {
+          "type": "header",
+          "content": "Results"
+        },
+        {
+            "type": "text",
+            "id": "results_headline",
+            "default": "Results heading",
+            "label": "Results heading"
+        },
+        {
+          "type": "checkbox",
+          "id": "override_results_heading_size",
+          "label": "Override Results Heading Size",
+          "default": false
+        },
+        {
+          "type": "range",
+          "id": "results_heading_size",
+          "min": 18,
+          "max": 54,
+          "step": 1,
+          "unit": "px",
+          "label": "Results Heading Font Size",
+          "default": 40
+        },
+        {
+            "type": "select",
+            "id": "results_headline_alignment",
+            "options": [
+                {
+                    "value": "left",
+                    "label": "Left"
+                },
+                {
+                    "value": "center",
+                    "label": "Center"
+                }
+            ],
+            "default": "center",
+            "label": "Results heading alignment"
+        },
+        {
+            "type": "richtext",
+            "id": "caption",
+            "default": "<p>Caption about the results and/or link for their proof.</p>",
+            "label": "Caption"
+        },
+        {
+          "type": "text",
+          "id": "button_label",
+          "label": "Button Label"
+        },
+        {
+          "type": "url",
+          "id": "link",
+          "label": "Buttin URL"
+        },
+        {
+          "type": "checkbox",
+          "id": "button_style_secondary",
+          "label": "Button Style Secondary",
+          "default": false
+        },
+        {
+        "type": "header",
+        "content": "heading padding content"
+        },
+        {
+        "type": "range",
+        "id": "padding_top",
+        "min": 0,
+        "max": 100,
+        "step": 4,
+        "unit": "px",
+        "label": "Padding Top",
+        "default": 36
+        },
+        {
+        "type": "range",
+        "id": "padding_bottom",
+        "min": 0,
+        "max": 100,
+        "step": 4,
+        "unit": "px",
+        "label": "t:sections.all.padding.padding_bottom",
+        "default": 36
+        }
+    ],
+    "blocks": [
+        {
+            "type": "row",
+            "name": "Result row",
+            "settings": [
+                {
+                    "type": "range",
+                    "id": "percentage",
+                    "min": 0,
+                    "max": 100,
+                    "default": 90,
+                    "step": 1,
+                    "label": "Percentage"
+                },
+                {
+                    "type": "richtext",
+                    "id": "row_text",
+                    "default": "<p>Noticed that this product has significantly improved their life.</p>",
+                    "label": "Result"
+                }
+            ]
+        }
+    ],
+    "presets": [
+        {
+            "name": "Results",
+            "blocks": [
+                {
+                "type": "row"
+                },
+                {
+                "type": "row"
+                },
+                {
+                "type": "row"
+                }
+            ]
+        }
+    ],
+    "disabled_on": {
+        "groups": ["header", "footer"]
+    }
+}
+{% endschema %}

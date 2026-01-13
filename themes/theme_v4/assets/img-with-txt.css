@@ -1,0 +1,100 @@
+/* image with text start */
+.not_faq_mgtxt.image_with_text__wrapper {
+    padding: 60px 0;
+    background: rgb(var(--color-innerHighlight));
+}
+.not_faq_mgtxt .mgtxt__title {
+    font-size: 36px;
+    line-height: normal;
+    letter-spacing: -.02em;
+    margin: 0 0 32px;
+    font-weight: 700;
+}
+.not_faq_mgtxt .mgtxt__title span {
+    font-style: Italic;
+    color: var(--color-highliter);
+}
+.not_faq_mgtxt .mgtxt__paragraph {
+    font-size: 16px;
+    line-height: 1.4;
+}
+.not_faq_mgtxt .mgtxt__buttons {
+    margin: 40px 0 0;
+}
+.not_faq_mgtxt .mgtxt__buttons a {
+    display: flex;
+    align-items: center;
+    border: 1px solid #000;
+    border-radius: 50px;
+    justify-content: center;
+    gap: 8px;
+    font-size: 16px;
+    line-height: 25px;
+    width: fit-content;
+    padding: 11.5px 23.1px;
+    text-decoration: none;
+    color: #000;
+    transition: ease .3s;
+}
+.not_faq_mgtxt .mgtxt__buttons a:hover svg path {
+    fill: #fff;
+}
+.not_faq_mgtxt .mgtxt__buttons a:hover {
+    background: rgb(var(--color-button));
+    border-color: rgb(var(--color-button));
+    color: rgb(var(--color-button-text));
+}
+.not_faq_mgtxt .image_with_text_container {
+    display: flex;
+    gap: 40px;
+    align-items: center;
+}
+.not_faq_mgtxt .media__layout_mgtxt {
+    max-width: 630px;
+    width: 100%;
+}
+.media__interior_mgtxt video {
+    width: 100%;
+    display: block;
+}
+.not_faq_mgtxt .content_layout__mgtxt {
+    width: 100%;
+}
+/* image with text end */
+@media (max-width: 1400px) {
+/* image with text start */
+.not_faq_mgtxt .media__layout_mgtxt {
+    max-width: 540px;
+}
+/* image with text end */
+}
+@media (max-width: 1279px) {
+/* image with text start */
+.not_faq_mgtxt .mgtxt__title {
+    font-size: 34px;
+    line-height: 1.1;
+    margin: 0 0 24px;
+}
+/* image with text end */
+}
+@media (max-width: 768px) {
+/* image with text start */
+.not_faq_mgtxt .image_with_text_container {
+    gap: 24px;
+    flex-direction: column-reverse;
+}
+.not_faq_mgtxt .media__layout_mgtxt {
+    max-width: 100%;
+}
+/* image with text end */
+}
+@media (max-width: 749px) {
+/* image with text start */
+.not_faq_mgtxt.image_with_text__wrapper {
+    padding: 40px 0 60px;
+}
+.not_faq_mgtxt .mgtxt__title {
+    max-width: 314px;
+}
+/* image with text end */
+}

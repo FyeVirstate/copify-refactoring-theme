@@ -1,0 +1,697 @@
+{
+    "sections": {
+        "main": {
+            "type": "main-product-custom",
+            "blocks": {
+                "star_heading_9xJAbW": {
+                    "type": "star_heading",
+                    "settings": {
+                        "review_stars": 4.5,
+                        "rating_text": "Rated 4.8 (21,883+ happy customers)"
+                    }
+                },
+                "title": {
+                    "type": "title",
+                    "settings": {}
+                },
+                "vendor": {
+                    "type": "text",
+                    "settings": {
+                        "text": "Invisible protection. All-day comfort. Ultimate confidence.",
+                        "text_style": "body"
+                    }
+                },
+                "divider_Mc9TG9": {
+                    "type": "divider",
+                    "settings": {
+                        "margin_top": 10,
+                        "margin_bottom": 6
+                    }
+                },
+                "price": {
+                    "type": "price",
+                    "settings": {}
+                },
+                "divider_HwFiDa": {
+                    "type": "divider",
+                    "settings": {
+                        "margin_top": 10,
+                        "margin_bottom": 6
+                    }
+                },
+                "tag_custom_kHgyMb": {
+                    "type": "tag_custom",
+                    "settings": {
+                        "tag_heading": "In few words"
+                    }
+                },
+                "custom_product_form_jehUnn": {
+                    "type": "custom_product_form",
+                    "settings": {}
+                },
+                "variant_picker": {
+                    "type": "variant_picker",
+                    "disabled": true,
+                    "settings": {
+                        "picker_type": "button",
+                        "swatch_shape": "circle"
+                    }
+                },
+                "buy_buttons": {
+                    "type": "buy_buttons",
+                    "settings": {
+                        "show_dynamic_checkout": false,
+                        "show_gift_card_recipient": false,
+                        "in_stock_text": "In Stock",
+                        "out_of_stock_text": "Out of Stock",
+                        "order_in_text": "Order in",
+                        "get_it_text": "and get it by",
+                        "delivery_days": 4,
+                        "text_style": "body",
+                        "inventory_threshold": 10,
+                        "show_inventory_quantity": true
+                    }
+                },
+                "icon_with_text_Pi7aQp": {
+                    "type": "icon-with-text",
+                    "settings": {
+                        "layout": "horizontal",
+                        "icon_1": "shield",
+                        "heading_1": "Money-Back Guarantee",
+                        "icon_2": "tick",
+                        "heading_2": "90-Day Free Returns",
+                        "icon_3": "truck",
+                        "heading_3": ""
+                    }
+                },
+                "trust_image_tcRB3p": {
+                    "type": "trust_image",
+                    "settings": {}
+                },
+                "free_heading_slider_cVWa46": {
+                    "type": "free_heading_slider",
+                    "settings": {
+                        "show_block": false,
+                        "free_1_title": "Free Shipping",
+                        "free_1_text": "in US & EU",
+                        "free_2_title": "Free Shipping",
+                        "free_2_text": "in US & EU",
+                        "free_3_title": "Free Shipping",
+                        "free_3_text": "in US & EU"
+                    }
+                },
+                "video_slider_pJT8mt": {
+                    "type": "video_slider",
+                    "settings": {
+                        "show_block": false,
+                        "video_1_video": "",
+                        "video_2_video": "",
+                        "video_3_video": "",
+                        "video_4_video": ""
+                    }
+                },
+                "reviews_rJbdnP": {
+                    "type": "reviews",
+                    "settings": {
+                        "heading": "Reviews",
+                        "rating_text": "Rated 4.8/5 based on 200 reviews",
+                        "review_1_title": "Total Game Changer!",
+                        "review_1_text": "Finally comfortable in my favorite tops. They stay put all day!",
+                        "review_1_name": "Sarah M.",
+                        "review_1_avatar": "avtar.svg",
+                        "review_1_stars": 4.5,
+                        "review_1_time": "2 weeks ago",
+                        "review_2_title": "Completely Invisible",
+                        "review_2_text": "You can't see them at all. Perfect for tight dresses and shirts.",
+                        "review_2_name": "Jessica L.",
+                        "review_2_stars": 4.5,
+                        "review_2_time": "Yesterday",
+                        "review_3_title": "So Comfortable",
+                        "review_3_text": "I forget I'm wearing them. No irritation, just confidence.",
+                        "review_3_name": "Amanda K.",
+                        "review_3_stars": 4.5,
+                        "review_3_time": "3 days ago",
+                        "review_4_title": "Worth Every Penny",
+                        "review_4_text": "Reusable and reliable. Best investment for my wardrobe.",
+                        "review_4_name": "Emily R.",
+                        "review_4_stars": 4.5,
+                        "review_4_time": "1 month ago"
+                    }
+                },
+                "collapsible_tab_WaHTn9": {
+                    "type": "collapsible_tab",
+                    "settings": {
+                        "heading": "HOW TO USE",
+                        "icon": "none",
+                        "content": "<p>Gentle adhesive keeps covers in place. Breathable material prevents irritation. Reusable design saves money. Simply apply, wear confidently, remove gently, and wash for next use.</p>",
+                        "page": ""
+                    }
+                },
+                "collapsible_tab_nM3LH4": {
+                    "type": "collapsible_tab",
+                    "settings": {
+                        "heading": "DESCRIPTION & CARE",
+                        "icon": "none",
+                        "content": "<p>Discreet, reusable nipple covers for instant confidence. Soft, breathable fabric stays invisible under any outfit. Feel secure and comfortable all day long.</p>",
+                        "page": ""
+                    }
+                },
+                "collapsible_tab_WaHTQ9": {
+                    "type": "collapsible_tab",
+                    "settings": {
+                        "heading": "Instructions",
+                        "icon": "none",
+                        "content": "<p>Clean skin before applying. Peel backing and center over nipple. Press edges firmly. Remove gently after use. Hand wash with mild soap, air dry, and store for reuse.</p>",
+                        "page": ""
+                    }
+                },
+                "collapsible_tab_WaHTF9": {
+                    "type": "collapsible_tab",
+                    "settings": {
+                        "heading": "Delivery Information",
+                        "icon": "none",
+                        "content": "<p>Fast shipping worldwide. Orders processed within 24 hours. Standard delivery 5-10 business days. Express options available at checkout. Discreet packaging guaranteed.</p>",
+                        "page": ""
+                    }
+                }
+            },
+            "block_order": [
+                "star_heading_9xJAbW",
+                "title",
+                "vendor",
+                "divider_Mc9TG9",
+                "price",
+                "divider_HwFiDa",
+                "tag_custom_kHgyMb",
+                "custom_product_form_jehUnn",
+                "variant_picker",
+                "buy_buttons",
+                "icon_with_text_Pi7aQp",
+                "trust_image_tcRB3p",
+                "free_heading_slider_cVWa46",
+                "video_slider_pJT8mt",
+                "reviews_rJbdnP",
+                "collapsible_tab_WaHTn9",
+                "collapsible_tab_nM3LH4",
+                "collapsible_tab_WaHTQ9",
+                "collapsible_tab_WaHTF9"
+            ],
+            "settings": {
+                "product_title_size": "h2",
+                "enable_sticky_info": true,
+                "color_scheme": "scheme-1",
+                "square_media": true,
+                "media_size": "medium",
+                "constrain_to_viewport": false,
+                "media_fit": "cover",
+                "gallery_layout": "thumbnail_slider",
+                "mobile_thumbnails": "show",
+                "media_position": "left",
+                "image_zoom": "none",
+                "hide_variants": true,
+                "enable_video_looping": false,
+                "padding_top": 0,
+                "padding_bottom": 56
+            }
+        },
+        "h_tickers_Va7Uai": {
+            "type": "h-tickers",
+            "blocks": {
+                "text_hAtUVh": {
+                    "type": "text",
+                    "settings": {
+                        "title": "",
+                        "image": ""
+                    }
+                },
+                "text_qjhrya": {
+                    "type": "text",
+                    "settings": {
+                        "title": "",
+                        "image": ""
+                    }
+                },
+                "text_BXeBnJ": {
+                    "type": "text",
+                    "settings": {
+                        "title": "",
+                        "image": ""
+                    }
+                },
+                "text_dH3rKK": {
+                    "type": "text",
+                    "settings": {
+                        "title": "",
+                        "image": ""
+                    }
+                },
+                "text_DryriH": {
+                    "type": "text",
+                    "settings": {
+                        "title": "",
+                        "image": ""
+                    }
+                },
+                "text_8XAFCt": {
+                    "type": "text",
+                    "settings": {
+                        "title": "",
+                        "image": ""
+                    }
+                },
+                "text_rLNUKG": {
+                    "type": "text",
+                    "settings": {
+                        "title": "",
+                        "image": ""
+                    }
+                },
+                "text_P9VN3y": {
+                    "type": "text",
+                    "settings": {
+                        "title": "",
+                        "image": ""
+                    }
+                }
+            },
+            "block_order": [
+                "text_hAtUVh",
+                "text_qjhrya",
+                "text_BXeBnJ",
+                "text_dH3rKK",
+                "text_DryriH",
+                "text_8XAFCt",
+                "text_rLNUKG",
+                "text_P9VN3y"
+            ],
+            "name": "Horizontal Ticker",
+            "settings": {
+                "color_scheme": "scheme-2",
+                "show_store_name": false,
+                "speed": 1.5,
+                "text_spacing": 3,
+                "text_size": "2.5",
+                "italic_text": false,
+                "uppercase_text": false,
+                "bold_text": false,
+                "padding_top": 20,
+                "padding_bottom": 20
+            }
+        },
+        "product_section_1_LwmfCP": {
+            "type": "product-section-1",
+            "blocks": {
+                "feature_left_TBf6tF": {
+                    "type": "feature_left",
+                    "settings": {
+                        "title": "Invisible Coverage",
+                        "text": "Ultra-thin design vanishes under clothing"
+                    }
+                },
+                "feature_left_PBTXUT": {
+                    "type": "feature_left",
+                    "settings": {
+                        "title": "All-Day Comfort",
+                        "text": "Breathable fabric feels natural on skin"
+                    }
+                },
+                "feature_right_eMXP6L": {
+                    "type": "feature_right",
+                    "settings": {
+                        "title": "Secure Hold",
+                        "text": "Medical-grade adhesive stays in place"
+                    }
+                },
+                "feature_right_Y3TRjX": {
+                    "type": "feature_right",
+                    "settings": {
+                        "title": "Reusable Design",
+                        "text": "Wash and wear again, saves money"
+                    }
+                },
+                "guarantee_BJUxNp": {
+                    "type": "guarantee",
+                    "settings": {
+                        "icon": "tick",
+                        "text": "Money Back Guarantee"
+                    }
+                },
+                "guarantee_7A4ybd": {
+                    "type": "guarantee",
+                    "settings": {
+                        "icon": "shield",
+                        "text": "30-Night Risk-Free"
+                    }
+                }
+            },
+            "block_order": [
+                "feature_left_TBf6tF",
+                "feature_left_PBTXUT",
+                "feature_right_eMXP6L",
+                "feature_right_Y3TRjX",
+                "guarantee_BJUxNp",
+                "guarantee_7A4ybd"
+            ],
+            "name": "Product Section 1",
+            "settings": {
+                "section_color_scheme": "scheme-1",
+                "heading": "Your Wardrobe's New Best Friend\u2013For Real",
+                "highlight_italic": true,
+                "heading_size": "h2",
+                "subheading": "Ultra-thin, breathable coverage that disappears under clothes",
+                "center_image": "product_section_image.png",
+                "image_height": "small",
+                "button_text": "RISK-FREE - 50% OFF",
+                "button_link": "",
+                "padding_top": 40,
+                "padding_bottom": 40
+            }
+        },
+        "text_and_image_kQYq3M": {
+            "type": "text-and-image",
+            "blocks": {
+                "heading_NK3gFY": {
+                    "type": "heading",
+                    "settings": {
+                        "show_stars": true,
+                        "review_stars": 4.5,
+                        "rating_text": "Rated 4.8 (21,883+ happy customers)",
+                        "heading": "Freedom to Wear Whatever You Want",
+                        "heading_size": "h2"
+                    }
+                },
+                "text_7z7VAY": {
+                    "type": "text",
+                    "settings": {
+                        "text": "<p>Experience invisible protection that moves with you. Our ultra-thin covers disappear under clothing while keeping you comfortable and confident.</p>",
+                        "text_style": "body"
+                    }
+                },
+                "button_B7QEwB": {
+                    "type": "button",
+                    "settings": {
+                        "button_label": "SHOP NOW",
+                        "button_link": "shopify://collections/all",
+                        "button_style_secondary": false,
+                        "icon_1": "tick",
+                        "text_1": "Risk-Free Trial",
+                        "icon_2": "tick",
+                        "text_2": "Free Shipping",
+                        "icon_3": "tick",
+                        "text_3": "Hassle-Free Returns"
+                    }
+                }
+            },
+            "block_order": [
+                "heading_NK3gFY",
+                "text_7z7VAY",
+                "button_B7QEwB"
+            ],
+            "name": "Text and Image",
+            "settings": {
+                "section_color_scheme": "",
+                "color_scheme": "",
+                "image": "",
+                "height": "medium",
+                "desktop_image_width": "medium",
+                "layout": "image_first",
+                "image_behavior": "none",
+                "content_layout": "no-overlap",
+                "desktop_content_position": "middle",
+                "desktop_content_alignment": "left",
+                "mobile_content_alignment": "left",
+                "padding_top": 36,
+                "padding_bottom": 36
+            }
+        },
+        "product_results_eb4dFn": {
+            "type": "product-results",
+            "blocks": {
+                "result_LmtWJw": {
+                    "type": "result",
+                    "settings": {
+                        "percentage": "+98%",
+                        "text": "report invisible coverage"
+                    }
+                },
+                "result_BAw9HD": {
+                    "type": "result",
+                    "settings": {
+                        "percentage": "+95%",
+                        "text": "feel more confident in outfits"
+                    }
+                },
+                "result_LmtWPw": {
+                    "type": "result",
+                    "settings": {
+                        "percentage": "+92%",
+                        "text": "experience no skin irritation"
+                    }
+                },
+                "result_BAw9KD": {
+                    "type": "result",
+                    "settings": {
+                        "percentage": "+97%",
+                        "text": "say they stay secure all day"
+                    }
+                }
+            },
+            "block_order": [
+                "result_LmtWJw",
+                "result_BAw9HD",
+                "result_LmtWPw",
+                "result_BAw9KD"
+            ],
+            "name": "Product Results",
+            "settings": {
+                "section_color_scheme": "scheme-1",
+                "heading": "Proven Results",
+                "highlight_italic": true,
+                "heading_size": "h2",
+                "center_image": "product_section_image.png",
+                "image_height": "adapt",
+                "image_position": "right",
+                "bottom_note": "Results are collected on reviews post-purchase*",
+                "padding_top": 40,
+                "padding_bottom": 40
+            }
+        },
+        "product_compare_NzVpgU": {
+            "type": "product-compare",
+            "blocks": {
+                "compare_row_zXkHd3": {
+                    "type": "compare_row",
+                    "settings": {
+                        "feature": "Invisible confidence",
+                        "left_icon_type": "check",
+                        "left_text": "\u2713",
+                        "right_icon_type": "cross",
+                        "right_text": "\u2717"
+                    }
+                },
+                "compare_row_W9TeTP": {
+                    "type": "compare_row",
+                    "settings": {
+                        "feature": "All-day comfort",
+                        "left_icon_type": "check",
+                        "left_text": "\u2713",
+                        "right_icon_type": "cross",
+                        "right_text": "\u2717"
+                    }
+                },
+                "compare_row_Nkwqw3": {
+                    "type": "compare_row",
+                    "settings": {
+                        "feature": "Reusable & eco-friendly",
+                        "left_icon_type": "check",
+                        "left_text": "\u2713",
+                        "right_icon_type": "cross",
+                        "right_text": "\u2717"
+                    }
+                },
+                "compare_row_LCDjtA": {
+                    "type": "compare_row",
+                    "settings": {
+                        "feature": "No irritation",
+                        "left_icon_type": "check",
+                        "left_text": "\u2713",
+                        "right_icon_type": "cross",
+                        "right_text": "\u2717"
+                    }
+                },
+                "compare_row_AKHf6B": {
+                    "type": "compare_row",
+                    "settings": {
+                        "feature": "Perfect for any outfit",
+                        "left_icon_type": "check",
+                        "left_text": "\u2713",
+                        "right_icon_type": "cross",
+                        "right_text": "\u2717"
+                    }
+                },
+                "guarantee_bAcM6X": {
+                    "type": "guarantee",
+                    "settings": {
+                        "icon": "tick",
+                        "text": "Money-Back Guarantee"
+                    }
+                },
+                "guarantee_76nEPh": {
+                    "type": "guarantee",
+                    "settings": {
+                        "icon": "shield",
+                        "text": "30-Hassle free Return"
+                    }
+                }
+            },
+            "block_order": [
+                "compare_row_zXkHd3",
+                "compare_row_W9TeTP",
+                "compare_row_Nkwqw3",
+                "compare_row_LCDjtA",
+                "compare_row_AKHf6B",
+                "guarantee_bAcM6X",
+                "guarantee_76nEPh"
+            ],
+            "name": "Product Compare",
+            "settings": {
+                "section_color_scheme": "scheme-3",
+                "heading": "Why Choose Our Product?",
+                "highlight_italic": true,
+                "heading_size": "h2",
+                "col_left": "Our Product",
+                "col_right": "Others",
+                "button_text": "RISK-FREE - 50% OFF",
+                "button_link": "",
+                "padding_top": 40,
+                "padding_bottom": 40
+            }
+        },
+        "product_reviews_m8WX3U": {
+            "type": "product-reviews",
+            "blocks": {
+                "review_khLXQP": {
+                    "type": "review",
+                    "settings": {
+                        "review_title": "Total Game Changer!",
+                        "review_text": "Finally comfortable in my favorite tops. They stay put all day!",
+                        "review_stars": 5,
+                        "reviewer_name": "Sarah M.",
+                        "review_time": "3 days ago"
+                    }
+                },
+                "review_DqGbak": {
+                    "type": "review",
+                    "settings": {
+                        "review_title": "Completely Invisible",
+                        "review_text": "You can't see them at all. Perfect for tight dresses and shirts.",
+                        "review_stars": 5,
+                        "reviewer_name": "Jessica L.",
+                        "review_time": "2 days ago"
+                    }
+                },
+                "review_3FiQJw": {
+                    "type": "review",
+                    "settings": {
+                        "review_title": "So Comfortable",
+                        "review_text": "I forget I'm wearing them. No irritation, just confidence.",
+                        "review_stars": 5,
+                        "reviewer_name": "Amanda K.",
+                        "review_time": "Yesterday"
+                    }
+                },
+                "review_6UTTQ8": {
+                    "type": "review",
+                    "settings": {
+                        "review_title": "Worth Every Penny",
+                        "review_text": "Reusable and reliable. Best investment for my wardrobe.",
+                        "review_stars": 5,
+                        "reviewer_name": "Emily R.",
+                        "review_time": "3 weeks ago"
+                    }
+                }
+            },
+            "block_order": [
+                "review_khLXQP",
+                "review_DqGbak",
+                "review_3FiQJw",
+                "review_6UTTQ8"
+            ],
+            "name": "Product Reviews",
+            "settings": {
+                "section_color_scheme": "",
+                "review_stars": 4.5,
+                "review_text": "Rated 4.8 (21,883+ happy customers)",
+                "heading": "Customers can't stop raving about this product",
+                "heading_size": "h3",
+                "button_text": "RISK-FREE - 50% OFF",
+                "button_link": "shopify://collections",
+                "icon1": "shield",
+                "text1": "30-Night Risk-Free",
+                "icon2": "truck",
+                "text2": "Free Shipping",
+                "padding_top": 40,
+                "padding_bottom": 40
+            }
+        },
+        "product_faq_y9iPrW": {
+            "type": "product-faq",
+            "blocks": {
+                "faq_7UFBzL": {
+                    "type": "faq",
+                    "settings": {
+                        "q": "How many times can I reuse them               ?",
+                        "a": "<p>With proper care, each pair lasts 30-50 uses. Hand wash and air dry.</p>"
+                    }
+                },
+                "faq_4T8UeV": {
+                    "type": "faq",
+                    "settings": {
+                        "q": "Will they show under tight clothing               ?",
+                        "a": "<p>No. Ultra-thin design is completely invisible under any fabric.</p>"
+                    }
+                },
+                "faq_A8EhAQ": {
+                    "type": "faq",
+                    "settings": {
+                        "q": "Are they safe for sensitive skin               ?",
+                        "a": "<p>Yes. Hypoallergenic, dermatologist-tested materials for all skin types.</p>"
+                    }
+                },
+                "faq_VKAfzc": {
+                    "type": "faq",
+                    "settings": {
+                        "q": "How do I clean them               ?",
+                        "a": "<p>Hand wash with mild soap and water. Air dry completely before reuse.</p>"
+                    }
+                }
+            },
+            "block_order": [
+                "faq_7UFBzL",
+                "faq_4T8UeV",
+                "faq_A8EhAQ",
+                "faq_VKAfzc"
+            ],
+            "name": "Product FAQ",
+            "settings": {
+                "section_color_scheme": "scheme-1",
+                "heading": "Frequently Asked Questions",
+                "heading_size": "h3",
+                "image_height": "adapt",
+                "hide_image_mobile": false,
+                "padding_top": 40,
+                "padding_bottom": 40
+            }
+        }
+    },
+    "order": [
+        "main",
+        "h_tickers_Va7Uai",
+        "product_section_1_LwmfCP",
+        "text_and_image_kQYq3M",
+        "product_results_eb4dFn",
+        "product_compare_NzVpgU",
+        "product_reviews_m8WX3U",
+        "product_faq_y9iPrW"
+    ]
+}

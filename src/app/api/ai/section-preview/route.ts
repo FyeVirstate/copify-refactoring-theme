@@ -4,8 +4,10 @@ import { getPrisma } from '@/lib/prisma'
 import * as fs from 'fs'
 import * as path from 'path'
 
-const LIQUID_SERVICE_URL = process.env.LIQUID_SERVICE_URL || 'http://127.0.0.1:9292'
-const THEMES_BASE_PATH = process.env.THEMES_PATH || 'C:/Users/Zakaria/Documents/Github/copyfy-theme/public/shopify'
+const LIQUID_SERVICE_URL = process.env.LIQUID_SERVICE_URL || 'https://web-production-86921.up.railway.app/'
+const THEMES_BASE_PATH = process.env.THEMES_PATH || path.join(process.cwd(), 'themes')
+// Path to themes on the Liquid service server (Railway)
+const LIQUID_SERVICE_THEMES_PATH = process.env.LIQUID_SERVICE_THEMES_PATH || '/app/themes'
 
 /**
  * Load section schema from section liquid file
@@ -364,8 +366,8 @@ export async function POST(request: NextRequest) {
       aicontent: aiContent
     }
 
-    // Theme path
-    const themePath = path.join(THEMES_BASE_PATH, themeKey).replace(/\\/g, '/')
+    // Theme path for Liquid service (Railway path, not local)
+    const themePath = `${LIQUID_SERVICE_THEMES_PATH}/${themeKey}`
     
     console.log('[Section Preview] Theme path:', themePath)
     console.log('[Section Preview] Calling Liquid service at:', LIQUID_SERVICE_URL)

@@ -1,0 +1,21 @@
+<div class="payment-icons-wrapper paymentsIcons__wp-{{ block.id }}">
+    <div class="payment-icons-container">
+        <div class="payment-icons-wrapper">
+            {%- assign suffix_payment_keys = "a,b,c,d,e,f,g" | split:',' -%}
+            {%- for key in suffix_payment_keys -%}
+                {%- liquid
+                    assign icon_key = 'icon_' | append:key
+                -%}
+            {%- if block.settings[icon_key] != 'none' -%}
+                <div class="payment-icon">{% render 'icons-list', icon: block.settings[icon_key] %}</div>
+            {%- endif -%}
+            {%- endfor -%}            
+        </div>
+    </div>
+</div>
+
+{%- style -%}
+body .paymentsIcons__wp-{{ block.id }}{
+    margin: {{ block.settings.margin_top_badge }}px 0px {{ block.settings.margin_bottom_badge }}px 0px;
+}
+{%- endstyle -%}

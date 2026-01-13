@@ -1,0 +1,261 @@
+{% schema %}
+{
+  "name": "Comparison table",
+  "settings": [
+    { "type": "header", "content": "Header"},
+    { "type": "liquid", "id": "heading", "label": "Heading", "info": "Use <hig></hig> tag to show gradient text","default":"Pourquoi nous <hig>choisir ?</hig>" },
+    { "type": "liquid", "id": "subheading", "label": "Sub heading","default":"Voici pourquoi nous sommes le leader du secteur" },
+     { "type": "color_scheme", "id": "color_scheme", "label": "t:sections.all.colors.label", "default": "scheme-1" },
+  ],
+  "blocks": [
+    {
+      "type": "table_heading",
+      "name": "Table heading",
+      "limit": 2,
+      "settings": [
+        { "type": "image_picker", "id": "image", "label": "Image" },
+        { "type": "liquid", "id": "title", "label": "Title","default":"Notre produit"},
+        {"type": "select", "id": "icon", "options": [
+          { "value": "none", "label": "None" },
+          { "value": "apple", "label": "Apple" }, 
+          { "value": "banana", "label": "Banana" }, 
+          { "value": "bottle", "label": "Bottle" }, 
+          { "value": "box", "label": "Box" }, 
+          { "value": "carrot", "label": "Carrot" }, 
+          { "value": "chat_bubble", "label": "Chat bubble" }, 
+          { "value": "check_mark", "label": "Check mark" }, 
+          { "value": "clipboard", "label": "Clipboard" }, 
+          { "value": "dairy", "label": "Dairy" }, 
+          { "value": "dairy_free", "label": "Dairy free" }, 
+          { "value": "dryer", "label": "Dryer" }, 
+          { "value": "eye", "label": "Eye" }, 
+          { "value": "fire", "label": "Fire" }, 
+          { "value": "gluten_free", "label": "Gluten free" }, 
+          { "value": "heart", "label": "Heart" }, 
+          { "value": "iron", "label": "Iron" }, 
+          { "value": "leaf", "label": "Leaf" }, 
+          { "value": "leather", "label": "Leather" }, 
+          { "value": "lightning_bolt", "label": "Lightning bolt" }, 
+          { "value": "lipstick", "label": "Lipstick" }, 
+          { "value": "lock", "label": "Lock" }, 
+          { "value": "map_pin", "label": "Map pin" }, 
+          { "value": "nut_free", "label": "Nut free" }, 
+          { "value": "pants", "label": "Pants" }, 
+          { "value": "paw_print", "label": "Paw print" },
+          { "value": "pepper", "label": "Pepper" }, 
+          { "value": "perfume", "label": "Perfume" }, 
+          { "value": "plane", "label": "Plane" }, 
+          { "value": "plant", "label": "Plant" }, 
+          { "value": "price_tag", "label": "Price tag" }, 
+          { "value": "question_mark", "label": "Question mark" }, 
+          { "value": "recycle", "label": "Recycle" }, 
+          { "value": "return", "label": "Return" }, 
+          { "value": "ruler", "label": "Ruler" }, 
+          { "value": "serving_dish", "label": "Serving dish" },
+          { "value": "shirt", "label": "Shirt" }, 
+          { "value": "shoe", "label": "Shoe" }, 
+          { "value": "silhouette", "label": "Silhouette" }, 
+          { "value": "snowflake", "label": "Snowflake" }, 
+          { "value": "star", "label": "Star" }, 
+          { "value": "stopwatch", "label": "Stopwatch" }, 
+          { "value": "truck", "label": "Truck" }, 
+          { "value": "washing", "label": "Washing" },
+          { "value": "bubble_check", "label": "Bubble check" }  
+          ], "default": "bubble_check", "label": "Icon"},
+        { "type": "liquid", "id": "icon_text", "label": "Icon text","default":"Original" },
+        { "type": "checkbox", "id": "highlighted", "label": "Highlighted ?","default":true }
+      ]
+    },
+    {
+      "type": "features",
+      "name": "Features",
+      "settings": [
+        {"type": "select", "id": "iconone", "options": [
+          { "value": "none", "label": "None" },
+          { "value": "apple", "label": "Apple" }, 
+          { "value": "banana", "label": "Banana" }, 
+          { "value": "bottle", "label": "Bottle" }, 
+          { "value": "box", "label": "Box" }, 
+          { "value": "carrot", "label": "Carrot" }, 
+          { "value": "chat_bubble", "label": "Chat bubble" }, 
+          { "value": "check_mark", "label": "Check mark" }, 
+          { "value": "clipboard", "label": "Clipboard" }, 
+          { "value": "dairy", "label": "Dairy" }, 
+          { "value": "dairy_free", "label": "Dairy free" }, 
+          { "value": "dryer", "label": "Dryer" }, 
+          { "value": "eye", "label": "Eye" }, 
+          { "value": "fire", "label": "Fire" }, 
+          { "value": "gluten_free", "label": "Gluten free" }, 
+          { "value": "heart", "label": "Heart" }, 
+          { "value": "iron", "label": "Iron" }, 
+          { "value": "leaf", "label": "Leaf" }, 
+          { "value": "leather", "label": "Leather" }, 
+          { "value": "lightning_bolt", "label": "Lightning bolt" }, 
+          { "value": "lipstick", "label": "Lipstick" }, 
+          { "value": "lock", "label": "Lock" }, 
+          { "value": "map_pin", "label": "Map pin" }, 
+          { "value": "nut_free", "label": "Nut free" }, 
+          { "value": "pants", "label": "Pants" }, 
+          { "value": "paw_print", "label": "Paw print" },
+          { "value": "pepper", "label": "Pepper" }, 
+          { "value": "perfume", "label": "Perfume" }, 
+          { "value": "plane", "label": "Plane" }, 
+          { "value": "plant", "label": "Plant" }, 
+          { "value": "price_tag", "label": "Price tag" }, 
+          { "value": "question_mark", "label": "Question mark" }, 
+          { "value": "recycle", "label": "Recycle" }, 
+          { "value": "return", "label": "Return" }, 
+          { "value": "ruler", "label": "Ruler" }, 
+          { "value": "serving_dish", "label": "Serving dish" },
+          { "value": "shirt", "label": "Shirt" }, 
+          { "value": "shoe", "label": "Shoe" }, 
+          { "value": "silhouette", "label": "Silhouette" }, 
+          { "value": "snowflake", "label": "Snowflake" }, 
+          { "value": "star", "label": "Star" }, 
+          { "value": "stopwatch", "label": "Stopwatch" }, 
+          { "value": "truck", "label": "Truck" }, 
+          { "value": "washing", "label": "Washing" },
+          { "value": "bubble_check", "label": "Bubble check" }  
+          ], "default": "bubble_check", "label": "Icon"},
+        { "type": "liquid", "id": "feature_title", "label": "Title","default":"Fonctionnalité principale" },
+        {"type": "select", "id": "feature_have_a", "options": [
+          { "value": "true", "label": "True" },
+          { "value": "false", "label": "False" }, 
+        ], "default": "true", "label": "Feature Have I"},
+        {"type": "select", "id": "feature_have_b", "options": [
+          { "value": "true", "label": "True" },
+          { "value": "false", "label": "False" }, 
+          ], "default": "true", "label": "Feature Have II"}                  
+      ]
+    }
+  ],
+  "presets": [{ "name": "Comparison table - PDP","blocks": [
+    {"type": "table_heading"},
+    {"type": "table_heading"},
+    {"type": "features"},
+    {"type": "features"},
+    {"type": "features"},
+    {"type": "features"},
+    {"type": "features"}
+  ] }],
+
+}
+{% endschema %}
+
+<style>
+  .table-{{ section.id }} .pdp_comparison_table_heading hig{
+    color: rgb(var(--color-sale-badge))!important;
+    background: none;
+    -webkit-text-fill-color: unset;
+  }
+  .table-{{ section.id }} .table-background-clr:before{
+    background:rgb(var(--color-background)) !important;
+  }
+  .table-{{ section.id }} .value-cell.highlighted.column-1:before{
+    background:rgb(var(--color-background)) !important;
+    border-color: rgb(var(--color-background))!important;
+  } 
+</style>
+
+{{ 'pdp-comparison-table.css' | asset_url | stylesheet_tag }}
+
+<div class="pdp_comparison_table_mainwrapper table-{{ section.id }} gradient color-{{ section.settings.color_scheme }}" data-section-type="pdp-comparison-table">
+  <div class="pdp_comparison_table_container">
+    <div class="pdp_comparison_table_layout">
+      <div class="pdp_comparison_table_header">
+        <div class="pdp_comparison_table_interior">
+          {%- if section.settings.heading != blank -%}
+            <div class="pdp_comparison_table_heading {{section.id}}-text-color {{section.id}}-pdp-benefits_header_heading hig">{{ section.settings.heading }}</div>
+          {%- endif -%}
+          {%- if section.settings.subheading != blank -%}
+            <div class="pdp_comparison_table_subheading {{section.id}}-text-color">
+              {{ section.settings.subheading }}
+            </div>
+          {%- endif -%}
+        </div>
+      </div>
+
+      <div class="pdp_comparison_table_column">
+        <div class="pdp_comparison_table_column_wp">
+          <table class="pdp_comparison_table_column_nt">
+            {% comment %} <!-- START Header Row --> {% endcomment %}
+            <thead>
+              <tr class="pdp_comparison_table__header">
+                <th class="feature-header"></th>
+                {%- for block in section.blocks -%}
+                  {%- if block.type == 'table_heading' -%}
+                    <th
+                      class="pdp_comparison_product_header column-{{ forloop.index }} {% if block.settings.highlighted %}highlighted{% endif %} table-background-clr {{ section.id }}-border-color"
+                      data-column="{{ forloop.index }}"
+                    >
+                      {%- if block.settings.image != blank -%}
+                        <div class="comparison-img-wrapper">
+                          {{
+                            block.settings.image
+                            | image_url: width: block.settings.image.width
+                            | image_tag: preload: true
+                          }}
+                        </div>
+                      {%- else -%}
+                        <div class="comparison-img-wrapper">
+                          {{ 'product-1' | placeholder_svg_tag }}
+                        </div>                        
+                      {%- endif -%}
+                      {%- if block.settings.title != blank -%}
+                        <div class="comparison-product-title {{section.id}}-text-color">{{ block.settings.title }}</div>
+                      {%- endif -%}
+                      <div class="product-subtitle">
+                        {%- if block.settings.icon != 'none' -%}
+                          <span class="pdp_comparison_product_subtitle-icon {{section.id}}-text-color">
+                            {% render 'icons-list', icon: block.settings.icon %}
+                          </span>
+                        {%- endif -%}
+                        {%- if block.settings.icon_text != blank -%}
+                          <span class="pdp_comparison_product_subtitle-icon-text {{section.id}}-text-color">
+                            {{- block.settings.icon_text -}}
+                          </span>
+                        {%- endif -%}
+                      </div>
+                    </th>
+                  {%- endif -%}
+                {%- endfor -%}
+              </tr>
+            </thead>
+            {% comment %} <!-- END Header Row --> {% endcomment %}
+            {% comment %} <!-- START Feature Rows --> {% endcomment %}
+            <tbody>
+              {%- for block in section.blocks -%}
+                {%- if block.type == 'features' and block.settings.feature_title != blank -%}
+                  <tr class="feature-row">
+                    <td class="feature-cell">
+                      <div class="feature-content">
+                        <div class="feature-icon">
+                          {% render 'icons-list', icon: block.settings.iconone %}
+                        </div>
+                        <div class="feature-name {{section.id}}-text-color">{{ block.settings.feature_title }}</div>
+                      </div>
+                    </td>
+                    {%- if block.settings.feature_have_a != blank -%}
+                      <td class="value-cell column-1 highlighted {{ section.id }}-table-background-clr {{ section.id }}-border-color" data-column="1">
+                        <span class="value__cell_content">
+                          {% render 'icons-list', icon: block.settings.feature_have_a %}
+                        </span>
+                      </td>
+                    {%- endif -%}
+                    {%- if block.settings.feature_have_b != blank -%}
+                      <td class="value-cell column-2 highlighted" data-column="2">
+                        <span class="value__cell_content">
+                          {% render 'icons-list', icon: block.settings.feature_have_b %}
+                        </span>
+                      </td>
+                    {%- endif -%}
+                  </tr>
+                {%- endif -%}
+              {%- endfor -%}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

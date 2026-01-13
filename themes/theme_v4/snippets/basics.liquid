@@ -1,0 +1,11 @@
+{% assign core_enabled = true %}
+{% if core_enabled %}
+  {{ 'basics.js' | asset_url | script_tag }}
+{% endif %}
+
+{% comment %}
+  Include this snippet in your theme.liquid file by adding:
+  {% render 'basics' %}
+
+  This should be placed in the <head> section or before the closing </body> tag
+{% endcomment %}

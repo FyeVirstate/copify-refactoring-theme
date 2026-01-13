@@ -1,0 +1,643 @@
+{{ 'section-comparison-table.css' | asset_url | stylesheet_tag }}
+{{ 'component-rte.css' | asset_url | stylesheet_tag }}
+{%- style -%}
+    .section-{{ section.id }}-padding {
+      padding-top: {{ section.settings.padding_top | times: 0.75 | round: 0 }}px;
+      padding-bottom: {{ section.settings.padding_bottom | times: 0.75 | round: 0 }}px;
+    }
+
+    @media screen and (min-width: 750px) {
+      .section-{{ section.id }}-padding {
+        padding-top: {{ section.settings.padding_top }}px;
+        padding-bottom: {{ section.settings.padding_bottom }}px;
+      }
+    }
+
+
+  #section__heading-{{ section.id }}{
+    {% if section.settings.override_heading_size %}
+      font-size: {{ section.settings.heading_size }}px!important;
+      line-height: {{ section.settings.heading_size | plus: 8 }}px!important;
+    {% endif %}
+    /* font-weight: bold; */
+
+    {% if section.settings.override_heading_color %}
+      color: {{ section.settings.heading_color }};
+    {% endif %}
+  }
+
+  #section_text-{{ section.id }} ,
+  #section_text-{{ section.id }} p {
+    {% if section.settings.override_body_font_size %}
+    font-size: {{ section.settings.body_font_size }}px;
+    font-size: {{ section.settings.body_font_size }}px;
+    /* line-height: {{ section.settings.body_font_size | plus: 8 }}px; */
+    {% endif %}
+    {% if section.settings.override_body_color %}
+    color: {{ section.settings.body_color }};
+    {% endif %}
+
+
+  }
+
+  .benefit-text-h3 {
+    /* font-size: 100px !important; */
+    {% if section.settings.override_benefit_size %}
+      font-size: {{ section.settings.benefits_desktop_size }}px !important;
+    {% else %}
+      font-size: 1.7rem !important;
+    {% endif %}
+  }
+  @media (max-width: 768px){
+    #section__heading-{{ section.id }}{
+    {% if section.settings.override_heading_size %}
+      font-size: {{ section.settings.heading_mob_size }}px!important;
+      line-height: {{ section.settings.heading_mob_size | plus: 8 }}px!important;
+    {% endif %}
+    }
+
+    .benefit-text-h3 {
+      /* font-size: 100px !important; */
+      {% if section.settings.override_benefit_size %}
+        font-size: {{ section.settings.benefits_mobile_size }}px !important;
+      {% else %}
+        font-size: 1.4rem !important;
+      {% endif %}
+    }
+
+  }
+{%- endstyle -%}
+
+<div class="color-{{ section.settings.color_scheme }} content-for-grouping" style="background:{{ section.settings.bgcolor }}">
+  <div class="page-width section-{{ section.id }}-padding">
+    <div class="content-and-comparison-table{% if section.settings.layout == 'table_first' %} content-and-comparison-table--table-first{% endif %}{% if section.settings.title == blank and section.settings.text == blank %} content-and-comparison-table--no-content{% endif %}">
+      <div class="content-container center">
+        <div>
+          {%- unless section.settings.title == blank -%}
+            <h2 id="section__heading-{{ section.id }}" class="title">
+              {{ section.settings.title | escape }}
+            </h2>
+          {%- endunless -%}
+          {%- unless section.settings.text == blank -%}
+            {{ section.settings.text }}
+          {%- endunless -%}
+          {%- if section.settings.button_label != blank -%}
+            <a
+              {% if section.settings.link %}
+                href="{{ section.settings.link }}"
+              {% else %}
+                role="link" aria-disabled="true"
+              {% endif %}
+              class="button mb-1em {% if section.settings.button_style_secondary %}button--secondary{% else %}button--primary{% endif %}"
+            >
+              {{- section.settings.button_label | escape -}}
+            </a>
+          {%- endif -%}
+
+          {% if section.settings.show_body_content %}
+            <div id="section_text-{{ section.id }}" class="sw-base-text-color image-with-text__text rte body">
+              {{ section.settings.body_content }}
+            </div>
+          {%- endif -%}
+
+          {%- if section.settings.show_image -%}
+            <div class="main-comp">
+              <div class="list-image">
+ {% if section.settings.default_image != blank %}
+         <img src="{{ section.settings.default_image | asset_url }}" alt="My Image">
+              {% else %}       
+                <img style="border-radius:{{ section.settings.image_border_radius }}px;" src="{{ section.settings.icon_list-img1 | img_url: 'master' }}">
+        {% endif %}        
+              
+              </div>
+            </div>
+          {%- endif -%}
+        </div>
+      </div>
+      <div class="comparison-table-container">
+        <table style="table-layout: fixed; width: 100%;" class="comparison-table comparison-table-{{ section.id }}">
+          <thead>
+            <tr>
+              <th
+                class="comparison-table__row-name"
+                style="background-color: transparent;"
+              >
+                &nbsp
+              </th>
+              <th
+                align="center"
+                class="comparison-table__logo"
+                style="--mobile-logo-width: {{ section.settings.mobile_logo_width }}px; {% if section.settings.override_cell_headers_text_color %} color: {{ section.settings.compare_subheading_text_color }};{% endif %}"
+              >
+                {%- if section.settings.logo != blank -%}
+                  {%- assign logo_width = section.settings.logo_width -%}
+                  {%- assign logo_height = logo_width | divided_by: section.settings.logo.aspect_ratio -%}
+                  {{
+                    section.settings.logo
+                    | image_url: width: 800
+                    | image_tag: width: logo_width, height: logo_height, alt: shop.name
+                  }}
+                {%- else -%}
+                  {% if section.settings.us_label == blank %}
+                    {{ shop.name }}
+                  {% else %}
+                    {{ section.settings.us_label }}
+                  {% endif %}
+                {%- endif -%}
+              </th>
+              <th
+                class="comparison-table__others"
+                align="center"
+                {% if section.settings.override_cell_headers_text_color %}
+                  style="color: {{ section.settings.cell_headers_text_color }};"
+                {% endif %}
+              >
+                {{ section.settings.others_label }}
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {%- for block in section.blocks -%}
+              {% style %}
+                #block-table-heading-{{ block.id }}{
+                  color: {{ block.settings.heading_color }};
+                }
+              {% endstyle %}
+              <tr>
+                <td
+                  style="background-color: {{ section.settings.compare_cell_background_color }};"
+                  align="center"
+                  class="comparison-table__row-name"
+                >
+                  <h3
+                    id="block-table-heading-{{ block.id }}"
+                    class="benefit-text-h3"
+                    style="{% if section.settings.override_compare_cell_text_color %}color: {{ section.settings.compare_cell_text_color }} !important;{% endif %}"
+                  >
+                    {{ block.settings.benefit }}
+                  </h3>
+                </td>
+                <td
+                  align="center"
+                  class="color-{{ section.settings.icon_cells_color_scheme }}"
+                >
+                  {%- if block.settings.us -%}
+                    <svg
+                      class="comparison-table__checkmark"
+                      id="Layer_3"
+                      data-name="Layer 3"
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 25.45 25.43"
+                    >
+                      <defs><style>.cls-1{fill:{{ section.settings.checkmark_color }};}</style></defs><polygon class="cls-1" points="25.45 0 24.06 0 9.5 15.27 2.12 10.24 0 12.55 9.28 25.43 25.45 2.48 25.45 0"/>
+                    </svg>
+                  {%- else -%}
+                    <div class="comparison-table__x">
+                      <span
+                        class=""
+
+                        {%- if section.settings.override_x_color -%}
+                          style="background: {{ section.settings.x_color }};"
+                        {%- endif -%}
+                      >
+                      </span>
+                      <span
+                        class=""
+
+                        {%- if section.settings.override_x_color -%}
+                          style="background: {{ section.settings.x_color }};"
+                        {%- endif -%}
+                      >
+                      </span>
+                    </div>
+                  {%- endif -%}
+                </td>
+                <td
+                  align="center"
+                  class="color-{{ section.settings.icon_cells_color_scheme }}"
+                >
+                  {%- if block.settings.others -%}
+                    <svg
+                      class="comparison-table__checkmark"
+                      id="Layer_3"
+                      data-name="Layer 3"
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 25.45 25.43"
+                    >
+                      <defs><style>.cls-1{fill:{{ section.settings.checkmark_color }};}</style></defs><polygon class="cls-1" points="25.45 0 24.06 0 9.5 15.27 2.12 10.24 0 12.55 9.28 25.43 25.45 2.48 25.45 0"/>
+                    </svg>
+                  {%- else -%}
+                    <div class="comparison-table__x">
+                      <span
+                        class=""
+
+                        {%- if section.settings.override_x_color -%}
+                          style="background: {{ section.settings.x_color }};"
+                        {%- endif -%}
+                      >
+                      </span>
+                      <span
+                        class=""
+
+                        {%- if section.settings.override_x_color -%}
+                          style="background: {{ section.settings.x_color }};"
+                        {%- endif -%}
+                      >
+                      </span>
+                    </div>
+                  {%- endif -%}
+                </td>
+              </tr>
+            {%- endfor -%}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+.comparison-table__logo, .comparison-table__others{
+  color: {{section.settings.compare_subheading_text_color}};
+}                          
+</style>
+                        
+                      
+{% schema %}
+{
+  "name": "Comparison table",
+  "settings": [
+    {
+      "type": "header",
+      "content": "Section"
+    },
+    {
+     "type" : "color",
+      "id": "bgcolor",
+      "label": "Background Color"
+    },
+    {
+      "type": "range",
+      "id": "padding_top",
+      "min": 0,
+      "max": 100,
+      "step": 4,
+      "unit": "px",
+      "label": "t:sections.all.padding.padding_top",
+      "default": 36
+    },
+    {
+      "type": "range",
+      "id": "padding_bottom",
+      "min": 0,
+      "max": 100,
+      "step": 4,
+      "unit": "px",
+      "label": "t:sections.all.padding.padding_bottom",
+      "default": 36
+    },
+    {
+      "type": "select",
+      "id": "layout",
+      "options": [
+        {
+          "value": "table_first",
+          "label": "Table first"
+        },
+        {
+          "value": "table_second",
+          "label": "Table second"
+        }
+      ],
+      "default": "table_second",
+      "label": "Desktop table placement"
+    },
+    {
+      "type": "header",
+      "content": "Heading"
+    },
+    {
+      "type": "text",
+      "id": "title",
+      "default": "What Make us different",
+      "label": "Heading"
+    },
+    {
+      "type": "checkbox",
+      "id": "override_heading_color",
+      "label": "Override Heading Color",
+      "default": false
+    },
+    {
+      "type": "color",
+      "id": "heading_color",
+      "label": "Heading Text Color",
+      "default": "#000000"
+    },
+    {
+      "type": "checkbox",
+      "id": "override_heading_size",
+      "label": "Override Heading Size",
+      "default": false
+    },
+    {
+      "type": "range",
+      "id": "heading_size",
+      "min": 28,
+      "max": 54,
+      "step": 1,
+      "unit": "px",
+      "label": "Heading Font Size",
+      "default": 40
+    },
+    {
+      "type": "range",
+      "id": "heading_mob_size",
+      "min": 28,
+      "max": 54,
+      "step": 1,
+      "unit": "px",
+      "label": "Heading (Mobile) Font Size",
+      "default": 29
+    },
+    {
+      "type": "header",
+      "content": "Body"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_body_content",
+      "label": "Show Body Content",
+      "default": false
+    },
+    {
+      "type": "richtext",
+      "id": "body_content",
+      "default": "<p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer nec odio. Praesent libero. Sed cursus ante dapibus diam. Sed nisi. Nulla quis sem at nibh elementum imperdiet. Duis sagittis ipsum. Praesent mauris. Fusce nec tellus sed augue semper porta. Mauris massa. Vestibulum lacinia arcu eget.</p>",
+      "label": "Body Content"
+    },
+
+    {
+      "type": "checkbox",
+      "id": "override_body_color",
+      "label": "Override Body Color",
+      "default": false
+    },
+    {
+      "type": "color",
+      "id": "body_color",
+      "label": "Body Color",
+      "default": "#757575"
+    },
+    {
+      "type": "checkbox",
+      "id": "override_body_font_size",
+      "label": "Override Body Font Size",
+      "default": false
+    },
+    {
+      "type": "range",
+      "id": "body_font_size",
+      "label": "Font size",
+      "min": 10,
+      "max": 100,
+      "step": 2,
+      "default": 16,
+      "unit": "px"
+    },
+
+    {
+      "type": "header",
+      "content": "Image"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_image",
+      "label": "Show Image",
+      "default": true
+    },{
+      "type": "text",
+      "id": "default_image",
+      "label": "default Image",
+      "default":"2.png",
+      "info":"same name image need to save in assets and if you want change please select image from below Image Picker"
+    },
+    {
+      "type": "image_picker",
+      "id": "icon_list-img1",
+      "label": "Image"
+    },
+ {
+      "type": "range",
+      "id": "image_border_radius",
+      "label": "Image Border Radius",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": "px",
+      "default": 0
+    },
+    {
+      "type": "header",
+      "content": "Button"
+    },
+
+    {
+      "type": "text",
+      "id": "button_label",
+      "label": "t:sections.slideshow.blocks.slide.settings.button_label.label",
+      "info": "t:sections.slideshow.blocks.slide.settings.button_label.info"
+    },
+    {
+      "type": "url",
+      "id": "link",
+      "label": "t:sections.slideshow.blocks.slide.settings.link.label"
+    },
+    {
+      "type": "checkbox",
+      "id": "button_style_secondary",
+      "label": "t:sections.slideshow.blocks.slide.settings.secondary_style.label",
+      "default": false
+    },
+    {
+      "type": "header",
+      "content": "Table"
+    },
+    {
+      "type": "checkbox",
+      "id": "override_benefit_size",
+      "label": "Override Benefits Size",
+      "default": false
+    },
+    {
+      "type": "range",
+      "id": "benefits_desktop_size",
+      "min": 6,
+      "max": 54,
+      "step": 1,
+      "unit": "px",
+      "label": "Benefits Desktop Font Size",
+      "default": 16
+    },
+    {
+      "type": "range",
+      "id": "benefits_mobile_size",
+      "min": 6,
+      "max": 54,
+      "step": 1,
+      "unit": "px",
+      "label": "Benefits Mobile Font Size",
+      "default": 14
+    },
+    {
+      "type": "checkbox",
+      "id": "override_compare_cell_text_color",
+      "label": "Override Benefits Text Color",
+      "default": false
+    },
+    {
+      "type": "color",
+      "id": "compare_subheading_text_color",
+      "label": "Subheading Text Color",
+      "default": "#00bb00"
+    },
+    {
+      "type": "color",
+      "id": "compare_cell_text_color",
+      "label": "Benefits Text Color",
+      "default": "#383838"
+    },
+    {
+      "type": "color",
+      "id": "compare_cell_background_color",
+      "label": "Benefits Background Color",
+      "default": "#e84343"
+    },
+    {
+      "type": "image_picker",
+      "id": "logo",
+      "label": "Logo"
+    },
+    {
+      "type": "range",
+      "id": "logo_width",
+      "min": 25,
+      "max": 150,
+      "step": 5,
+      "unit": "px",
+      "label": "Desktop logo width",
+      "default": 90
+    },
+    {
+      "type": "range",
+      "id": "mobile_logo_width",
+      "min": 25,
+      "max": 100,
+      "step": 5,
+      "unit": "px",
+      "label": "Mobile logo width",
+      "default": 60
+    },
+    {
+      "type": "text",
+      "id": "us_label",
+      "label": "Custom Label",
+      "info": "Displayed if logo image is not selected."
+    },
+    {
+      "type": "text",
+      "id": "others_label",
+      "label": "Competitors label",
+      "default": "Others"
+    },
+    {
+      "type": "color",
+      "id": "checkmark_color",
+      "default": "#181818",
+      "label": "Checkmark color"
+    },
+    
+    {
+      "type": "checkbox",
+      "id": "override_cell_headers_text_color",
+      "label": "Override Cell Headers Text Color",
+      "default": false
+    },
+    {
+      "type": "color",
+      "id": "cell_headers_text_color",
+      "label": "Benefits Text Color",
+      "default": "#000000"
+    },
+    {
+      "type": "checkbox",
+      "id": "override_x_color",
+      "label": "Override X Color",
+      "default": false
+    },
+    {
+      "type": "color",
+      "id": "x_color",
+      "label": "X Color",
+      "default": "#000000"
+    }
+  ],
+  "blocks": [
+    {
+      "type": "row",
+      "name": "Table row",
+      "settings": [
+        {
+          "type": "text",
+          "id": "benefit",
+          "default": "Benefit",
+          "label": "Benefit"
+        },
+        {
+          "type": "color",
+          "id": "heading_color",
+          "label": "Benefit text Color",
+          "default": "#ffffff"
+        },
+        {
+          "type": "checkbox",
+          "id": "us",
+          "default": true,
+          "label": "Us"
+        },
+        {
+          "type": "checkbox",
+          "id": "others",
+          "default": false,
+          "label": "Others"
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Comparison table",
+      "blocks": [
+        {
+          "type": "row"
+        },
+        {
+          "type": "row"
+        },
+        {
+          "type": "row"
+        },
+        {
+          "type": "row"
+        },
+        {
+          "type": "row"
+        }
+      ]
+    }
+  ],
+  "disabled_on": {
+    "groups": ["header", "footer"]
+  }
+}
+{% endschema %}

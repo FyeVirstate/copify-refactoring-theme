@@ -1,0 +1,169 @@
+{%- liquid
+  if section.settings.flip_horizontal
+    assign scaleX = 'scaleX(-1)'
+  else
+    assign scaleX = 'scaleX(1)'
+  endif
+
+  if section.settings.flip_vertical
+    assign scaleY = 'scaleY(-1)'
+  else
+    assign scaleY = 'scaleY(1)'
+  endif
+-%}
+
+{% style %}
+  .section-divider-{{ section.id }} {
+    transform: {{ scaleX }} {{ scaleY }};
+  }
+  .section-{{ section.id }}-top-padding {
+    height: {{ section.settings.padding_top | times: 0.75 | round: 0 }}px;
+  }
+  .section-{{ section.id }}-bottom-padding {
+    height: {{ section.settings.padding_bottom | times: 0.75 | round: 0 }}px;
+  }
+  @media screen and (min-width: 750px) {
+    .section-{{ section.id }}-top-padding {
+      height: {{ section.settings.padding_top }}px;
+    }
+    .section-{{ section.id }}-bottom-padding {
+      height: {{ section.settings.padding_bottom }}px;
+    }
+  }
+{% endstyle %}
+
+<div class="section-{{ section.id }}-top-padding color-{% if section.settings.flip_vertical %}{{ section.settings.shape_color }}{% else %}{{ section.settings.background_color }}{% endif %}" style="background:{{ section.settings.background_color }};color:{{ section.settings.shape_color }}">
+  &nbsp
+</div>
+<div class="section-divider section-divider-{{ section.id }} color-{{ section.settings.background_color }}" style="background:{{ section.settings.background_color }}">
+  <div class="section-divider__svg color-{{ section.settings.shape_color }}" style="margin:-10px 0px;color:{{ section.settings.shape_color }}">
+    {% case section.settings.shape %}
+      {% when 'diagonal_1' %}
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 360 32"
+          height="200"
+          width="100%"
+          preserveAspectRatio="none"
+        >
+          <polygon fill="currentColor" points="0 29.91 0 32 360 32 360 0 0 29.91"/>
+        </svg>
+     
+      {% when 'curved_4' %}
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 1440 226.97"
+          height="200"
+          width="100%"
+          preserveAspectRatio="none"
+          style="--max-height: 120px;"
+        >
+          <path fill="currentColor" fill-opacity="1" d="M0,81,21.8,70.3C43.6,60,87,38,131,27.7,174.5,17,218,17,262,49c43.5,32,87,96,131,106.7C436.4,166,480,124,524,97c43.3-27,87-37,131-26.7,43.2,10.7,87,42.7,130,64C829.1,156,873,166,916,161c44-5,88-27,131-58.7C1090.9,70,1135,28,1178,17c43.8-11,87,11,131,26.7,43.7,16.3,87,26.3,109,32l22,5.3V241H0Z" transform="translate(0 -14.03)"/>
+        </svg>
+      {% when 'waves_2' %}
+        <svg
+          id="wave"
+          style="transform:rotate(0deg); transition: 0.3s"
+          viewBox="0 0 1440 250"
+          version="1.1"
+          xmlns="http://www.w3.org/2000/svg"
+          height="200"
+          width="100%"
+          preserveAspectRatio="none"
+        >
+          <path style="transform:translate(-5%, -5%); opacity:0.3" fill="currentColor" d="M0,100L30,100C60,100,120,100,180,83.3C240,67,300,33,360,45.8C420,58,480,117,540,133.3C600,150,660,125,720,133.3C780,142,840,183,900,175C960,167,1020,108,1080,91.7C1140,75,1200,100,1260,104.2C1320,108,1380,92,1440,108.3C1500,125,1560,175,1620,166.7C1680,158,1740,92,1800,83.3C1860,75,1920,125,1980,137.5C2040,150,2100,125,2160,120.8C2220,117,2280,133,2340,120.8C2400,108,2460,67,2520,41.7C2580,17,2640,8,2700,12.5C2760,17,2820,33,2880,41.7C2940,50,3000,50,3060,79.2C3120,108,3180,167,3240,187.5C3300,208,3360,192,3420,187.5C3480,183,3540,192,3600,195.8C3660,200,3720,200,3780,187.5C3840,175,3900,150,3960,133.3C4020,117,4080,108,4140,125C4200,142,4260,183,4290,204.2L4320,225L4320,250L4290,250C4260,250,4200,250,4140,250C4080,250,4020,250,3960,250C3900,250,3840,250,3780,250C3720,250,3660,250,3600,250C3540,250,3480,250,3420,250C3360,250,3300,250,3240,250C3180,250,3120,250,3060,250C3000,250,2940,250,2880,250C2820,250,2760,250,2700,250C2640,250,2580,250,2520,250C2460,250,2400,250,2340,250C2280,250,2220,250,2160,250C2100,250,2040,250,1980,250C1920,250,1860,250,1800,250C1740,250,1680,250,1620,250C1560,250,1500,250,1440,250C1380,250,1320,250,1260,250C1200,250,1140,250,1080,250C1020,250,960,250,900,250C840,250,780,250,720,250C660,250,600,250,540,250C480,250,420,250,360,250C300,250,240,250,180,250C120,250,60,250,30,250L0,250Z"></path>
+          <path style="transform:translate(0, 0); opacity:1" fill="currentColor" d="M0,75L30,87.5C60,100,120,125,180,116.7C240,108,300,67,360,66.7C420,67,480,108,540,133.3C600,158,660,167,720,154.2C780,142,840,108,900,112.5C960,117,1020,158,1080,154.2C1140,150,1200,100,1260,91.7C1320,83,1380,117,1440,141.7C1500,167,1560,183,1620,162.5C1680,142,1740,83,1800,54.2C1860,25,1920,25,1980,58.3C2040,92,2100,158,2160,183.3C2220,208,2280,192,2340,187.5C2400,183,2460,192,2520,183.3C2580,175,2640,150,2700,154.2C2760,158,2820,192,2880,175C2940,158,3000,92,3060,91.7C3120,92,3180,158,3240,154.2C3300,150,3360,75,3420,41.7C3480,8,3540,17,3600,54.2C3660,92,3720,158,3780,158.3C3840,158,3900,92,3960,79.2C4020,67,4080,108,4140,133.3C4200,158,4260,167,4290,170.8L4320,175L4320,250L4290,250C4260,250,4200,250,4140,250C4080,250,4020,250,3960,250C3900,250,3840,250,3780,250C3720,250,3660,250,3600,250C3540,250,3480,250,3420,250C3360,250,3300,250,3240,250C3180,250,3120,250,3060,250C3000,250,2940,250,2880,250C2820,250,2760,250,2700,250C2640,250,2580,250,2520,250C2460,250,2400,250,2340,250C2280,250,2220,250,2160,250C2100,250,2040,250,1980,250C1920,250,1860,250,1800,250C1740,250,1680,250,1620,250C1560,250,1500,250,1440,250C1380,250,1320,250,1260,250C1200,250,1140,250,1080,250C1020,250,960,250,900,250C840,250,780,250,720,250C660,250,600,250,540,250C480,250,420,250,360,250C300,250,240,250,180,250C120,250,60,250,30,250L0,250Z"></path>
+        </svg>
+     
+    {% endcase %}
+  </div>
+</div>
+<div class="section-{{ section.id }}-bottom-padding color-{% if section.settings.flip_vertical %}{{ section.settings.background_color }}{% else %}{{ section.settings.shape_color }}{% endif %}" style="background:{{ section.settings.background_color }};color:{{ section.settings.shape_color }}">
+  &nbsp
+</div>
+
+{% schema %}
+{
+  "name": "Divider",
+  "settings": [
+    {
+      "type": "select",
+      "id": "shape",
+      "options": [
+        {
+          "value": "diagonal_1",
+          "label": "Diagonal"
+        },
+        {
+          "value": "curved_4",
+          "label": "Curved"
+        },
+        {
+          "value": "waves_2",
+          "label": "Waves"
+        }
+      ],
+      "label": "Shape",
+      "default": "diagonal_1"
+    },
+    {
+      "type": "checkbox",
+      "id": "flip_horizontal",
+      "label": "Flip horizontal",
+      "default": false
+    },
+    {
+      "type": "checkbox",
+      "id": "flip_vertical",
+      "label": "Flip vertical",
+      "default": false
+    },
+    {
+      "type": "color",
+      "id": "shape_color",
+      "label": "Shape color"
+    },
+    {
+      "type": "color",
+      "id": "background_color",
+      "label": "Background color"
+    },
+    {
+      "type": "header",
+      "content": "t:sections.all.padding.section_padding_heading"
+    },
+    {
+      "type": "range",
+      "id": "padding_top",
+      "min": 0,
+      "max": 100,
+      "step": 4,
+      "unit": "px",
+      "label": "t:sections.all.padding.padding_top",
+      "default": 0
+    },
+    {
+      "type": "range",
+      "id": "padding_bottom",
+      "min": 0,
+      "max": 100,
+      "step": 4,
+      "unit": "px",
+      "label": "t:sections.all.padding.padding_bottom",
+      "default": 0
+    }
+  ],
+  "presets": [
+    {
+      "name": "Section Divider",
+      "category": "Divider"
+    }
+  ]
+}
+{% endschema %}
+
+{% stylesheet %}
+{% endstylesheet %}
+
+{% javascript %}
+{% endjavascript %}

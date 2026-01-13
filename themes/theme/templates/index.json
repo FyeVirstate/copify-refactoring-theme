@@ -1,0 +1,632 @@
+{
+    "sections": {
+        "image_with_mobile_filter_P636fB": {
+            "type": "image-with-mobile-filter",
+            "disabled": true,
+            "name": "Image with Mobile Filter",
+            "settings": {}
+        },
+        "custom_slideshow_WVwjEV": {
+            "type": "custom-slideshow",
+            "blocks": {
+                "slide_d6Ck8k": {
+                    "type": "slide",
+                    "settings": {
+                        "default_desk_image": "landing_page_image.jpg",
+                        "default_mob_image": "landing_page_image.jpg",
+                        "subheading": "Adoptez le style d\u00e9contract\u00e9",
+                        "heading": "Confort d'\u00e9t\u00e9",
+                        "description": "",
+                        "button_text": "Lire la suite",
+                        "button_link": "#",
+                        "content_color": "#ffffff",
+                        "button_bg_color": "#ffffff",
+                        "button_text_color": "#000000",
+                        "desktop_text_position": "sm:align-items-center sm:justify-content-center",
+                        "mobile_text_position": "align-center-mbl justify-center-mbl"
+                    }
+                }
+            },
+            "block_order": [
+                "slide_d6Ck8k"
+            ],
+            "name": "Custom Slideshow",
+            "settings": {}
+        },
+        "h_tickers_GA76Cz": {
+            "type": "h-tickers",
+            "blocks": {
+                "text_yTPKpM": {
+                    "type": "text",
+                    "settings": {
+                        "title": "MY STORE",
+                        "color_scheme": "scheme-4"
+                    }
+                }
+            },
+            "block_order": [
+                "text_yTPKpM"
+            ],
+            "settings": {
+                "color_scheme": "scheme-4",
+                "show_store_name": true,
+                "speed": 3,
+                "text_spacing": 3,
+                "background": "#000000",
+                "drop_text": "#ffffff",
+                "text_size": "1.75",
+                "italic_text": true,
+                "uppercase_text": true,
+                "bold_text": true,
+                "padding_top": 40,
+                "padding_bottom": 40
+            }
+        },
+        "rich_text_DiaJWY": {
+            "type": "rich-text",
+            "blocks": {
+                "heading_gJHpC3": {
+                    "type": "heading",
+                    "settings": {
+                        "heading": "LA D\u00c9LICES DES PIEDS !",
+                        "heading_size": "h1"
+                    }
+                },
+                "text_RKAmmC": {
+                    "type": "text",
+                    "settings": {
+                        "text": "<p>Sensible, l\u00e9ger et styl\u00e9 pour l'\u00e9t\u00e9.</p>"
+                    }
+                },
+                "button_pkAPyg": {
+                    "type": "button",
+                    "disabled": true,
+                    "settings": {
+                        "button_label": "Texte du bouton",
+                        "button_link": "",
+                        "button_style_secondary": false,
+                        "button_label_2": "",
+                        "button_link_2": "",
+                        "button_style_secondary_2": false
+                    }
+                }
+            },
+            "block_order": [
+                "heading_gJHpC3",
+                "text_RKAmmC",
+                "button_pkAPyg"
+            ],
+            "settings": {
+                "desktop_content_position": "center",
+                "content_alignment": "center",
+                "color_scheme": "scheme-2",
+                "full_width": true,
+                "padding_top": 40,
+                "padding_bottom": 44
+            }
+        },
+        "featured_collection_q3rjqG": {
+            "type": "featured-collection",
+            "settings": {
+                "title": "Nos meilleures ventes",
+                "heading_size": "h1",
+                "description": "",
+                "show_description": false,
+                "description_style": "body",
+                "collection": "3-produits",
+                "products_to_show": 3,
+                "columns_desktop": 3,
+                "full_width": false,
+                "show_view_all": true,
+                "view_all_style": "solid",
+                "enable_desktop_slider": true,
+                "color_scheme": "scheme-2",
+                "image_border_radius": 15,
+                "image_ratio": "adapt",
+                "image_shape": "default",
+                "show_secondary_image": false,
+                "show_vendor": false,
+                "show_rating": false,
+                "quick_add": "none",
+                "columns_mobile": "2",
+                "swipe_on_mobile": false,
+                "padding_top": 36,
+                "padding_bottom": 36
+            }
+        },
+        "testimonials_xLaqeA": {
+            "type": "testimonials",
+            "blocks": {
+                "slide_tWNXb9": {
+                    "type": "slide",
+                    "settings": {
+                        "num_stars": 5,
+                        "review_heading": "Un vrai bonheur !",
+                        "review_text": "Ces sandales sont incroyablement confortables. Je les porte tout le temps.",
+                        "review_name": "Marc"
+                    }
+                },
+                "slide_j8R3rn": {
+                    "type": "slide",
+                    "settings": {
+                        "num_stars": 5,
+                        "review_heading": "Top qualit\u00e9 !",
+                        "review_text": "Excellent produit. Tr\u00e8s l\u00e9ger et facile \u00e0 porter toute la journ\u00e9e.",
+                        "review_name": "Sophie"
+                    }
+                },
+                "slide_NKC8gV": {
+                    "type": "slide",
+                    "settings": {
+                        "num_stars": 5,
+                        "review_heading": "J'adore ces sandales !",
+                        "review_text": "Parfaites pour la plage, je les recommande \u00e0 tous mes amis.",
+                        "review_name": "Julien"
+                    }
+                },
+                "slide_d34wrf": {
+                    "type": "slide",
+                    "settings": {
+                        "num_stars": 5,
+                        "review_heading": "Mes favorites !",
+                        "review_text": "Confort et style, elles sont id\u00e9ales pour l'\u00e9t\u00e9.",
+                        "review_name": "Isabelle"
+                    }
+                }
+            },
+            "block_order": [
+                "slide_tWNXb9",
+                "slide_j8R3rn",
+                "slide_NKC8gV",
+                "slide_d34wrf"
+            ],
+            "settings": {
+                "color_scheme": "",
+                "section_heading": "LES RETOURS DE NOS CLIENTS \u2764\ufe0f",
+                "override_section_heading_size": true,
+                "section_heading_size": 28,
+                "section_heading_size_mobile": 28,
+                "override_section_heading_color": false,
+                "section_heading_color": "#181818",
+                "show_overall_rating": true,
+                "overall_rating_value": 4.9,
+                "overall_rating_num_stars": 5,
+                "overall_rating_text_size": 25,
+                "overall_rating_text_size_mobile": 21,
+                "overall_rating_text_color": "#000000",
+                "overall_rating_text_margin_top": 26,
+                "override_star_color": true,
+                "star_color": "#C78A85",
+                "star_size": 30,
+                "star_size_mobile": 26,
+                "review_heading_size": 23,
+                "review_heading_size_mobile": 20,
+                "review_slide_heading_color": "#000000",
+                "review_slide_heading_margin_top": 15,
+                "review_slide_text_color": "#000000",
+                "review_slide_text_size": 14,
+                "review_slide_text_size_mobile": 14,
+                "review_name_text_size": 16,
+                "review_name_text_size_mobile": 15,
+                "review_name_text_color": "#000000",
+                "slide_background_color": "#ffffff",
+                "slide_box_shadow": true,
+                "slide_box_shadow_color": "#595959",
+                "review_slide_padding_vertical": 30,
+                "review_slide_padding_vertical_mobile": 25,
+                "review_slide_padding_horizontal": 35,
+                "review_slide_padding_horizontal_mobile": 25,
+                "reviews_slide_border_radius": 15,
+                "left_right_button_size": 48,
+                "left_right_button_size_mobile": 35,
+                "left_right_button_horizontal_position_mobile": -15,
+                "show_left_right_buttons_on_desktop": true,
+                "show_left_right_buttons_on_mobile": true,
+                "left_right_icon_color": "#000000",
+                "left_right_background_color": "#ffffff",
+                "slider_swiper_width": 82,
+                "slider_slides_to_show_at_once": 3,
+                "slides_gap": 18,
+                "slides_gap_mobile": 25,
+                "slider_margin_top": 35,
+                "section_margin_top": 0,
+                "section_margin_bottom": 0,
+                "section_padding_top": 36,
+                "section_padding_bottom": 58,
+                "section_padding_sides_desktop": 0,
+                "section_padding_sides_mobile": 24,
+                "bgcolor": "#f1f5f9"
+            }
+        },
+        "image_with_text_k7TENQ": {
+            "type": "image-with-text",
+            "blocks": {
+                "heading_iRfVNU": {
+                    "type": "heading",
+                    "settings": {
+                        "heading": "Transformez vos pas",
+                        "heading_size": "h1"
+                    }
+                },
+                "text_9HaNNB": {
+                    "type": "text",
+                    "settings": {
+                        "text": "<p>Dites adieu aux douleurs et bonjour au confort. Avec nos sandales, chaque pas devient un plaisir. Ne manquez pas cette chance de marcher avec style et aisance.</p>",
+                        "text_style": "body"
+                    }
+                },
+                "button_rmUHx9": {
+                    "type": "button",
+                    "settings": {
+                        "button_label": "JE D\u00c9COUVRE",
+                        "button_link": "",
+                        "button_style_secondary": false
+                    }
+                }
+            },
+            "block_order": [
+                "heading_iRfVNU",
+                "text_9HaNNB",
+                "button_rmUHx9"
+            ],
+            "settings": {
+                "default_image": "persuasive_image.jpg",
+                "image_border_radius": 0,
+                "button_border_radius": 100,
+                "height": "adapt",
+                "desktop_image_width": "medium",
+                "layout": "text_first",
+                "desktop_content_position": "top",
+                "desktop_content_alignment": "left",
+                "content_layout": "no-overlap",
+                "section_color_scheme": "scheme-2",
+                "color_scheme": "scheme-2",
+                "image_behavior": "none",
+                "mobile_content_alignment": "left",
+                "padding_top": 36,
+                "padding_bottom": 36
+            }
+        },
+        "featured_product_PxReAn": {
+            "type": "featured-product",
+            "blocks": {
+                "text_UeehHp": {
+                    "type": "text",
+                    "disabled": true,
+                    "settings": {
+                        "text": "{{ section.settings.product.vendor }}",
+                        "text_style": "uppercase"
+                    }
+                },
+                "text_nWErWR": {
+                    "type": "text",
+                    "disabled": true,
+                    "settings": {
+                        "text": "{{ section.settings.product.vendor }}",
+                        "text_style": "uppercase"
+                    }
+                },
+                "title_f7V6ee": {
+                    "type": "title",
+                    "settings": {
+                        "heading_size": "h1"
+                    }
+                },
+                "price_L4aBte": {
+                    "type": "price",
+                    "settings": {}
+                },
+                "icon_text_xeYVnE": {
+                    "type": "icon_text",
+                    "settings": {
+                        "additional_class": "",
+                        "icon_text_1": "Ultra l\u00e9g\u00e8res",
+                        "icon_text_2": "R\u00e9sistantes \u00e0 l'eau",
+                        "icon_text_3": "Faciles \u00e0 nettoyer",
+                        "icon_text_4": "",
+                        "icon_text_5": "",
+                        "icon_text_6": ""
+                    }
+                },
+                "icon_with_text_cWdwyw": {
+                    "type": "icon-with-text",
+                    "disabled": true,
+                    "settings": {
+                        "layout": "vertical",
+                        "icon_1": "none",
+                        "heading_1": "Titre",
+                        "icon_2": "none",
+                        "heading_2": "Titre",
+                        "icon_3": "none",
+                        "heading_3": "Titre"
+                    }
+                },
+                "variant_picker_DhhpJW": {
+                    "type": "variant_picker",
+                    "settings": {
+                        "picker_type": "button",
+                        "swatch_shape": "circle"
+                    }
+                },
+                "quantity_selector_7Ef7cc": {
+                    "type": "quantity_selector",
+                    "settings": {}
+                },
+                "buy_buttons_6xyjNW": {
+                    "type": "buy_buttons",
+                    "settings": {
+                        "show_dynamic_checkout": false,
+                        "show_gift_card_recipient": true
+                    }
+                },
+                "icon_with_text_PrdbDg": {
+                    "type": "icon-with-text",
+                    "settings": {
+                        "layout": "horizontal",
+                        "icon_1": "heart",
+                        "heading_1": "Livraison gratuite",
+                        "icon_2": "return",
+                        "heading_2": "Retours faciles",
+                        "icon_3": "truck",
+                        "heading_3": "Paiements s\u00e9curis\u00e9s"
+                    }
+                }
+            },
+            "block_order": [
+                "text_UeehHp",
+                "text_nWErWR",
+                "title_f7V6ee",
+                "price_L4aBte",
+                "icon_text_xeYVnE",
+                "icon_with_text_cWdwyw",
+                "variant_picker_DhhpJW",
+                "quantity_selector_7Ef7cc",
+                "buy_buttons_6xyjNW",
+                "icon_with_text_PrdbDg"
+            ],
+            "settings": {
+                "product": "kit-complet-ohcoco\u00a9",
+                "color_scheme": "scheme-2",
+                "secondary_background": false,
+                "image_border_radius": 15,
+                "button_border_radius": 50,
+                "media_size": "medium",
+                "constrain_to_viewport": true,
+                "media_fit": "contain",
+                "media_position": "left",
+                "image_zoom": "lightbox",
+                "hide_variants": false,
+                "enable_video_looping": false,
+                "padding_top": 36,
+                "padding_bottom": 36
+            }
+        },
+        "results_LtVdTd": {
+            "type": "results",
+            "blocks": {
+                "row_nbfVXJ": {
+                    "type": "row",
+                    "settings": {
+                        "percentage": 95,
+                        "row_text": "<p>Satisfaction des clients sur le confort.</p>"
+                    }
+                },
+                "row_Dgzxed": {
+                    "type": "row",
+                    "settings": {
+                        "percentage": 90,
+                        "row_text": "<p>Recommand\u00e9 pour sa l\u00e9g\u00e8ret\u00e9 et flexibilit\u00e9.</p>"
+                    }
+                },
+                "row_wyNXie": {
+                    "type": "row",
+                    "settings": {
+                        "percentage": 85,
+                        "row_text": "<p>Taux d'utilisation quotidienne chez les acheteurs.</p>"
+                    }
+                },
+                "row_V8yXhB": {
+                    "type": "row",
+                    "settings": {
+                        "percentage": 88,
+                        "row_text": "<p>Clients adorent le design moderne.</p>"
+                    }
+                }
+            },
+            "block_order": [
+                "row_nbfVXJ",
+                "row_Dgzxed",
+                "row_wyNXie",
+                "row_V8yXhB"
+            ],
+            "custom_css": [
+                ".results__caption p {color: inherit;}"
+            ],
+            "settings": {
+                "color_scheme": "scheme-1",
+                "title": "Statistiques des commentaires des utilisateurs",
+                "override_heading_size": true,
+                "heading_size": 40,
+                "heading_mob_size": 29,
+                "override_subheading_color": false,
+                "override_subheading_size": false,
+                "subheading_size": 40,
+                "subheading_mob_size": 29,
+                "text": "",
+                "override_body_size": true,
+                "body_size": 16,
+                "image_margin_top": 25,
+                "rounded_image_corners": true,
+                "layout": "results_second",
+                "results_headline": "",
+                "override_results_heading_size": false,
+                "results_heading_size": 54,
+                "results_headline_alignment": "center",
+                "caption": "",
+                "button_label": "",
+                "link": "",
+                "button_style_secondary": false,
+                "padding_top": 36,
+                "padding_bottom": 36
+            }
+        },
+        "icon_bar_rzekxa": {
+            "type": "icon-bar",
+            "blocks": {
+                "column_w8GX3V": {
+                    "type": "column",
+                    "settings": {
+                        "icon": "review_star",
+                        "custom_icon_color": "#000000",
+                        "override_icon_size": true,
+                        "custom_icon_size": 90,
+                        "title": "",
+                        "icon_heading_font_size_new": 16,
+                        "override_icon_heading_color": false,
+                        "icon_heading_color": "#000000",
+                        "text": "<p>1000+ Cinq critiques</p>",
+                        "override_column_text_size": false,
+                        "column_text_size": 16,
+                        "override_column_text_color": false,
+                        "column_text_color": "#000000"
+                    }
+                },
+                "column_Pj4HC6": {
+                    "type": "column",
+                    "settings": {
+                        "icon": "warranty",
+                        "custom_icon_color": "#000000",
+                        "override_icon_size": true,
+                        "custom_icon_size": 90,
+                        "title": "",
+                        "icon_heading_font_size_new": 16,
+                        "override_icon_heading_color": false,
+                        "icon_heading_color": "#000000",
+                        "text": "<p>Service client 7j/7</p>",
+                        "override_column_text_size": false,
+                        "column_text_size": 16,
+                        "override_column_text_color": false,
+                        "column_text_color": "#000000"
+                    }
+                },
+                "column_WJRPhN": {
+                    "type": "column",
+                    "settings": {
+                        "icon": "shipping",
+                        "custom_icon_color": "#000000",
+                        "override_icon_size": true,
+                        "custom_icon_size": 90,
+                        "title": "",
+                        "icon_heading_font_size_new": 16,
+                        "override_icon_heading_color": false,
+                        "icon_heading_color": "#000000",
+                        "text": "<p>Livraison dans le monde</p>",
+                        "override_column_text_size": false,
+                        "column_text_size": 16,
+                        "override_column_text_color": false,
+                        "column_text_color": "#000000"
+                    }
+                },
+                "column_qTgmJV": {
+                    "type": "column",
+                    "settings": {
+                        "icon": "returns",
+                        "custom_icon_color": "#000000",
+                        "override_icon_size": true,
+                        "custom_icon_size": 90,
+                        "title": "",
+                        "icon_heading_font_size_new": 16,
+                        "override_icon_heading_color": false,
+                        "icon_heading_color": "#000000",
+                        "text": "<p>Retours rapides et faciles</p>",
+                        "override_column_text_size": false,
+                        "column_text_size": 16,
+                        "override_column_text_color": false,
+                        "column_text_color": "#000000"
+                    }
+                }
+            },
+            "block_order": [
+                "column_w8GX3V",
+                "column_Pj4HC6",
+                "column_WJRPhN",
+                "column_qTgmJV"
+            ],
+            "custom_css": [
+                ".multicolumn-card__info {padding: 2rem;}",
+                ".sec_icon-bar > p {font-size: 18px !important;}"
+            ],
+            "settings": {
+                "color_scheme": "scheme-2",
+                "title": "Pourquoi choisissez-nous ",
+                "override_heading_color": false,
+                "heading_color": "#000000",
+                "override_heading_size": false,
+                "heading_size": 40,
+                "heading_mob_size": 29,
+                "text": "<p>Choisissez nos sandales pour leur qualit\u00e9 et leur confort. Chaque paire est fabriqu\u00e9e avec soin, garantissant durabilit\u00e9 et satisfaction. Profitez d'un style moderne tout en restant \u00e0 l'aise.</p>",
+                "override_body_color": false,
+                "body_color": "#000000",
+                "override_body_size": true,
+                "body_size": 16,
+                "icon_size": "medium",
+                "columns_desktop": 4,
+                "background_style": "none",
+                "columns_mobile": "1",
+                "swipe_on_mobile": false,
+                "padding_top": 52,
+                "padding_bottom": 36,
+                "padding_horizontal_desktop": 36,
+                "padding_horizontal_mobile": 18
+            }
+        },
+        "newsletter_4aBA97": {
+            "type": "newsletter",
+            "blocks": {
+                "heading_tdhx9C": {
+                    "type": "heading",
+                    "settings": {
+                        "heading": "S\u2019abonner \u00e0 nos e-mails",
+                        "heading_size": "h1"
+                    }
+                },
+                "paragraph_mXMJey": {
+                    "type": "paragraph",
+                    "settings": {
+                        "text": "<p>Faites partie des premi\u00e8res personnes \u00e0 \u00eatre inform\u00e9es des nouvelles collections et des offres exclusives.</p>"
+                    }
+                },
+                "email_form_jPwPbY": {
+                    "type": "email_form",
+                    "settings": {}
+                }
+            },
+            "block_order": [
+                "heading_tdhx9C",
+                "paragraph_mXMJey",
+                "email_form_jPwPbY"
+            ],
+            "name": "t:sections.newsletter.presets.name",
+            "settings": {
+                "placeholder_text": "Entrez votre e-mail\u2026",
+                "color_scheme": "scheme-1",
+                "full_width": true,
+                "padding_top": 44,
+                "padding_bottom": 60
+            }
+        }
+    },
+    "order": [
+        "image_with_mobile_filter_P636fB",
+        "custom_slideshow_WVwjEV",
+        "h_tickers_GA76Cz",
+        "rich_text_DiaJWY",
+        "featured_collection_q3rjqG",
+        "testimonials_xLaqeA",
+        "image_with_text_k7TENQ",
+        "featured_product_PxReAn",
+        "results_LtVdTd",
+        "icon_bar_rzekxa",
+        "newsletter_4aBA97"
+    ]
+}
