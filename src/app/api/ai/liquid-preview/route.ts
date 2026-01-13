@@ -399,8 +399,8 @@ button.product-form__submit,
 .product_labels_ii svg path,
 .product_labels_main svg,
 .product_labels_main svg path,
-.svg-wrapper svg,
-.svg-wrapper svg path,
+.svg-wrapper svg:not(.icon-facebook):not(.icon-instagram):not(.icon-youtube):not(.icon-tiktok):not(.icon-twitter):not(.icon-pinterest):not(.icon-snapchat):not(.icon-tumblr):not(.icon-vimeo),
+.svg-wrapper svg:not(.icon-facebook):not(.icon-instagram):not(.icon-youtube):not(.icon-tiktok):not(.icon-twitter):not(.icon-pinterest):not(.icon-snapchat):not(.icon-tumblr):not(.icon-vimeo) path,
 .pdp-benefits svg,
 .pdp-benefits svg path,
 .new-favorite-sec svg,
@@ -413,11 +413,40 @@ svg.icon-bubble-check,
 svg.icon-bubble-check path,
 svg.icon-accordion,
 svg.icon-accordion path,
-svg[class*="icon-"],
-svg[class*="icon-"] path {
+svg[class*="icon-"]:not(.icon--full-color),
+svg[class*="icon-"]:not(.icon--full-color) path {
     fill: rgb(var(--color-primary)) !important;
     stroke: rgb(var(--color-primary)) !important;
     color: rgb(var(--color-primary)) !important;
+}
+
+/* Social icons in footer - always black (higher specificity to override above) */
+/* The SVGs use fill="currentColor", so we need to set color on parents */
+.list-social,
+.list-social__item,
+.list-social__link,
+.list-social .svg-wrapper,
+.footer .list-social,
+.footer .list-social__item,
+.footer .list-social__link,
+.footer-social-bottom,
+.footer-social-bottom .list-social {
+    color: #000000 !important;
+}
+.list-social svg,
+.list-social svg *,
+.list-social svg path,
+.list-social svg.icon,
+.list-social svg.icon path,
+.list-social .svg-wrapper svg,
+.list-social .svg-wrapper svg path,
+.footer .list-social svg,
+.footer .list-social svg *,
+.footer-social-bottom svg,
+.footer-social-bottom svg * {
+    fill: #000000 !important;
+    stroke: none !important;
+    color: #000000 !important;
 }
 
 /* Override hardcoded fill opacity on SVGs */
@@ -585,18 +614,42 @@ table svg * {
     color: rgb(var(--color-primary)) !important;
 }
 
-/* Marquee/ticker text */
-.marquee__content,
-.squeeze_scroller_para {
+/* Marquee/ticker text - should be white on dark backgrounds */
+.marquee__content {
     color: rgb(var(--color-foreground)) !important;
 }
+/* Squeeze scroller (black banner) - text must be white */
+.squeeze_scroller_para,
+.squeeze_scroller_inner,
+.squeeze_scroller_item {
+    color: #ffffff !important;
+}
+.squeeze_scroller_main[style*="background-color: #000"],
+.squeeze_scroller_main[style*="background-color:#000"],
+.squeeze_scroller_main[style*="background-color: black"] {
+    color: #ffffff !important;
+}
+.squeeze_scroller_main .squeeze_scroller_para {
+    color: #ffffff !important;
+}
 
-/* Footer social icons - keep foreground color */
+/* Footer social icons - must be black (currentColor inheritance) */
+.footer .svg-wrapper,
+.footer .list-social__link,
+.footer__list-social,
+.footer-social-bottom {
+    color: #000000 !important;
+}
 .footer .svg-wrapper svg,
 .footer .svg-wrapper svg *,
-.list-social svg,
-.list-social svg * {
-    fill: rgb(var(--color-foreground)) !important;
+.footer .svg-wrapper svg path,
+.list-social svg.icon,
+.list-social svg.icon path,
+.footer__list-social svg,
+.footer__list-social svg * {
+    fill: #000000 !important;
+    stroke: none !important;
+    color: #000000 !important;
 }
 
 /* ========================================
@@ -631,6 +684,15 @@ section.footer {
     background: rgb(var(--color-innerHighlight)) !important;
 }
 
+/* Footer background */
+footer.footer,
+footer.footer.gradient,
+.footer.gradient,
+.footer[class*="color-scheme-"] {
+    background-color: rgb(var(--color-innerHighlight)) !important;
+    background: rgb(var(--color-innerHighlight)) !important;
+}
+
 /* Scrolling card / marquee sections */
 .scrolling__card_marquee,
 .scrolling__card_marquee.gradient,
@@ -649,25 +711,25 @@ section.footer {
     color: rgb(var(--color-primary)) !important;
 }
 
-/* All gradient sections should use background variables */
-.gradient,
-section.gradient,
-div.gradient,
-[class*="-padding"].gradient {
+/* All gradient sections should use background variables - EXCEPT sections with custom backgrounds */
+.gradient:not(.image_with_text__wrapper):not(.img-with-txt):not([class*="shopall-"]):not(.footer),
+section.gradient:not(.image_with_text__wrapper):not(.img-with-txt):not(.footer),
+div.gradient:not(.image_with_text__wrapper):not(.img-with-txt):not(.footer),
+[class*="-padding"].gradient:not(.image_with_text__wrapper):not(.footer) {
     background: rgb(var(--color-background)) !important;
     background: var(--gradient-background) !important;
 }
 
-/* Color scheme specific gradient backgrounds */
-.color-scheme-1.gradient { background: var(--gradient-background) !important; }
-.color-scheme-2.gradient { background: var(--gradient-background) !important; }
-.color-scheme-3.gradient { background: var(--gradient-background) !important; }
-.color-scheme-4.gradient { background: var(--gradient-background) !important; }
-.color-scheme-5.gradient { background: var(--gradient-background) !important; }
+/* Color scheme specific gradient backgrounds - EXCEPT sections with custom backgrounds */
+.color-scheme-1.gradient:not(.image_with_text__wrapper):not([class*="shopall-"]):not(.footer) { background: var(--gradient-background) !important; }
+.color-scheme-2.gradient:not(.image_with_text__wrapper):not([class*="shopall-"]):not(.footer) { background: var(--gradient-background) !important; }
+.color-scheme-3.gradient:not(.image_with_text__wrapper):not([class*="shopall-"]):not(.footer) { background: var(--gradient-background) !important; }
+.color-scheme-4.gradient:not(.image_with_text__wrapper):not([class*="shopall-"]):not(.footer) { background: var(--gradient-background) !important; }
+.color-scheme-5.gradient:not(.image_with_text__wrapper):not([class*="shopall-"]):not(.footer) { background: var(--gradient-background) !important; }
 
-/* Section padding containers */
-[class*="section-"][class*="-padding"],
-[class*="section-"][class*="-padding"].gradient {
+/* Section padding containers - EXCEPT footer */
+[class*="section-"][class*="-padding"]:not(.footer),
+[class*="section-"][class*="-padding"].gradient:not(.footer) {
     background-color: rgb(var(--color-background)) !important;
 }
 
@@ -681,9 +743,13 @@ div.gradient,
 
 /* PDP sections */
 .pdp-benefits_mainwrapper,
-.pdp-statistics__column_mainwrapper,
-.pdp_comparison_table_mainwrapper {
+.pdp-statistics__column_mainwrapper {
     background-color: rgb(var(--color-background)) !important;
+    color: rgb(var(--color-foreground)) !important;
+}
+/* Comparison table - uses innerHighlight for grayish/cream background */
+.pdp_comparison_table_mainwrapper {
+    background-color: rgb(var(--color-innerHighlight)) !important;
     color: rgb(var(--color-foreground)) !important;
 }
 
@@ -793,12 +859,8 @@ div.gradient,
     color: var(--color-highliter) !important;
 }
 
-/* Payment icons - don't override */
-.payment-icons svg,
-.payment-icons img {
-    fill: initial !important;
-    stroke: initial !important;
-}
+/* Payment icons - DO NOT override - these have inline colors that must be preserved */
+/* The exclusions in the SVG rules above (using :not(.icon--full-color)) handle this */
 
 /* ========================================
    HOME PAGE SPECIFIC OVERRIDES
@@ -890,10 +952,23 @@ h3 strong,
 }
 
 /* Comparison table - "Why Choose Us" heading highlight */
-.pdp_comparison_table_heading span,
-.comparison-table__heading span,
-.pdp_comparison_table_heading strong,
-.comparison-table__heading strong {
+/* Only target <hig> tag, not span/strong - span and strong should inherit text color */
+.pdp_comparison_table_heading hig,
+.comparison-table__heading hig {
+    color: var(--color-highliter) !important;
+}
+
+/* Override theme's hardcoded gradient color on highlighted text to use theme primary */
+.hgt___tag_heading,
+.pdp_comparison_table_heading .hgt___tag_heading,
+.pdp-benefits_header_heading .hgt___tag_heading,
+.pdp-statistics__column_heading .hgt___tag_heading,
+h2 .hgt___tag_heading,
+h1 .hgt___tag_heading {
+    background: none !important;
+    -webkit-background-clip: unset !important;
+    background-clip: unset !important;
+    -webkit-text-fill-color: var(--color-highliter) !important;
     color: var(--color-highliter) !important;
 }
 
@@ -992,11 +1067,21 @@ h3 strong,
     background-color: rgb(var(--color-background)) !important;
 }
 
-/* Text with image sections (img-with-txt) */
+/* Text with image sections (img-with-txt) - must override color-scheme gradient */
 .img-with-txt,
+.img-with-txt.gradient,
+.img-with-txt.color-scheme-1,
+.img-with-txt.color-scheme-1.gradient,
+section.img-with-txt,
+section.img-with-txt.gradient,
 .img_with_txt_mainwrapper,
-.shopall-img_with_txt {
+.img_with_txt_mainwrapper.gradient,
+.shopall-img_with_txt,
+.shopall-img_with_txt.gradient,
+[class*="img-with-txt"][class*="gradient"],
+[class*="img-with-txt"][class*="color-scheme"] {
     background-color: rgb(var(--color-innerHighlight)) !important;
+    background: rgb(var(--color-innerHighlight)) !important;
 }
 .img-with-txt h2 span,
 .img-with-txt .title span,
@@ -1014,6 +1099,41 @@ h3 strong,
 .icon_text_cls_guarantee li,
 .guarantee-item {
     color: rgb(var(--color-foreground)) !important;
+}
+
+/* ========================================
+   SOCIAL ICONS - MUST BE BLACK (FINAL OVERRIDE)
+   ======================================== */
+/* These rules MUST come last to override all other icon rules */
+ul.list-social,
+ul.list-social li,
+ul.list-social a,
+ul.list-social .svg-wrapper,
+.footer ul.list-social,
+.footer-social-bottom,
+.footer-social-bottom ul.list-social {
+    color: #000000 !important;
+}
+ul.list-social svg.icon,
+ul.list-social svg.icon path,
+ul.list-social .svg-wrapper svg,
+ul.list-social .svg-wrapper svg path,
+.footer ul.list-social svg,
+.footer ul.list-social svg path,
+.footer-social-bottom svg,
+.footer-social-bottom svg path,
+svg.icon-facebook, svg.icon-facebook path,
+svg.icon-instagram, svg.icon-instagram path,
+svg.icon-youtube, svg.icon-youtube path,
+svg.icon-tiktok, svg.icon-tiktok path,
+svg.icon-twitter, svg.icon-twitter path,
+svg.icon-pinterest, svg.icon-pinterest path,
+svg.icon-snapchat, svg.icon-snapchat path,
+svg.icon-tumblr, svg.icon-tumblr path,
+svg.icon-vimeo, svg.icon-vimeo path {
+    fill: #000000 !important;
+    stroke: none !important;
+    color: #000000 !important;
 }
 `
 }
@@ -1072,13 +1192,15 @@ function buildGlobalContext(
   images: string[],
   themeKey: string
 ) {
-  const storeName = (aiContent.store_name as string) || 'YOUR BRAND'
+  // Force "YOUR BRAND" for navbar - not editable for now
+  const storeName = 'YOUR BRAND'
   // Default colors match Laravel and frontend: #6f6254 (brownish) and #e6e1dc (cream)
   const primaryColor = (aiContent.primary_color_picker as string) || '#6f6254'
   const tertiaryColor = (aiContent.tertiary_color_picker as string) || '#e6e1dc'
   const fontFamily = (aiContent.font_family as string) || (aiContent.font_family_input as string) || 'Inter'
   
-  const productTitle = (productData.title as string) || (aiContent.product_title as string) || 'Product'
+  // Use aiContent.title (from "Informations sur le produit") as primary source for product title
+  const productTitle = (aiContent.title as string) || (productData.title as string) || (aiContent.product_title as string) || 'Product'
   const productDescription = (aiContent.product_description as string) || (productData.description as string) || ''
   const price = parseFloat(String(productData.price || aiContent.price || '29.99'))
   const comparePrice = parseFloat(String(productData.compare_at_price || aiContent.compare_price || price * 1.5))
@@ -1441,6 +1563,304 @@ function prepareSectionsForLiquid(
 }
 
 /**
+ * Generate WYSIWYG script for preview iframe
+ * Handles scrollToSection, highlightInput, and clearHighlight messages from parent
+ */
+function generateWysiwygScript(): string {
+  return `
+<script>
+(function() {
+  // WYSIWYG Preview Communication - Listen for messages from parent window
+  var currentHighlightedElement = null;
+  var highlightOverlay = null;
+  var highlightStyle = null;
+  
+  // Section type to CSS selector mapping (matching Laravel exactly)
+  var sectionSelectors = {
+    // Product Page Sections
+    'featured-product': '[data-section-type="featured-product"], .featured-product, .main_product-custom, section[id*="featured-product"], section[id*="main-product"], .main-product, .product-info-section',
+    'product-section-1': '[data-section-type="product-section-1"], .product-section-1, section[id*="product-section"], section[id*="product_section"]',
+    'pdp-benefits': '[data-section-type="pdp-benefits"], .pdp-benefits, .pdp_benefits_mainwrapper, section[id*="pdp_benefits"], section[id*="pdp-benefits"]',
+    'pdp-statistics-column': '[data-section-type="pdp-statistics-column"], .pdp-statistics, .pdp_statistics__column_mainwrapper, section[id*="pdp_statistics"], section[id*="clinical"]',
+    'image-faq': '[data-section-type="image-faq"], [data-section-type="faq"], .image-faq, .image_faq_mainwrapper, .store-faq-section, .faq-wp, [class*="faq-wp-faq"], [class*="faq_Kgq"], section[id*="image_faq"], section[id*="image-faq"], section[id*="faq"]',
+    'faq': '[data-section-type="faq"], [data-section-type="image-faq"], .image-faq, .image_faq_mainwrapper, .store-faq-section, .faq-wp, [class*="faq-wp-faq"], [class*="faq_Kgq"], section[id*="image_faq"], section[id*="image-faq"], section[id*="faq"]',
+    'pdp-comparison-table': '[data-section-type="pdp-comparison-table"], .pdp-comparison-table, .pdp_comparison_table_mainwrapper, section[id*="comparison"], section[id*="pdp_comparison"]',
+    'product-reviews': '[data-section-type="product-reviews"], .product-reviews, .scrolling__card_marquee, [class*="marq-header_with_marquee"], section[id*="reviews"], section[id*="product-reviews"]',
+    
+    // Homepage Sections  
+    'img-with-txt': '[data-section-type="img-with-txt"], .img-with-txt, .shopall-img_with_txt, section[id*="img-with-txt"], section[id*="img_with_txt"], section[id*="hero"]',
+    'header-with-marquee': '[data-section-type="header-with-marquee"], .header-with-marquee, .header_with_marquee__mainWrapper, .scrolling__card_marquee, .squeeze_scroller_main, .squeeze_scroller_data, .squeeze_scroller_inner, section[id*="header_with_marquee"], section[id*="header-with-marquee"], section[id*="marquee"], section[id*="squeeze_scroller"], section[class*="squeeze_scroller"]',
+    'timeline-points': '[data-section-type="timeline-points"], .timeline-points, .timeline__main__wrapper, section[id*="timeline"]',
+    'video-gris-slider': '[data-section-type="video-gris-slider"], .video-gris-slider, section[id*="video"]',
+    'image-with-text': '[data-section-type="image-with-text"], .image-with-text, .image_with_text__wrapper, section[id*="image-with-text"]',
+    
+    // Other Sections
+    'announcement-bar': '[data-section-type="announcement-bar"], .announcement-bar, .utility-bar, section[id*="announcement"]',
+    'rich-text': '[data-section-type="rich-text"], .rich-text, section[id*="rich-text"]',
+    'custom-newsletter': '[data-section-type="custom-newsletter"], .custom-newsletter, section[id*="newsletter"]',
+    'product-images': '.product-gallery, .product-images, .product-media-gallery, .product__media-wrapper'
+  };
+  
+  function findSectionElement(sectionType) {
+    // Special handling for product-reviews (first testimonials) to find scrolling__card_marquee
+    if (sectionType === 'product-reviews') {
+      // Try scrolling__card_marquee first
+      var marqueeEl = document.querySelector('.scrolling__card_marquee');
+      if (marqueeEl) {
+        console.log('[WYSIWYG] Found scrolling__card_marquee');
+        return marqueeEl;
+      }
+      // Try marq-header_with_marquee_B8fi3m or similar
+      marqueeEl = document.querySelector('[class*="marq-header_with_marquee"]');
+      if (marqueeEl) {
+        console.log('[WYSIWYG] Found marq-header_with_marquee element');
+        return marqueeEl;
+      }
+      // Try element with gradient color-scheme-1 classes
+      var elements = document.querySelectorAll('.scrolling__card_marquee, [class*="marq-header_with_marquee"]');
+      for (var i = 0; i < elements.length; i++) {
+        if (elements[i].classList.contains('gradient') || elements[i].classList.contains('color-scheme-1')) {
+          console.log('[WYSIWYG] Found scrolling__card_marquee with gradient/color-scheme');
+          return elements[i];
+        }
+      }
+      if (elements.length > 0) {
+        console.log('[WYSIWYG] Found scrolling__card_marquee element by class');
+        return elements[0];
+      }
+    }
+    
+    // Special handling for featured-product to find main_product-custom
+    if (sectionType === 'featured-product') {
+      var productEl = document.querySelector('.main_product-custom');
+      if (productEl) {
+        console.log('[WYSIWYG] Found main_product-custom');
+        return productEl;
+      }
+    }
+    
+    // Special handling for header-with-marquee to find squeeze_scroller
+    if (sectionType === 'header-with-marquee') {
+      // Try squeeze_scroller_main first (most specific)
+      var squeezeEl = document.querySelector('.squeeze_scroller_main');
+      if (squeezeEl) {
+        console.log('[WYSIWYG] Found squeeze_scroller_main');
+        return squeezeEl;
+      }
+      // Try squeeze_scroller_data
+      squeezeEl = document.querySelector('.squeeze_scroller_data');
+      if (squeezeEl) {
+        console.log('[WYSIWYG] Found squeeze_scroller_data');
+        return squeezeEl;
+      }
+      // Try any element with squeeze_scroller in class
+      var squeezeElements = document.querySelectorAll('[class*="squeeze_scroller"]');
+      if (squeezeElements.length > 0) {
+        console.log('[WYSIWYG] Found squeeze_scroller element by class');
+        return squeezeElements[0];
+      }
+    }
+    
+    // Special handling for FAQ to find store-faq-section
+    if (sectionType === 'faq' || sectionType === 'image-faq') {
+      // Try store-faq-section first (most specific)
+      var faqEl = document.querySelector('.store-faq-section');
+      if (faqEl) {
+        console.log('[WYSIWYG] Found store-faq-section');
+        return faqEl;
+      }
+      // Try faq-wp-faq_Kgq36b or similar
+      faqEl = document.querySelector('[class*="faq-wp-faq"]');
+      if (faqEl) {
+        console.log('[WYSIWYG] Found faq-wp-faq element');
+        return faqEl;
+      }
+      // Try any element with faq_Kgq in class
+      faqEl = document.querySelector('[class*="faq_Kgq"]');
+      if (faqEl) {
+        console.log('[WYSIWYG] Found faq_Kgq element');
+        return faqEl;
+      }
+      // Try faq-wp
+      faqEl = document.querySelector('.faq-wp');
+      if (faqEl) {
+        console.log('[WYSIWYG] Found faq-wp');
+        return faqEl;
+      }
+    }
+    
+    // Try specific selector first
+    var selectors = sectionSelectors[sectionType];
+    if (selectors) {
+      var el = document.querySelector(selectors);
+      if (el) {
+        console.log('[WYSIWYG] Found element by selector:', selectors);
+        return el;
+      }
+    }
+    
+    // Fallback: find by data-section-type attribute
+    var el = document.querySelector('[data-section-type="' + sectionType + '"]');
+    if (el) {
+      console.log('[WYSIWYG] Found element by data-section-type');
+      return el;
+    }
+    
+    // Fallback: find section with ID containing the type
+    var sections = document.querySelectorAll('section[id], div[id*="shopify-section"]');
+    for (var i = 0; i < sections.length; i++) {
+      var id = sections[i].id.toLowerCase();
+      var normalizedType = sectionType.toLowerCase().replace(/-/g, '_');
+      var normalizedType2 = sectionType.toLowerCase().replace(/_/g, '-');
+      if (id.includes(normalizedType) || id.includes(normalizedType2)) {
+        console.log('[WYSIWYG] Found element by ID:', id);
+        return sections[i];
+      }
+    }
+    
+    console.log('[WYSIWYG] Element not found for sectionType:', sectionType);
+    return null;
+  }
+  
+  function scrollToSection(sectionType) {
+    console.log('[WYSIWYG] Scrolling to section:', sectionType);
+    var element = findSectionElement(sectionType);
+    if (element) {
+      console.log('[WYSIWYG] Found element:', element.id || element.className);
+      element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      highlightElement(element);
+    } else {
+      console.log('[WYSIWYG] Section not found:', sectionType);
+    }
+  }
+  
+  function highlightElement(element) {
+    // Clear previous highlight
+    clearHighlight();
+    
+    if (!element) return;
+    
+    currentHighlightedElement = element;
+    
+    // Add highlight style if not exists
+    if (!highlightStyle) {
+      highlightStyle = document.createElement('style');
+      highlightStyle.id = 'wysiwyg-highlight-style';
+      highlightStyle.textContent = \`
+        .wysiwyg-highlight-overlay {
+          position: fixed !important;
+          background-color: rgba(51, 92, 255, 0.15) !important;
+          border: 3px solid rgba(51, 92, 255, 0.8) !important;
+          border-radius: 8px;
+          pointer-events: none;
+          z-index: 999999 !important;
+          transition: none !important;
+          mix-blend-mode: normal !important;
+          will-change: transform;
+        }
+      \`;
+      document.head.appendChild(highlightStyle);
+    }
+    
+    // Create overlay element positioned over the section
+    highlightOverlay = document.createElement('div');
+    highlightOverlay.className = 'wysiwyg-highlight-overlay';
+    
+    // Function to update position instantly (no transition, direct updates)
+    var updatePosition = function() {
+      if (!element || !highlightOverlay) return;
+      
+      var rect = element.getBoundingClientRect();
+      
+      // Direct position update - no transition, instant
+      highlightOverlay.style.top = (rect.top - 6) + 'px';
+      highlightOverlay.style.left = (rect.left - 6) + 'px';
+      highlightOverlay.style.width = (rect.width + 12) + 'px';
+      highlightOverlay.style.height = (rect.height + 12) + 'px';
+    };
+    
+    // Initial setup - append and position immediately
+    var rect = element.getBoundingClientRect();
+    highlightOverlay.style.top = (rect.top - 6) + 'px';
+    highlightOverlay.style.left = (rect.left - 6) + 'px';
+    highlightOverlay.style.width = (rect.width + 12) + 'px';
+    highlightOverlay.style.height = (rect.height + 12) + 'px';
+    highlightOverlay.style.display = 'block';
+    highlightOverlay.style.visibility = 'visible';
+    highlightOverlay.style.opacity = '1';
+    document.body.appendChild(highlightOverlay);
+    
+    // Use requestAnimationFrame for scroll updates (synchronized with browser paint)
+    var rafId = null;
+    var scrollHandler = function() {
+      if (rafId) return; // Already scheduled
+      rafId = requestAnimationFrame(function() {
+        updatePosition();
+        rafId = null;
+      });
+    };
+    
+    // Update on scroll and resize - use capture phase for better performance
+    window.addEventListener('scroll', scrollHandler, { capture: true, passive: true });
+    window.addEventListener('resize', scrollHandler, { passive: true });
+    
+    // Store cleanup function
+    highlightOverlay._cleanup = function() {
+      window.removeEventListener('scroll', scrollHandler, { capture: true });
+      window.removeEventListener('resize', scrollHandler);
+      if (rafId) {
+        cancelAnimationFrame(rafId);
+        rafId = null;
+      }
+    };
+  }
+  
+  function clearHighlight() {
+    if (highlightOverlay) {
+      // Clean up event listeners
+      if (typeof highlightOverlay._cleanup === 'function') {
+        highlightOverlay._cleanup();
+      }
+      if (highlightOverlay.parentNode) {
+        highlightOverlay.parentNode.removeChild(highlightOverlay);
+      }
+      highlightOverlay = null;
+    }
+    currentHighlightedElement = null;
+  }
+  
+  // Listen for messages from parent window
+  window.addEventListener('message', function(event) {
+    var data = event.data;
+    
+    if (!data || typeof data !== 'object') return;
+    
+    switch (data.type) {
+      case 'scrollToSection':
+        if (data.sectionType) {
+          scrollToSection(data.sectionType);
+        }
+        break;
+        
+      case 'highlightInput':
+        if (data.sectionType) {
+          scrollToSection(data.sectionType);
+        }
+        break;
+        
+      case 'clearHighlight':
+        clearHighlight();
+        break;
+    }
+  });
+  
+  console.log('[WYSIWYG] Preview communication initialized');
+})();
+</script>
+`;
+}
+
+/**
  * Rewrite asset URLs in HTML to use our proxy, fix script loading, and inject CSS variables
  */
 function rewriteAssetUrls(html: string, aiContent: Record<string, unknown>, baseUrl?: string): string {
@@ -1477,6 +1897,9 @@ ${cssVariables}
     result = result.replace('</head>', `${cssInjection}</head>`)
   }
   
+  // Inject WYSIWYG script for preview communication
+  const wysiwygScript = generateWysiwygScript()
+  
   // Inject a Swiper polyfill script right after opening <body> tag to handle timing issues
   const swiperPolyfill = `
 <script>
@@ -1503,7 +1926,7 @@ ${cssVariables}
   }
 </script>
 `
-  result = result.replace(/<body([^>]*)>/i, `<body$1>${swiperPolyfill}`)
+  result = result.replace(/<body([^>]*)>/i, `<body$1>${swiperPolyfill}${wysiwygScript}`)
   
   return result
 }
@@ -1664,7 +2087,10 @@ export async function GET(request: NextRequest) {
     }
     
     const productData = (product.product_content as Record<string, unknown>) || {}
-    const images = (productData.images as string[]) || []
+    // Use selectedMainImages from aiContent if available (includes AI-generated images)
+    const selectedMainImages = aiContent.selectedMainImages as string[] | undefined
+    const originalImages = (productData.images as string[]) || []
+    const images = (selectedMainImages && selectedMainImages.length > 0) ? selectedMainImages : originalImages
     
     // Load theme sections based on page type
     const { sections: templateSections, order } = loadThemeSections(themeKey, pageType)
@@ -1674,6 +2100,56 @@ export async function GET(request: NextRequest) {
     // Build context and sections
     const context = buildGlobalContext(aiContent, productData, images, themeKey)
     const sections = prepareSectionsForLiquid(templateSections, order, aiContent, images)
+    
+    // Force "YOUR BRAND" in header/navbar sections and product title in featured-product
+    for (const section of sections) {
+      // Force navbar title to "YOUR BRAND" - check ALL blocks in header section
+      if (section.type === 'header' || section.type === 'navbar' || section.id?.includes('header')) {
+        if (section.settings) {
+          // Force all possible title/heading settings
+          section.settings.title = 'YOUR BRAND'
+          section.settings.heading = 'YOUR BRAND'
+          section.settings.text = 'YOUR BRAND'
+          section.settings.link_text = 'YOUR BRAND'
+          section.settings.logo_text = 'YOUR BRAND'
+          section.settings.brand_name = 'YOUR BRAND'
+        }
+        // Check ALL blocks in header section, regardless of type
+        if (section.blocks) {
+          for (const blockId of Object.keys(section.blocks)) {
+            const block = section.blocks[blockId] as BlockData
+            if (block.settings) {
+              // Force all possible title/heading settings in ALL blocks
+              block.settings.title = 'YOUR BRAND'
+              block.settings.heading = 'YOUR BRAND'
+              block.settings.text = 'YOUR BRAND'
+              block.settings.link_text = 'YOUR BRAND'
+              block.settings.logo_text = 'YOUR BRAND'
+              block.settings.brand_name = 'YOUR BRAND'
+              block.settings.h1 = 'YOUR BRAND'
+              block.settings.h2 = 'YOUR BRAND'
+            }
+          }
+        }
+      }
+      // Force product title in featured-product section
+      if (section.type === 'featured-product' || section.type === 'pdp-main-product' || section.type === 'main-product-custom') {
+        const productTitle = (aiContent.title as string) || ''
+        if (productTitle && section.blocks) {
+          for (const blockId of Object.keys(section.blocks)) {
+            const block = section.blocks[blockId] as BlockData
+            if (block.type === 'title' || block.type === 'product_title' || block.type === 'product-title') {
+              if (block.settings) {
+                block.settings.title = productTitle
+                block.settings.heading = productTitle
+                block.settings.text = productTitle
+                block.settings.h2 = productTitle
+              }
+            }
+          }
+        }
+      }
+    }
 
     // Call Liquid service
     try {
@@ -1689,29 +2165,61 @@ export async function GET(request: NextRequest) {
         context
       }
       
-    const response = await fetch(`${LIQUID_SERVICE_URL}/render-theme`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(requestBody)
-      })
+      // Retry logic for transient EPIPE errors
+      const MAX_RETRIES = 3
+      let lastError: Error | null = null
       
-      console.log('GET: Liquid service response status:', response.status)
-
-      if (response.ok) {
-    const result = await response.json()
-        console.log('GET: Liquid service result - success:', result.success, 'html length:', result.html?.length || 0)
-        
-        if (result.success && result.html && result.html.length > 1000) {
-          const html = rewriteAssetUrls(result.html, aiContent)
-          return new NextResponse(html, {
-            headers: { 'Content-Type': 'text/html' }
+      for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+        try {
+          console.log(`GET: Liquid service attempt ${attempt}/${MAX_RETRIES}`)
+          
+          const response = await fetch(`${LIQUID_SERVICE_URL}/render-theme`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(requestBody)
           })
-        } else {
-          console.log('GET: HTML too short or missing, response:', JSON.stringify(result).substring(0, 500))
+          
+          console.log('GET: Liquid service response status:', response.status)
+
+          if (response.ok) {
+            const result = await response.json()
+            console.log('GET: Liquid service result - success:', result.success, 'html length:', result.html?.length || 0)
+            
+            if (result.success && result.html && result.html.length > 1000) {
+              const html = rewriteAssetUrls(result.html, aiContent)
+              return new NextResponse(html, {
+                headers: { 'Content-Type': 'text/html' }
+              })
+            } else {
+              console.log('GET: HTML too short or missing, response:', JSON.stringify(result).substring(0, 500))
+            }
+          } else {
+            const errorText = await response.text()
+            console.log(`GET: Liquid service error response (attempt ${attempt}):`, errorText.substring(0, 300))
+            
+            // If it's an EPIPE error, retry
+            if (errorText.includes('EPIPE') && attempt < MAX_RETRIES) {
+              console.log(`GET: EPIPE error detected, retrying in 500ms...`)
+              await new Promise(resolve => setTimeout(resolve, 500))
+              continue
+            }
+          }
+          // If we got here without returning, break out of retry loop
+          break
+        } catch (fetchError) {
+          lastError = fetchError as Error
+          console.error(`GET: Liquid service fetch error (attempt ${attempt}):`, fetchError)
+          
+          if (attempt < MAX_RETRIES) {
+            console.log(`GET: Network error, retrying in 500ms...`)
+            await new Promise(resolve => setTimeout(resolve, 500))
+            continue
+          }
         }
-      } else {
-        const errorText = await response.text()
-        console.log('GET: Liquid service error response:', errorText.substring(0, 500))
+      }
+      
+      if (lastError) {
+        console.error('GET: All retry attempts failed:', lastError)
       }
       
       console.log('GET: Liquid service returned invalid response, using fallback')
@@ -1771,6 +2279,16 @@ export async function POST(request: NextRequest) {
     const existingContent = (product.aicontent as Record<string, unknown>) || {}
     const aiContent = { ...existingContent, ...editedContent }
     
+    // Debug: Log image-related fields from editedContent
+    console.log('POST: Image fields from editedContent:', {
+      timelineImage: editedContent.timelineImage,
+      selectedBenefitsImage: editedContent.selectedBenefitsImage,
+      selectedClinicalImage: editedContent.selectedClinicalImage,
+      selectedHeroImage: editedContent.selectedHeroImage,
+      faqImage: editedContent.faqImage,
+      productSectionImage: editedContent.productSectionImage,
+    })
+    
     // Ensure RGB color values are calculated from hex colors (critical for CSS variables)
     if (aiContent.primary_color_picker) {
       aiContent.primary_rgbcolor_picker = hexToRgbString(aiContent.primary_color_picker as string)
@@ -1780,7 +2298,19 @@ export async function POST(request: NextRequest) {
     }
     
     const productData = (product.product_content as Record<string, unknown>) || {}
-    const images = (productData.images as string[]) || []
+    // Use selectedMainImages from editedContent if available (includes AI-generated images)
+    // Otherwise fallback to original product images
+    const selectedMainImages = editedContent.selectedMainImages as string[] | undefined
+    const originalImages = (productData.images as string[]) || []
+    const images = (selectedMainImages && selectedMainImages.length > 0) ? selectedMainImages : originalImages
+    
+    console.log('POST: Using images for preview:', {
+      hasSelectedMainImages: !!selectedMainImages,
+      selectedMainImagesCount: selectedMainImages?.length || 0,
+      originalImagesCount: originalImages.length,
+      finalImagesCount: images.length,
+      firstImage: images[0]?.substring(0, 50) + '...'
+    })
     
     // Use theme_key from editedContent or default to theme_v4
     const themeKey = (editedContent.theme_key as string) || 'theme_v4'
@@ -1795,42 +2325,118 @@ export async function POST(request: NextRequest) {
     // Build context and sections
     const context = buildGlobalContext(aiContent, productData, images, themeKey)
     const sections = prepareSectionsForLiquid(templateSections, order, aiContent, images)
-
-    // Call Liquid service
-    try {
-      console.log('POST: Calling Liquid service for product:', aiShopId, 'sections count:', sections.length)
-      
-    const response = await fetch(`${LIQUID_SERVICE_URL}/render-theme`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        theme_path: themePath,
-        layout: 'theme',
-        sections,
-        context
-      })
-    })
-      
-      console.log('POST: Liquid service response status:', response.status)
-
-    if (response.ok) {
-    const result = await response.json()
-        console.log('POST: Liquid service result - success:', result.success, 'html length:', result.html?.length || 0)
-        
-        if (result.success && result.html && result.html.length > 1000) {
-          // Get the origin from the request URL for base tag (needed for blob URL loading)
-          const origin = request.nextUrl.origin || 'http://localhost:3000'
-          const html = rewriteAssetUrls(result.html, aiContent, origin)
-          return new NextResponse(html, {
-            headers: { 'Content-Type': 'text/html' }
-          })
+    
+    // Force "YOUR BRAND" in header/navbar sections and product title in featured-product
+    for (const section of sections) {
+      // Force navbar title to "YOUR BRAND" - check ALL blocks in header section
+      if (section.type === 'header' || section.type === 'navbar' || section.id?.includes('header')) {
+        if (section.settings) {
+          // Force all possible title/heading settings
+          section.settings.title = 'YOUR BRAND'
+          section.settings.heading = 'YOUR BRAND'
+          section.settings.text = 'YOUR BRAND'
+          section.settings.link_text = 'YOUR BRAND'
+          section.settings.logo_text = 'YOUR BRAND'
+          section.settings.brand_name = 'YOUR BRAND'
         }
-      } else {
-        const errorText = await response.text()
-        console.error('POST: Liquid service error:', response.status, errorText.substring(0, 500))
+        // Check ALL blocks in header section, regardless of type
+        if (section.blocks) {
+          for (const blockId of Object.keys(section.blocks)) {
+            const block = section.blocks[blockId] as BlockData
+            if (block.settings) {
+              // Force all possible title/heading settings in ALL blocks
+              block.settings.title = 'YOUR BRAND'
+              block.settings.heading = 'YOUR BRAND'
+              block.settings.text = 'YOUR BRAND'
+              block.settings.link_text = 'YOUR BRAND'
+              block.settings.logo_text = 'YOUR BRAND'
+              block.settings.brand_name = 'YOUR BRAND'
+              block.settings.h1 = 'YOUR BRAND'
+              block.settings.h2 = 'YOUR BRAND'
+            }
+          }
+        }
       }
-  } catch (error) {
-      console.error('POST: Liquid service error:', error)
+      // Force product title in featured-product section
+      if (section.type === 'featured-product' || section.type === 'pdp-main-product' || section.type === 'main-product-custom') {
+        const productTitle = (aiContent.title as string) || ''
+        if (productTitle && section.blocks) {
+          for (const blockId of Object.keys(section.blocks)) {
+            const block = section.blocks[blockId] as BlockData
+            if (block.type === 'title' || block.type === 'product_title' || block.type === 'product-title') {
+              if (block.settings) {
+                block.settings.title = productTitle
+                block.settings.heading = productTitle
+                block.settings.text = productTitle
+                block.settings.h2 = productTitle
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // Call Liquid service with retry logic for transient EPIPE errors
+    const MAX_RETRIES = 3
+    let lastError: Error | null = null
+    
+    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        console.log(`POST: Calling Liquid service for product: ${aiShopId}, attempt ${attempt}/${MAX_RETRIES}, sections count: ${sections.length}`)
+        
+        const response = await fetch(`${LIQUID_SERVICE_URL}/render-theme`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            theme_path: themePath,
+            layout: 'theme',
+            sections,
+            context
+          })
+        })
+        
+        console.log('POST: Liquid service response status:', response.status)
+
+        if (response.ok) {
+          const result = await response.json()
+          console.log('POST: Liquid service result - success:', result.success, 'html length:', result.html?.length || 0)
+          
+          if (result.success && result.html && result.html.length > 1000) {
+            // Get the origin from the request URL for base tag (needed for blob URL loading)
+            const origin = request.nextUrl.origin || 'http://localhost:3000'
+            const html = rewriteAssetUrls(result.html, aiContent, origin)
+            return new NextResponse(html, {
+              headers: { 'Content-Type': 'text/html' }
+            })
+          }
+        } else {
+          const errorText = await response.text()
+          console.error(`POST: Liquid service error (attempt ${attempt}):`, response.status, errorText.substring(0, 300))
+          
+          // If it's an EPIPE error, retry
+          if (errorText.includes('EPIPE') && attempt < MAX_RETRIES) {
+            console.log(`POST: EPIPE error detected, retrying in 500ms...`)
+            await new Promise(resolve => setTimeout(resolve, 500))
+            continue
+          }
+        }
+        // If we got here without returning, we got a response but it wasn't valid - don't retry
+        break
+      } catch (error) {
+        lastError = error as Error
+        console.error(`POST: Liquid service error (attempt ${attempt}):`, error)
+        
+        // Retry on network errors
+        if (attempt < MAX_RETRIES) {
+          console.log(`POST: Network error, retrying in 500ms...`)
+          await new Promise(resolve => setTimeout(resolve, 500))
+          continue
+        }
+      }
+    }
+    
+    if (lastError) {
+      console.error('POST: All retry attempts failed:', lastError)
     }
     
     // Fallback HTML - pass aiContent for dynamic colors

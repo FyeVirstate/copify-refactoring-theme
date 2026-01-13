@@ -33,11 +33,72 @@ interface GeneratedShop {
 
 // Loading stages configuration
 const LOADING_STAGES = [
-  { id: 1, text: 'Récupération du produit...', textEn: 'Fetching product data...' },
-  { id: 2, text: 'Génération du contenu IA...', textEn: 'Generating AI content...' },
-  { id: 3, text: 'Création de la boutique...', textEn: 'Creating store...' },
-  { id: 4, text: 'Finalisation...', textEn: 'Finalizing...' },
+  { id: 1, text: '(1/4) Récupération des données produit...', textEn: '(1/4) Fetching product data...' },
+  { id: 2, text: '(2/4) Génération du contenu IA...', textEn: '(2/4) Generating AI content...' },
+  { id: 3, text: '(3/4) Création de la boutique...', textEn: '(3/4) Creating store...' },
+  { id: 4, text: '(4/4) Génération des images IA...', textEn: '(4/4) Generating AI images...' },
 ];
+
+// URL validation types
+type UrlType = 'aliexpress' | 'amazon' | 'shopify' | 'unknown';
+type UrlValidationStatus = 'idle' | 'validating' | 'valid' | 'invalid';
+
+interface UrlValidationResult {
+  status: UrlValidationStatus;
+  type: UrlType;
+  message: string;
+}
+
+// Detect URL type (mirrors Laravel detectUrlType)
+function detectUrlType(url: string): UrlType {
+  if (!url || typeof url !== 'string') return 'unknown';
+  
+  const trimmedUrl = url.trim().toLowerCase();
+  
+  // AliExpress pattern
+  const aliexpressRegex = /aliexpress\.com\/item\/(\d+)\.html/i;
+  if (aliexpressRegex.test(trimmedUrl)) {
+    return 'aliexpress';
+  }
+  
+  // Amazon pattern - check for ASIN in URL
+  const amazonPatterns = [
+    /amazon\.[a-z.]+\/dp\/([A-Z0-9]{10})/i,
+    /amazon\.[a-z.]+\/gp\/product\/([A-Z0-9]{10})/i,
+    /amazon\.[a-z.]+\/.*\/dp\/([A-Z0-9]{10})/i,
+    /amzn\.[a-z.]+\/([A-Z0-9]{10})/i,
+  ];
+  for (const pattern of amazonPatterns) {
+    if (pattern.test(url)) {
+      return 'amazon';
+    }
+  }
+  
+  // Shopify pattern - any domain with /products/ path
+  const shopifyRegex1 = /^[a-zA-Z0-9-]+(\.[a-zA-Z0-9-]+)*\.[a-zA-Z]{2,61}\/products\/[0-9a-zA-Z-]{1,}/i;
+  const shopifyRegex2 = /^(https?:\/\/)?[a-zA-Z0-9-]+(\.[a-zA-Z0-9-]+)*\.[a-zA-Z]{2,61}\/(collections\/[a-zA-Z0-9-]+\/)?products\/[0-9a-zA-Z-]{1,}/i;
+  
+  if (shopifyRegex1.test(url) || shopifyRegex2.test(url) || url.includes('/products/')) {
+    return 'shopify';
+  }
+  
+  return 'unknown';
+}
+
+// Beautify URL for validation (doesn't modify user input)
+// Only called before submitting, not while typing
+function beautifyUrlForValidation(url: string): string {
+  if (!url || typeof url !== 'string') return url;
+  
+  let cleaned = url.trim();
+  
+  // Add https:// if missing (for validation purposes only)
+  if (!cleaned.startsWith('http://') && !cleaned.startsWith('https://')) {
+    cleaned = 'https://' + cleaned;
+  }
+  
+  return cleaned;
+}
 
 interface AIContent {
   // Basic product info
@@ -432,52 +493,24 @@ function AIInputField({
   );
 }
 
-// Loading Animation Component with particles and progress
+// Loading Animation Component with particles and progress (matching Laravel design)
 function GenerationLoader({
   isVisible,
   productUrl,
   progress,
   currentStage,
+  previewData,
 }: {
   isVisible: boolean;
   productUrl: string;
   progress: number;
   currentStage: number;
+  previewData?: { title?: string; description?: string; image?: string; price?: string } | null;
 }) {
   if (!isVisible) return null;
 
-  // Generate random dust particles
-  const dustParticles = useMemo(() => {
-    const particles = [];
-    // Center area particles
-    for (let i = 0; i < 20; i++) {
-      particles.push({
-        top: `${35 + Math.random() * 30}%`,
-        left: `${35 + Math.random() * 30}%`,
-        size: Math.random() * 4 + 1,
-      });
-    }
-    // Mid-range particles
-    for (let i = 0; i < 10; i++) {
-      particles.push({
-        top: `${25 + Math.random() * 50}%`,
-        left: `${20 + Math.random() * 60}%`,
-        size: Math.random() * 3 + 1,
-      });
-    }
-    // Outer particles
-    for (let i = 0; i < 15; i++) {
-      particles.push({
-        top: `${10 + Math.random() * 80}%`,
-        left: `${10 + Math.random() * 80}%`,
-        size: Math.random() * 2 + 1,
-      });
-    }
-    return particles;
-  }, []);
-
   return (
-    <div className="generation-loader position-relative mx-auto" style={{ maxWidth: '510px', marginTop: '80px' }}>
+    <div className="generation-loader position-relative mx-auto" style={{ maxWidth: '600px', marginTop: '60px' }}>
       {/* Floating spark icon */}
       <div className="position-absolute floating-spark-icon">
         <span className="primary-gradient-color-2 sparkling-icon">
@@ -486,7 +519,7 @@ function GenerationLoader({
       </div>
 
       <p 
-        className="mb-3 fw-500 text-center"
+        className="mb-3 fw-500 primary-gradient-tri-color"
         style={{
           fontSize: '1.5rem',
           background: 'linear-gradient(90deg, #476CFF, #0C6CFB, #a897ff)',
@@ -495,13 +528,13 @@ function GenerationLoader({
           backgroundClip: 'text',
         }}
       >
-        Génération en cours...
+        Génération de votre boutique....
       </p>
 
       {/* URL Input Display */}
       <div className="mb-0 w-100">
         <div className="input-w-left-icon mb-3 position-relative">
-          <span className="position-absolute" style={{ left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#99a0ae' }}>
+          <span className="position-absolute left-icon" style={{ left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#99a0ae' }}>
             <i className="ri-link"></i>
           </span>
           <input 
@@ -514,25 +547,28 @@ function GenerationLoader({
         </div>
       </div>
 
-      {/* Loading Stage Indicator */}
+      {/* Loading Stage Indicator with dots (like Laravel) */}
       <div className="mb-3">
         <div className="d-flex align-items-center justify-content-center py-2">
-          <span 
-            className="fw-500 fs-6"
-            style={{ 
-              color: '#335cff',
-              animation: 'hoverUpDown 1.5s ease-in-out infinite',
-            }}
-          >
+          <span className="fw-500 text-primary fs-6">
             {LOADING_STAGES[currentStage - 1]?.text || 'Chargement...'}
           </span>
         </div>
         <div className="d-flex justify-content-center gap-1 mt-2">
-          {LOADING_STAGES.map((stage) => (
+          {LOADING_STAGES.map((stage, index) => (
             <span 
               key={stage.id}
-              className={`stage-dot ${currentStage === stage.id ? 'active' : ''} ${currentStage > stage.id ? 'completed' : ''}`}
+              className={`stage-dot ${currentStage >= stage.id ? 'active' : ''}`}
               title={stage.text}
+              style={{
+                width: '10px',
+                height: '10px',
+                borderRadius: '50%',
+                background: currentStage >= stage.id 
+                  ? 'linear-gradient(91.46deg, #0c6cfb 1.25%, #a897ff 99.5%)' 
+                  : '#e0e5f0',
+                transition: 'all 0.3s ease',
+              }}
             />
           ))}
         </div>
@@ -541,7 +577,7 @@ function GenerationLoader({
       {/* Progress Bar */}
       <div className="progress mb-2" style={{ height: '24px', borderRadius: '12px', overflow: 'hidden' }}>
         <div 
-          className="progress-bar progress-bar-striped progress-bar-animated"
+          className="progress-bar progress-bar-striped progress-bar-animated progress-bar-gradient"
           role="progressbar" 
           style={{ 
             width: `${progress}%`,
@@ -549,92 +585,62 @@ function GenerationLoader({
             backgroundSize: '24px 24px, 100% 100%',
             transition: 'width 0.3s ease',
           }}
-          aria-valuenow={progress} 
-          aria-valuemin={0} 
+          aria-valuenow={progress}
+          aria-valuemin={0}
           aria-valuemax={100}
-        />
+        ></div>
       </div>
-      <p className="text-end fw-bold fs-lg mb-3" style={{ color: '#6b7280' }}>
+
+      {/* Percentage */}
+      <p className="text-end fw-bold text-sub fs-lg mb-3" style={{ color: '#525866' }}>
         {Math.round(progress)}%
       </p>
 
-      {/* Placeholder with dust particles */}
-      <div 
-        className="loading-placeholder p-3 d-flex gap-3 position-relative overflow-hidden"
-        style={{
-          backgroundColor: '#f6f8fa',
-          border: '1px solid #e2e4e9',
-          borderRadius: '12px',
-        }}
-      >
-        {/* Dust particles */}
-        {dustParticles.map((particle, idx) => (
-          <span 
-            key={idx}
-            style={{ 
-              position: 'absolute', 
-              top: particle.top, 
-              left: particle.left, 
-              width: `${particle.size}px`, 
-              height: `${particle.size}px`, 
-              background: 'white', 
-              borderRadius: '50%',
-              opacity: 0.8,
-              animation: `twinkle ${1 + Math.random() * 2}s ease-in-out infinite`,
-              animationDelay: `${Math.random() * 2}s`,
-            }}
-          />
-        ))}
-
-        {/* Loading placeholder image */}
+      {/* Skeleton Preview Card (like Laravel loading-placeholder) */}
+      <div className="loading-placeholder p-3 d-flex gap-3">
+        {/* Image skeleton - shows actual image if available */}
         <div 
           className="loading-placeholder-img flex-shrink-0"
-          style={{
-            width: '160px',
-            height: '160px',
-            borderRadius: '8px',
-            backgroundColor: '#e2e4e9',
-            animation: 'shimmer 1.5s ease-in-out infinite',
-          }}
+          style={previewData?.image ? {
+            backgroundImage: `url(${previewData.image})`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+          } : undefined}
         />
         
-        {/* Loading placeholder details */}
-        <div className="w-100 ai-generated-details-loading">
-          <div 
-            className="loading-placeholder-text mb-4"
-            style={{
-              height: '24px',
-              width: '80%',
-              borderRadius: '16px',
-              backgroundColor: '#e2e4e9',
-              animation: 'shimmer 1.5s ease-in-out infinite',
-              animationDelay: '0.2s',
-            }}
-          />
-          <div 
-            className="loading-placeholder-text mb-3"
-            style={{
-              height: '19px',
-              width: '60%',
-              borderRadius: '16px',
-              backgroundColor: '#e2e4e9',
-              animation: 'shimmer 1.5s ease-in-out infinite',
-              animationDelay: '0.4s',
-            }}
-          />
-          <div 
-            className="loading-placeholder-text"
-            style={{
-              height: '19px',
-              width: '30%',
-              borderRadius: '16px',
-              backgroundColor: '#e2e4e9',
-              animation: 'shimmer 1.5s ease-in-out infinite',
-              animationDelay: '0.6s',
-            }}
-          />
+        {/* Text content */}
+        <div className="w-100 d-flex flex-column justify-content-center">
+          {/* Loading state (skeleton) */}
+          {!previewData?.title ? (
+            <div className="ai-generated-details-loading">
+              <div className="loading-placeholder-text loading-placeholder-text-title mb-4" />
+              <div className="loading-placeholder-text loading-placeholder-text-detail small-h w-50 mb-3" />
+              <div className="loading-placeholder-text loading-placeholder-text-price small-h w-25" />
+            </div>
+          ) : (
+            /* Actual product details (shown after API response) */
+            <div 
+              className="ai-generated-details"
+              style={{ animation: 'fadeIn 0.5s ease-in-out' }}
+            >
+              <p className="fs-lg fw-600 mb-3" style={{ color: '#0E121B' }}>
+                {previewData.title.length > 60 ? previewData.title.substring(0, 60) + '...' : previewData.title}
+              </p>
+              {previewData.description && (
+                <p className="mb-2 text-sub fs-small" style={{ color: '#6B7280' }}>
+                  {previewData.description.length > 100 ? previewData.description.substring(0, 100) + '...' : previewData.description}
+                </p>
+              )}
+              {previewData.price && (
+                <p className="text-soft fw-600 mb-0" style={{ color: '#335CFF' }}>
+                  {previewData.price}
+                </p>
+              )}
+            </div>
+          )}
         </div>
       </div>
+
     </div>
   );
 }
@@ -694,6 +700,23 @@ export default function AIShopPage() {
   const [generationProgress, setGenerationProgress] = useState(0);
   const [generationStage, setGenerationStage] = useState(1);
   const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const previewDataLoadedRef = useRef<boolean>(false);
+  
+  // URL validation state
+  const [urlValidation, setUrlValidation] = useState<UrlValidationResult>({
+    status: 'idle',
+    type: 'unknown',
+    message: ''
+  });
+  const urlValidationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // Preview data for skeleton loader
+  const [previewData, setPreviewData] = useState<{
+    title?: string;
+    description?: string;
+    image?: string;
+    price?: string;
+  } | null>(null);
   
   // Step 2: Select images
   const [aiContent, setAiContent] = useState<AIContent | null>(null);
@@ -757,6 +780,115 @@ export default function AIShopPage() {
   const credits = stats?.storeGeneration.isUnlimited ? -1 : (stats?.storeGeneration.limit ?? 0) - (stats?.storeGeneration.used ?? 0);
   const hasCredits = stats?.storeGeneration.isUnlimited || credits > 0;
 
+  // URL validation handler with debounce (like Laravel - doesn't modify input)
+  const validateProductUrl = useCallback(async (url: string) => {
+    // Clear previous timeout
+    if (urlValidationTimeoutRef.current) {
+      clearTimeout(urlValidationTimeoutRef.current);
+    }
+    
+    // Empty URL
+    if (!url.trim()) {
+      setUrlValidation({ status: 'idle', type: 'unknown', message: '' });
+      return;
+    }
+    
+    // Show validating state (loader icon)
+    setUrlValidation({ status: 'validating', type: 'unknown', message: '' });
+    
+    // Debounce validation (like Laravel setTimeout 500ms)
+    urlValidationTimeoutRef.current = setTimeout(async () => {
+      // Add https if needed for validation only (don't modify user input)
+      const urlForValidation = beautifyUrlForValidation(url);
+      const urlType = detectUrlType(urlForValidation);
+      
+      console.log('[URL Validation] Type detected:', urlType, 'URL:', urlForValidation);
+      
+      if (urlType === 'aliexpress') {
+        // Validate AliExpress URL format - must end with .html
+        const aliRegex = /aliexpress\.com\/item\/(\d+)\.html$/i;
+        if (aliRegex.test(urlForValidation)) {
+          setUrlValidation({
+            status: 'valid',
+            type: 'aliexpress',
+            message: 'URL de produit valide'
+          });
+        } else {
+          // Check if it's partially valid (missing .html ending)
+          const partialRegex = /aliexpress\.com\/item\/(\d+)/i;
+          if (partialRegex.test(urlForValidation)) {
+            setUrlValidation({
+              status: 'invalid',
+              type: 'aliexpress',
+              message: 'L\'URL doit se terminer par .html'
+            });
+          } else {
+            setUrlValidation({
+              status: 'invalid',
+              type: 'aliexpress',
+              message: 'Format URL AliExpress invalide. Ex: aliexpress.com/item/123456.html'
+            });
+          }
+        }
+      } else if (urlType === 'amazon') {
+        setUrlValidation({
+          status: 'valid',
+          type: 'amazon',
+          message: 'URL de produit valide'
+        });
+      } else if (urlType === 'shopify') {
+        // Validate Shopify URL - must have /products/ path
+        if (urlForValidation.includes('/products/')) {
+          setUrlValidation({
+            status: 'valid',
+            type: 'shopify',
+            message: 'URL de produit valide'
+          });
+        } else {
+          setUrlValidation({
+            status: 'invalid',
+            type: 'shopify',
+            message: 'L\'URL doit contenir /products/'
+          });
+        }
+      } else {
+        // Check if it's just a domain without product path
+        const isDomainOnly = /^(https?:\/\/)?(www\.)?[a-zA-Z0-9-]+(\.[a-zA-Z0-9-]+)*\.[a-zA-Z]{2,}(\/)?$/i.test(urlForValidation);
+        
+        if (isDomainOnly) {
+          setUrlValidation({
+            status: 'invalid',
+            type: 'unknown',
+            message: 'Veuillez entrer un lien de produit, pas juste un domaine'
+          });
+        } else {
+          setUrlValidation({
+            status: 'invalid',
+            type: 'unknown',
+            message: 'Veuillez saisir une URL de page de produit AliExpress, Amazon ou Shopify valide'
+          });
+        }
+      }
+    }, 500); // 500ms debounce like Laravel
+  }, []);
+
+  // Handle URL input change - DON'T modify user input, just validate
+  const handleUrlChange = useCallback((value: string) => {
+    // Set the raw value - don't beautify while typing
+    setProductUrl(value);
+    // Validate the URL
+    validateProductUrl(value);
+  }, [validateProductUrl]);
+
+  // Cleanup validation timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (urlValidationTimeoutRef.current) {
+        clearTimeout(urlValidationTimeoutRef.current);
+      }
+    };
+  }, []);
+
   // Get language flag
   const getLanguageFlag = (lang: string) => {
     return LANGUAGES.find(l => l.code === lang)?.flag || '🌐';
@@ -785,18 +917,61 @@ export default function AIShopPage() {
       return;
     }
 
-    const isAliExpress = productUrl.includes('aliexpress.com');
-    const isAmazon = productUrl.includes('amazon.');
-    
-    if (!isAliExpress && !isAmazon) {
-      setError("Veuillez entrer un lien AliExpress ou Amazon valide");
+    // Check URL validation status
+    if (urlValidation.status !== 'valid') {
+      setError(urlValidation.message || "Veuillez entrer une URL de produit valide");
       return;
     }
+
+    const urlType = detectUrlType(productUrl);
+    console.log('[Generate] Starting generation for URL type:', urlType);
 
     setIsGenerating(true);
     setError(null);
     setGenerationProgress(0);
     setGenerationStage(1);
+    setPreviewData(null);
+    previewDataLoadedRef.current = false;
+
+    // Function to quickly fetch product data and display it immediately
+    const fetchProductPreviewData = async () => {
+      try {
+        // Call the preview API endpoint
+        const previewResponse = await fetch('/api/ai/fetch-product-preview', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ productUrl }),
+        });
+
+        if (previewResponse.ok) {
+          const previewData = await previewResponse.json();
+          
+          if (previewData.success && previewData.title) {
+            const priceDisplay = previewData.price 
+              ? `€ ${typeof previewData.price === 'number' ? previewData.price.toFixed(2) : previewData.price}` 
+              : undefined;
+            
+            setPreviewData({
+              title: previewData.title,
+              description: previewData.description || '',
+              image: previewData.image || null,
+              price: priceDisplay,
+            });
+            
+            // Mark as loaded and update to stage 2 since we have product data
+            previewDataLoadedRef.current = true;
+            setGenerationStage(2);
+            setGenerationProgress(40);
+          }
+        }
+      } catch (err) {
+        console.log('[Preview] Could not fetch preview data:', err);
+        // Don't fail the whole process if preview fetch fails
+      }
+    };
+
+    // Fetch product preview data immediately (non-blocking)
+    fetchProductPreviewData();
 
     // Start progress animation
     // Phase 1: 0-40% (scraping) over ~15 seconds
@@ -813,7 +988,10 @@ export default function AIShopPage() {
       // Dynamic stages based on elapsed time
       if (elapsed < 15000) {
         // Stage 1: Scraping (0-15s) -> 0-40%
-        setGenerationStage(1);
+        // Only set stage 1 if preview data hasn't been loaded yet
+        if (!previewDataLoadedRef.current) {
+          setGenerationStage(1);
+        }
         progress = Math.min(40, (elapsed / 15000) * 40);
       } else if (elapsed < 35000) {
         // Stage 2: AI Copywriting (15-35s) -> 40-70%
@@ -854,22 +1032,44 @@ export default function AIShopPage() {
         throw new Error(data.error || 'Erreur lors de la génération');
       }
 
+      // Update previewData with returned product data (like Laravel does)
+      // This will override the quick preview with final AI-generated content
+      const aiContentData = data.aiContent || data.product || {};
+      const productDataResponse = data.productData || {};
+      
+      // Get the first image from aiContent, productData, or productResponse
+      const firstImage = aiContentData.images?.[0] || 
+                        productDataResponse.images?.[0] || 
+                        data.product?.images?.[0];
+      
+      // Get price from aiContent or product data
+      const price = aiContentData.price || data.product?.price;
+      const priceDisplay = price ? `€ ${typeof price === 'number' ? price.toFixed(2) : price}` : undefined;
+      
+      // Use AI-generated description if available, otherwise use original
+      const description = aiContentData.description || aiContentData.tagline || '';
+      
+      setPreviewData({
+        title: aiContentData.title || data.product?.title || 'Product',
+        description: description,
+        image: firstImage,
+        price: priceDisplay,
+      });
+      
+      previewDataLoadedRef.current = true;
+
       // Complete progress
       setGenerationProgress(100);
       
-      // Small delay to show 100%
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // Longer delay to show the completed skeleton with product data (like Laravel)
+      await new Promise(resolve => setTimeout(resolve, 1500));
 
-      // Save AI content and move to step 2
-      setAiContent(data.aiContent);
-      setSelectedImages(data.aiContent.images || []);
-      setStoreName(data.aiContent.title || '');
-      setGeneratedProductId(data.productId);
-      setCurrentStep(2);
-      
-      // Refresh stats
+      // Refresh stats and history before redirect
       refreshStats();
       loadHistory();
+      
+      // Redirect to the proper editor page instead of showing duplicate steps 2/3
+      router.push(`/dashboard/ai-shop/${data.productId}`);
       
     } catch (err) {
       // Clear progress interval on error
@@ -1522,6 +1722,7 @@ export default function AIShopPage() {
                   productUrl={productUrl}
                   progress={generationProgress}
                   currentStage={generationStage}
+                  previewData={previewData}
                 />
               ) : (
                 <>
@@ -1543,9 +1744,10 @@ export default function AIShopPage() {
                       </sup>
                     </h2>
                     <p className="text-sub mb-0" style={{ fontSize: '15px', lineHeight: '1.6', color: '#6B7280' }}>
-                      Transformez un lien de produit en boutique qui convertie. Collez le lien{' '}
-                      <span className="export-aliexpress-gradient">AliExpress</span> ou{' '}
-                      <span className="export-shopify-gradient">Amazon</span> ci-dessous, générez et personnalisez.
+                      Transformez un lien de produit en boutique qui convertie. Collez votre lien{' '}
+                      <span className="export-aliexpress-gradient">AliExpress</span>,{' '}
+                      <span className="export-shopify-gradient">Shopify</span> ou{' '}
+                      <span style={{ background: 'linear-gradient(90deg, #FF9900, #FF6600)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Amazon</span> ci-dessous, générez et personnalisez.
                     </p>
                   </div>
 
@@ -1555,17 +1757,34 @@ export default function AIShopPage() {
                       <div className="position-relative" style={{ flexGrow: 1, width: '400px', maxWidth: '100%' }}>
                         <Input
                           type="text"
-                          className="ai-shop-url-input form-control design-2"
-                          placeholder="https://www.aliexpress.com/item/10050082978909342..."
+                          className={`ai-shop-url-input form-control design-2 ${
+                            urlValidation.status === 'valid' ? 'input-success' : 
+                            urlValidation.status === 'invalid' ? 'input-error' : ''
+                          }`}
+                          placeholder="https://www.aliexpress.com/item/10050082978909342.html"
                           value={productUrl}
-                          onChange={(e) => setProductUrl(e.target.value)}
+                          onChange={(e) => handleUrlChange(e.target.value)}
                           disabled={isGenerating || !hasCredits}
                           onKeyDown={(e) => {
-                            if (e.key === 'Enter' && !isGenerating && hasCredits && productUrl.trim()) {
+                            if (e.key === 'Enter' && !isGenerating && hasCredits && urlValidation.status === 'valid') {
                               handleGenerate();
                             }
                           }}
                         />
+                        {/* Validation loader */}
+                        {urlValidation.status === 'validating' && (
+                          <span 
+                            className="position-absolute" 
+                            style={{ 
+                              right: '12px', 
+                              top: '50%', 
+                              transform: 'translateY(-50%)',
+                              color: '#99a0ae'
+                            }}
+                          >
+                            <i className="ri-loader-4-line spin-animation"></i>
+                          </span>
+                        )}
                       </div>
 
                       <select
@@ -1584,7 +1803,7 @@ export default function AIShopPage() {
                       <Button
                         onClick={handleGenerate}
                         className="ai-shop-generate-btn btn btn-primary"
-                        disabled={isGenerating || !productUrl.trim() || !hasCredits}
+                        disabled={isGenerating || urlValidation.status !== 'valid' || !hasCredits}
                       >
                         {isGenerating ? (
                           <>
@@ -1599,6 +1818,20 @@ export default function AIShopPage() {
                         )}
                       </Button>
                     </div>
+
+                    {/* URL Validation Message */}
+                    {urlValidation.status === 'valid' && (
+                      <div className="url-validation-message success mt-2 d-flex align-items-center gap-2">
+                        <i className="ri-checkbox-circle-fill text-success"></i>
+                        <span className="text-success fs-small">{urlValidation.message}</span>
+                      </div>
+                    )}
+                    {urlValidation.status === 'invalid' && (
+                      <div className="url-validation-message error mt-2 d-flex align-items-center gap-2">
+                        <i className="ri-error-warning-fill text-danger"></i>
+                        <span className="text-danger fs-small">{urlValidation.message}</span>
+                      </div>
+                    )}
 
                     {/* Shopify Setup Notice */}
                     {!session?.user?.shopifyDomain && (

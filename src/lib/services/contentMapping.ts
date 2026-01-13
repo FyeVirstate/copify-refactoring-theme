@@ -33,12 +33,15 @@ interface DistributedImages {
   featuredImage?: string
   landingPageImage?: string
   benefitsImage?: string
+  benefitsImage2?: string
   statisticsImage?: string
   timelineImage?: string
-  comparisonImage?: string
+  comparisonOurImage?: string
+  comparisonOthersImage?: string
   faqImage?: string
   productSectionImage?: string
   imageWithTextImage?: string
+  heroImages?: string[]
 }
 
 interface Testimonial {
@@ -172,19 +175,28 @@ export function applyContentToSettings(
 ): BlockSettings {
   const normalizedType = normalizeSectionType(sectionType)
   
-  // Get images with fallbacks
+  // Get images with fallbacks - use frontend field names (selectedBenefitsImage, selectedClinicalImage, selectedHeroImage)
   const productImages = (aiContent.images as string[]) || []
   const featuredImage = images.featuredImage || productImages[0] || 'https://placehold.co/600x600/png?text=Product'
-  const landingPageImage = images.landingPageImage || (aiContent.landingPageImage as string) || (aiContent.selectedLandingPageImage as string) || featuredImage
-  const benefitsImage = images.benefitsImage || (aiContent.benefitsImage as string) || landingPageImage
-  const statisticsImage = images.statisticsImage || (aiContent.clinicalImage as string) || landingPageImage
+  // Hero image: frontend uses selectedHeroImage
+  const landingPageImage = images.landingPageImage || (aiContent.selectedHeroImage as string) || (aiContent.selectedLandingPageImage as string) || (aiContent.landingPageImage as string) || featuredImage
+  // Benefits image: frontend uses selectedBenefitsImage
+  const benefitsImage = images.benefitsImage || (aiContent.selectedBenefitsImage as string) || (aiContent.benefitsImage as string) || landingPageImage
+  // Statistics/Clinical image: frontend uses selectedClinicalImage
+  const statisticsImage = images.statisticsImage || (aiContent.selectedClinicalImage as string) || (aiContent.clinicalImage as string) || landingPageImage
+  // Timeline image: frontend uses timelineImage
   const timelineImage = images.timelineImage || (aiContent.timelineImage as string) || landingPageImage
-  const comparisonImage = images.comparisonImage || (aiContent.comparisonImage as string) || landingPageImage
+  // Comparison images: frontend uses comparisonOurImage and comparisonOthersImage
+  const comparisonOurImage = images.comparisonOurImage || (aiContent.comparisonOurImage as string) || (aiContent.comparisonImage as string) || featuredImage
+  const comparisonOthersImage = images.comparisonOthersImage || (aiContent.comparisonOthersImage as string) || landingPageImage
+  // FAQ image: frontend uses faqImage
   const faqImage = images.faqImage || (aiContent.faqImage as string) || benefitsImage
-  const productSectionImage = images.productSectionImage || (aiContent.productSectionImage as string) || featuredImage
+  // Product section images: frontend uses productSectionImage (array)
+  const productSectionImage = images.productSectionImage || (Array.isArray(aiContent.productSectionImage) ? (aiContent.productSectionImage as string[])[0] : (aiContent.productSectionImage as string)) || featuredImage
+  // Image with text: frontend uses imageWithTextImage
   const imageWithTextImage = images.imageWithTextImage || (aiContent.imageWithTextImage as string) || landingPageImage
   
-  const storeName = (aiContent.store_name as string) || 'Our Product'
+  const storeName = (aiContent.store_name as string) || 'YOUR BRAND'
   const persuasiveContent = (aiContent.persuasiveContent as Record<string, string>) || {}
   const imageWithText = (aiContent.imageWithText as Record<string, string>) || {}
   const comparison = (aiContent.comparison as Comparison) || {}
@@ -193,11 +205,11 @@ export function applyContentToSettings(
   
   const mappings: Record<string, Record<string, unknown>> = {
     'featured-product': {
-      heading: aiContent.header || aiContent.title || null,
+      // Don't use title here - it will be set in blocks for product__title h2
       color_scheme: 'scheme-1',
     },
     'featured-product-new': {
-      heading: aiContent.header || aiContent.title || null,
+      // Don't use title here - it will be set in blocks for product__title h2
       color_scheme: 'scheme-1',
     },
     'footer': {
@@ -278,7 +290,7 @@ export function applyContentToSettings(
     'pdp-comparison-table': {
       heading: formatWithTagSpan(comparison.heading || 'Why Choose Us', 1),
       subheading: comparison.subheading || 'See the difference that matters',
-      image: comparisonImage,
+      image: comparisonOurImage,
     },
     'custom-newsletter': {
       heading: aiContent.newsletterHeading || null,
@@ -304,6 +316,14 @@ export function applyContentToSettings(
     },
     'marquee': {
       // Marquee section usually doesn't need settings override
+    },
+    'header': {
+      title: 'YOUR BRAND', // Always "YOUR BRAND" for navbar, not editable
+      heading: 'YOUR BRAND',
+    },
+    'navbar': {
+      title: 'YOUR BRAND', // Always "YOUR BRAND" for navbar, not editable
+      heading: 'YOUR BRAND',
     },
   }
   
@@ -355,6 +375,7 @@ export function applyContentToBlocks(
     timeline: 0,
     comparison: 0,
     collapsible: 0,
+    tableHeading: 0,
   }
   
   for (const blockId of Object.keys(blocks)) {
@@ -613,17 +634,40 @@ export function applyContentToBlocks(
       indexes.featureRight++
     }
     
+    // === TABLE HEADING (pdp-comparison-table column headers) ===
+    if (blockType === 'table_heading' && normalizedType === 'pdp-comparison-table') {
+      const comparisonData = comparison as { our_name?: string; others_name?: string }
+      if (indexes.tableHeading === 0) {
+        // First column: Our product
+        block.settings.title = comparisonData.our_name || storeName || 'Our Product'
+        block.settings.icon_text = 'Original'
+        // Use comparisonOurImage for our product column
+        block.settings.image = images.comparisonOurImage || (aiContent.comparisonOurImage as string) || images.featuredImage
+      } else {
+        // Second column: Others/Competitors
+        block.settings.title = comparisonData.others_name || 'Others'
+        block.settings.icon_text = ''
+        // Use comparisonOthersImage for others column
+        block.settings.image = images.comparisonOthersImage || (aiContent.comparisonOthersImage as string) || ''
+      }
+      indexes.tableHeading++
+    }
+    
     // === GENERIC FEATURES / BENEFITS ===
     if ((blockType.includes('feature') && !['feature_left', 'feature_right'].includes(blockType)) ||
         blockType.includes('icon_with_text') ||
         blockType === 'benefit' || blockType === 'item') {
       
-      // pdp-comparison-table features
+      // pdp-comparison-table features - skip empty features
       if (normalizedType === 'pdp-comparison-table' && comparisonFeatures[indexes.comparison]) {
         const cf = comparisonFeatures[indexes.comparison]
-        block.settings.feature_title = cf.feature || cf.title || ''
-        block.settings.feature_have_a = (cf.us === 'yes' || cf.us === true) ? 'true' : 'false'
-        block.settings.feature_have_b = (cf.others === 'yes' || cf.others === true) ? 'true' : 'false'
+        const featureTitle = cf.feature || cf.title || ''
+        // Only set if feature has actual content (not empty or just "Feature")
+        if (featureTitle && featureTitle !== 'Feature') {
+          block.settings.feature_title = featureTitle
+          block.settings.feature_have_a = (cf.us === 'yes' || cf.us === true) ? 'true' : 'false'
+          block.settings.feature_have_b = (cf.others === 'yes' || cf.others === true) ? 'true' : 'false'
+        }
         indexes.comparison++
       }
       // pdp-benefits section
@@ -683,8 +727,35 @@ export function applyContentToBlocks(
       }
     }
     
+    // === NAVBAR / HEADER TITLE (must be checked BEFORE title blocks) ===
+    // Ensure navbar always shows "YOUR BRAND" or store_name, never the product title
+    // This handles header__heading-link which should always be "YOUR BRAND"
+    if (blockType === 'navbar_title' || blockType === 'header_title' || blockType === 'navbar-title' ||
+        blockType === 'heading-link' || blockType === 'header_heading' ||
+        (blockType === 'title' && (normalizedType === 'header' || normalizedType === 'navbar' || sectionType.includes('header')))) {
+      // Use store_name or "YOUR BRAND" for navbar, never the product title
+      // Force "YOUR BRAND" for header__heading-link
+      block.settings.title = 'YOUR BRAND'
+      block.settings.heading = 'YOUR BRAND'
+      block.settings.text = 'YOUR BRAND'
+      block.settings.link_text = 'YOUR BRAND'
+    }
+    // === PRODUCT TITLE BLOCKS (h2 product__title in featured-product) ===
+    // This should use the "Titre du produit" from "Informations sur le produit" section
+    else if (blockType === 'product_title' || blockType === 'product-title' || 
+        blockType === 'product-title-h2' || blockType === 'product__title' ||
+        (blockType === 'title' && (normalizedType === 'featured-product' || normalizedType === 'pdp-main-product' || normalizedType === 'main-product-custom'))) {
+      // Use the product title from "Informations sur le produit" section (aiContent.title)
+      const productTitle = (aiContent.title as string) || ''
+      if (productTitle) {
+        block.settings.title = productTitle
+        block.settings.heading = productTitle
+        block.settings.text = productTitle
+        block.settings.h2 = productTitle
+      }
+    }
     // === TITLE BLOCKS (img-with-txt) ===
-    if (blockType === 'title') {
+    else if (blockType === 'title') {
       let mainCatchy = (aiContent.mainCatchyText as string) || (aiContent.header as string) || ''
       if (mainCatchy) {
         // Add span highlighting to last 2 words if not present
@@ -709,21 +780,28 @@ export function applyContentToBlocks(
     
     // === HEADING BLOCKS ===
     if (blockType === 'heading') {
-      const imageWithText = (aiContent.imageWithText as Record<string, string>) || {}
-      if (normalizedType.includes('text-and-image')) {
-        block.settings.heading = imageWithText.header || (block.settings.heading as string) || ''
-      } else if (normalizedType.includes('image-with-text') || sectionType.includes('image_with_text')) {
-        let mainCatchy = (aiContent.mainCatchyText as string) || (aiContent.header as string) || ''
-        if (mainCatchy) {
-          if (!mainCatchy.includes('<strong>')) {
-            mainCatchy = '<strong>' + mainCatchy + '</strong>'
+      // Skip heading blocks for header/navbar sections - they should use "YOUR BRAND"
+      if (normalizedType === 'header' || normalizedType === 'navbar' || sectionType.includes('header')) {
+        block.settings.heading = 'YOUR BRAND'
+        block.settings.title = 'YOUR BRAND'
+        block.settings.text = 'YOUR BRAND'
+      } else {
+        const imageWithText = (aiContent.imageWithText as Record<string, string>) || {}
+        if (normalizedType.includes('text-and-image')) {
+          block.settings.heading = imageWithText.header || (block.settings.heading as string) || ''
+        } else if (normalizedType.includes('image-with-text') || sectionType.includes('image_with_text')) {
+          let mainCatchy = (aiContent.mainCatchyText as string) || (aiContent.header as string) || ''
+          if (mainCatchy) {
+            if (!mainCatchy.includes('<strong>')) {
+              mainCatchy = '<strong>' + mainCatchy + '</strong>'
+            }
+            block.settings.heading = mainCatchy
           }
-          block.settings.heading = mainCatchy
-        }
-      } else if (normalizedType.includes('rich-text')) {
-        const newHeading = (aiContent.ctaHeading as string) || (aiContent.header as string) || (aiContent.mainCatchyText as string) || null
-        if (newHeading) {
-          block.settings.heading = newHeading
+        } else if (normalizedType.includes('rich-text')) {
+          const newHeading = (aiContent.ctaHeading as string) || (aiContent.header as string) || (aiContent.mainCatchyText as string) || null
+          if (newHeading) {
+            block.settings.heading = newHeading
+          }
         }
       }
     }
@@ -953,31 +1031,60 @@ export function distributeImagesToSections(
   
   const count = images.length
   
+  // Get user-selected images from editedContent (these take priority!)
+  const selectedHeroImage = (aiContent.selectedHeroImage as string)
+  const selectedBenefitsImage = (aiContent.selectedBenefitsImage as string)
+  const selectedClinicalImage = (aiContent.selectedClinicalImage as string)
+  const timelineImage = (aiContent.timelineImage as string)
+  const faqImage = (aiContent.faqImage as string)
+  const imageWithTextImage = (aiContent.imageWithTextImage as string)
+  const productSectionImages = (aiContent.productSectionImage as string[])
+  // Comparison images
+  const comparisonOurImage = (aiContent.comparisonOurImage as string)
+  const comparisonOthersImage = (aiContent.comparisonOthersImage as string)
+  // Benefits secondary image
+  const selectedBenefitsImage2 = (aiContent.selectedBenefitsImage2 as string)
+  
   if (count === 0) {
     return {
       featuredImage: placeholder,
-      landingPageImage: (aiContent.selectedLandingPageImage as string) || (aiContent.landingPageImage as string) || placeholder,
-      productSectionImage: (aiContent.productSectionImage as string) || placeholder,
-      imageWithTextImage: (aiContent.imageWithTextImage as string) || placeholder,
-      statisticsImage: (aiContent.clinicalImage as string) || (aiContent.statisticsImage as string) || placeholder,
-      timelineImage: (aiContent.timelineImage as string) || placeholder,
-      benefitsImage: (aiContent.benefitsImage as string) || placeholder,
-      faqImage: (aiContent.faqImage as string) || placeholder,
-      comparisonImage: (aiContent.comparisonImage as string) || placeholder,
+      landingPageImage: selectedHeroImage || (aiContent.selectedLandingPageImage as string) || (aiContent.landingPageImage as string) || placeholder,
+      productSectionImage: (productSectionImages && productSectionImages[0]) || placeholder,
+      imageWithTextImage: imageWithTextImage || placeholder,
+      statisticsImage: selectedClinicalImage || (aiContent.clinicalImage as string) || (aiContent.statisticsImage as string) || placeholder,
+      timelineImage: timelineImage || placeholder,
+      benefitsImage: selectedBenefitsImage || (aiContent.benefitsImage as string) || placeholder,
+      benefitsImage2: selectedBenefitsImage2 || placeholder,
+      faqImage: faqImage || placeholder,
+      comparisonOurImage: comparisonOurImage || (aiContent.comparisonImage as string) || placeholder,
+      comparisonOthersImage: comparisonOthersImage || placeholder,
+      heroImages: productSectionImages || [],
     }
   }
   
-  // Distribute images intelligently, prioritizing AI-selected images
+  // Distribute images intelligently, prioritizing USER-selected images over defaults
   return {
     featuredImage: images[0],
-    landingPageImage: (aiContent.selectedLandingPageImage as string) || (aiContent.landingPageImage as string) || images[0],
-    productSectionImage: (aiContent.productSectionImage as string) || images[Math.min(1, count - 1)],
-    imageWithTextImage: (aiContent.imageWithTextImage as string) || images[Math.min(2, count - 1)],
-    statisticsImage: (aiContent.clinicalImage as string) || (aiContent.statisticsImage as string) || images[Math.min(3, count - 1)],
-    timelineImage: (aiContent.timelineImage as string) || images[Math.min(4, count - 1)],
-    benefitsImage: (aiContent.benefitsImage as string) || images[Math.min(1, count - 1)],
-    faqImage: (aiContent.faqImage as string) || images[Math.min(2, count - 1)],
-    comparisonImage: (aiContent.comparisonImage as string) || images[0],
+    // Hero / Landing page - user selection first
+    landingPageImage: selectedHeroImage || (aiContent.selectedLandingPageImage as string) || (aiContent.landingPageImage as string) || images[0],
+    // Product section images (multiple)
+    productSectionImage: (productSectionImages && productSectionImages[0]) || images[Math.min(1, count - 1)],
+    // Image with text section
+    imageWithTextImage: imageWithTextImage || images[Math.min(2, count - 1)],
+    // Statistics/Clinical section - user selection first
+    statisticsImage: selectedClinicalImage || (aiContent.clinicalImage as string) || (aiContent.statisticsImage as string) || images[Math.min(3, count - 1)],
+    // Timeline section - user selection first
+    timelineImage: timelineImage || images[Math.min(4, count - 1)],
+    // Benefits section - user selection first
+    benefitsImage: selectedBenefitsImage || (aiContent.benefitsImage as string) || images[Math.min(1, count - 1)],
+    benefitsImage2: selectedBenefitsImage2 || images[Math.min(2, count - 1)],
+    // FAQ section - user selection first
+    faqImage: faqImage || images[Math.min(2, count - 1)],
+    // Comparison table - separate images for our product and others
+    comparisonOurImage: comparisonOurImage || (aiContent.comparisonImage as string) || images[0],
+    comparisonOthersImage: comparisonOthersImage || images[Math.min(1, count - 1)] || images[0],
+    // Hero images array for galleries
+    heroImages: productSectionImages || images.slice(0, 5),
   }
 }
 

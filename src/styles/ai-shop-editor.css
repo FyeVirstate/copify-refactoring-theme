@@ -1,0 +1,1685 @@
+        /* Match Laravel ai_store.css layout structure */
+        
+        /* Data view container - fixed height, no overflow */
+        .section-two .data-view {
+            height: calc(100vh - 32px) !important;
+            display: flex !important;
+            flex-direction: column !important;
+            overflow: hidden !important;
+          }
+          
+          /* Content menu sidebar - scrollable */
+          .content-menu-sidebar {
+            overflow-y: auto !important;
+            overflow-x: visible !important;
+          }
+          
+          /* Content editor wrapper - fixed height */
+          .content-editor-wrapper {
+            display: flex !important;
+            flex-direction: column !important;
+          }
+          
+          /* Content editor - takes remaining space, scrolls */
+          .content-editor {
+            flex: 1 !important;
+            overflow-y: auto !important;
+            overflow-x: hidden !important;
+          }
+          
+          /* Preview panel - has its own scroll */
+          #AIStorePreview {
+            height: calc(100vh - 115px) !important;
+            overflow-y: auto !important;
+            overflow-x: hidden !important;
+          }
+          
+          /* Left panel container - holds sidebar + content + footer */
+          .left-panel-container {
+            position: relative !important;
+          }
+          
+          /* ========================================
+             FORM STYLING - Match Laravel ai_store.css
+             ======================================== */
+          
+          /* Font size utilities matching Laravel */
+          .fs-xs {
+            font-size: 12px !important;
+          }
+          
+          .fs-small {
+            font-size: 0.875em !important;
+          }
+          
+          .fs-lg {
+            font-size: 1.125rem !important;
+          }
+          
+          .fw-500 {
+            font-weight: 500 !important;
+          }
+          
+          .fw-600 {
+            font-weight: 600 !important;
+          }
+          
+          /* Form control sizes */
+          .content-editor .form-control {
+            font-size: 14px;
+            padding: 0.5rem 0.75rem;
+          }
+          
+          .content-editor .form-control-sm {
+            font-size: 14px;
+            padding: 0.375rem 0.75rem;
+          }
+          
+          /* Section title - matches Laravel fs-lg fw-600 */
+          .content-editor .fs-5.fw-600,
+          .content-editor .section-title {
+            font-size: 1.125rem !important;
+            font-weight: 600 !important;
+          }
+          
+          /* Regenerate button - hidden by default, shown on hover */
+          .regenerate-field-btn {
+            border: none !important;
+            background: none !important;
+            opacity: 0 !important;
+            visibility: hidden !important;
+            transition: opacity 0.2s ease, visibility 0.2s ease !important;
+            cursor: pointer;
+            z-index: 100;
+            position: relative;
+            color: #6c757d;
+          }
+          
+          .regenerate-field-btn .regenerate-loading-icon {
+            font-size: 1.1em !important;
+            line-height: 16px;
+            color: #99a0ae;
+          }
+          
+          /* Show regenerate button ONLY when hovering directly on the input/textarea field */
+          /* Use ONLY sibling selector (~) to target ONLY the button that is a direct sibling of the hovered input */
+          /* This ensures only ONE button appears at a time - the one next to the hovered input */
+          .form-control:hover ~ .regenerate-field-btn,
+          input.form-control:hover ~ .regenerate-field-btn,
+          textarea.form-control:hover ~ .regenerate-field-btn {
+            opacity: 1 !important;
+            visibility: visible !important;
+          }
+          
+          /* Show button when hovering the button itself - keep it visible */
+          .regenerate-field-btn:hover,
+          .regenerate-field-btn:focus {
+            opacity: 1 !important;
+            visibility: visible !important;
+            color: #2563eb;
+            transform: scale(1.1);
+          }
+          
+          /* When regenerating, always show the button */
+          .regenerate-field-btn:disabled {
+            opacity: 1 !important;
+            visibility: visible !important;
+            cursor: not-allowed;
+          }
+          
+          /* Hide regenerate button on number inputs */
+          input[type="number"] ~ .regenerate-field-btn,
+          input[type="number"] + .regenerate-field-btn {
+            display: none !important;
+          }
+          
+          .regenerate-field-btn.btn-spinning {
+            animation: spin 1s linear infinite;
+          }
+          
+          /* Loading state for input field - medium gray background during regeneration */
+          .field-regenerating,
+          input.field-regenerating,
+          textarea.field-regenerating,
+          .form-control.field-regenerating {
+            background-color: #e5e7eb !important;
+            opacity: 0.8 !important;
+          }
+          
+          /* Ensure the background is visible */
+          input.form-control.field-regenerating,
+          textarea.form-control.field-regenerating {
+            background-color: #e5e7eb !important;
+            opacity: 0.8 !important;
+          }
+          
+          /* Disabled state during regeneration */
+          input.form-control.field-regenerating:disabled,
+          textarea.form-control.field-regenerating:disabled {
+            cursor: not-allowed !important;
+            opacity: 0.8 !important;
+          }
+          
+          /* Green border after successful regeneration */
+          .just-regenerated .form-control,
+          .just-regenerated input.form-control,
+          .just-regenerated textarea.form-control {
+            border-color: #10b981 !important;
+            border-width: 2px !important;
+            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1) !important;
+          }
+          
+          /* Ensure input container doesn't clip the tooltip */
+          .input-with-regenerate {
+            overflow: visible !important;
+          }
+          
+          .position-relative:has(.regenerate-field-btn) {
+            overflow: visible !important;
+          }
+          
+          /* Ensure all form controls show regenerate button on hover */
+          .form-control,
+          textarea.form-control,
+          input.form-control {
+            position: relative;
+          }
+          
+          /* Container for inputs with regenerate button */
+          .position-relative:has(.form-control):has(.regenerate-field-btn) {
+            overflow: visible !important;
+          }
+          
+          /* Tooltip z-index fix - ensure tooltips appear above everything */
+          [data-radix-tooltip-content] {
+            z-index: 99999 !important;
+          }
+          
+          [data-radix-portal] {
+            z-index: 99999 !important;
+          }
+          
+          /* Custom tooltip style to match Laravel */
+          [data-radix-tooltip-content] {
+            background-color: #333 !important;
+            color: #fff !important;
+            font-size: 11px !important;
+            padding: 4px 8px !important;
+            border-radius: 4px !important;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15) !important;
+            border: none !important;
+            white-space: nowrap !important;
+            z-index: 99999 !important;
+            pointer-events: none !important;
+          }
+          
+          /* Ensure tooltip is visible when button is hovered */
+          .regenerate-field-btn:hover ~ [data-radix-tooltip-content],
+          [data-radix-tooltip-content][data-state="delayed-open"],
+          [data-radix-tooltip-content][data-state="instant-open"] {
+            opacity: 1 !important;
+            visibility: visible !important;
+            display: block !important;
+          }
+          
+          /* Remove Radix UI animations but keep tooltip visible */
+          [data-radix-tooltip-content][data-state="delayed-open"] {
+            animation: none !important;
+            opacity: 1 !important;
+            visibility: visible !important;
+          }
+          
+          [data-radix-tooltip-content][data-state="closed"] {
+            animation: none !important;
+            opacity: 0 !important;
+            visibility: hidden !important;
+          }
+          
+          .spin-animation {
+            animation: spin 1s linear infinite;
+          }
+          
+          @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+          }
+          
+          @keyframes skeleton-pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+          }
+          
+          @keyframes skeleton-shimmer {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+          }
+          
+          .preview-skeleton-overlay {
+            animation: fadeIn 0.2s ease;
+          }
+          
+          @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+          }
+          
+          .preview-expanded {
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            right: 0 !important;
+            bottom: 0 !important;
+            width: 100% !important;
+            height: 100vh !important;
+            z-index: 1050 !important;
+            margin: 0 !important;
+            border-radius: 0 !important;
+          }
+          
+          .regenerate-btn {
+            opacity: 0;
+            transition: opacity 0.2s ease;
+          }
+          
+          .form-group-with-ai:hover .regenerate-btn {
+            opacity: 1;
+          }
+          
+          .nav-pills .nav-link.active {
+            background-color: #2563eb;
+            color: white;
+          }
+          
+          .nav-pills .nav-link {
+            color: #6b7280;
+            border-radius: 0.5rem;
+            padding: 0.75rem 1rem;
+            font-size: 0.875rem;
+            display: flex;
+            align-items: center;
+          }
+          
+          .nav-pills .nav-link:hover:not(.active) {
+            background-color: #f3f4f6;
+          }
+          
+          /* Step pills - matches Laravel nav-pills-rounded */
+          .step-pill {
+            border: 1px solid rgb(225, 228, 234);
+            border-radius: 20px !important;
+            height: 32px;
+            padding: 6px 10px !important;
+            background-color: #fff;
+          }
+          
+          .step-pill .nav-icon {
+            color: rgb(82, 88, 102);
+            font-size: 16px;
+          }
+          
+          .step-pill .nav-text {
+            color: rgb(82, 88, 102);
+            line-height: 20px;
+            font-weight: 500;
+          }
+          
+          .step-pill.active {
+            border: 1px solid rgb(51, 92, 255) !important;
+            background-color: rgba(71, 108, 255, 0.1) !important;
+          }
+          
+          .step-pill.active .nav-icon {
+            color: rgb(51, 92, 255);
+          }
+          
+          .step-pill.active .nav-text {
+            color: rgb(31, 59, 173);
+          }
+          
+          /* Input field with side button for regenerate - reserve space for icon */
+          .form-control-w-side-button {
+            padding-right: 50px !important;
+          }
+          
+          /* Ensure text doesn't overlap the regenerate icon - always reserve space */
+          .input-with-regenerate .form-control-w-side-button,
+          .position-relative:has(.regenerate-field-btn) .form-control-w-side-button,
+          .input-with-regenerate input.form-control-w-side-button {
+            padding-right: 50px !important;
+            box-sizing: border-box !important;
+          }
+          
+          /* For textarea, allow wrapping but keep padding */
+          .input-with-regenerate textarea.form-control-w-side-button {
+            padding-right: 50px !important;
+            box-sizing: border-box !important;
+            white-space: normal;
+            overflow-y: auto;
+          }
+          
+          /* Ensure regenerate button has enough space and doesn't overlap */
+          .regenerate-field-btn {
+            width: 24px;
+            height: 24px;
+            right: 8px !important;
+          }
+          
+          /* Regenerate field button styling - REMOVED DUPLICATE */
+          /* Styles are now defined above in the first .regenerate-field-btn block */
+          
+          .regenerate-field-btn i {
+            display: block;
+          }
+          
+          /* Small label styling */
+          .fs-small {
+            font-size: 0.85rem;
+          }
+          
+          .fs-xs {
+            font-size: 0.75rem;
+          }
+          
+          /* Icon text styling */
+          .icon-text-sub {
+            color: #6c757d;
+          }
+          
+          .icon-text-sub:hover {
+            color: #dc3545;
+          }
+          
+          /* Horizontal divider */
+          .horizontal-solid-divider {
+            margin: 1rem 0;
+          }
+          
+          /* Background color class (matches Laravel bg-weak-50) */
+          .bg-weak-50 {
+            background-color: rgb(245, 247, 250) !important;
+          }
+          
+          /* Preview button wrapper (matches Laravel preview-btn-wrapper) */
+          .preview-btn-wrapper {
+            height: 46px;
+            background-color: #fff;
+          }
+          
+          /* Preview device toggle (matches Laravel exactly) */
+          .preview-device-toggle {
+            background-color: #e4e4e7;
+            border-radius: 6px;
+            padding: 3px;
+            display: flex;
+          }
+          
+          .preview-device-btn {
+            background: transparent;
+            border: none;
+            padding: 4px 14px;
+            font-size: 13px;
+            font-weight: 500;
+            color: #71717a;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+          }
+          
+          .preview-device-btn:hover {
+            color: #52525b;
+          }
+          
+          .preview-device-btn.active {
+            background-color: #fff;
+            color: #18181b;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+          }
+          
+          /* Page toggle select (matches Laravel page-toggle exactly) */
+          .page-toggle {
+            border: 1px solid #e1e4ea !important;
+            font-weight: 500 !important;
+            height: 34px !important;
+            padding: 0.375rem 2rem 0.375rem 0.75rem !important;
+            font-size: 13px !important;
+            color: #525866 !important;
+            background-color: #fff !important;
+            border-radius: 6px !important;
+            max-width: 140px !important;
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23525866' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2 5l6 6 6-6'/%3e%3c/svg%3e") !important;
+            background-repeat: no-repeat !important;
+            background-position: right 0.5rem center !important;
+            background-size: 10px 8px !important;
+            -webkit-appearance: none !important;
+            -moz-appearance: none !important;
+            appearance: none !important;
+            cursor: pointer;
+          }
+          
+          .page-toggle:focus {
+            border-color: #335cff !important;
+            box-shadow: 0 0 0 2px rgba(51, 92, 255, 0.1) !important;
+            outline: none !important;
+          }
+          
+          /* Dropdown styling with visible arrows */
+          .form-select {
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23525866' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2 5l6 6 6-6'/%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right 0.75rem center;
+            background-size: 10px 8px;
+            padding-right: 2.25rem;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+          }
+          
+          .form-select:focus {
+            border-color: #335cff;
+            box-shadow: 0 0 0 2px rgba(51, 92, 255, 0.1);
+          }
+          
+          /* Preview iframe wrapper for mobile device frame */
+          .preview-iframe-wrapper.preview-mobile {
+            position: relative;
+          }
+          
+          .preview-iframe-wrapper.preview-mobile::before {
+            content: '';
+            position: absolute;
+            top: 5px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80px;
+            height: 4px;
+            background: #333;
+            border-radius: 2px;
+            z-index: 10;
+          }
+          
+          /* Custom nav line tabs (matches Laravel nav-tabs nav-pills custom-nav-line exactly) */
+          .nav.nav-tabs.nav-pills.custom-nav-line {
+            border: none;
+            background: transparent;
+          }
+          
+          .nav.nav-tabs.nav-pills.custom-nav-line .nav-item .nav-link {
+            color: #525866;
+            background: transparent;
+            border: none;
+            border-radius: 0;
+            padding: 12px 0;
+            margin-bottom: -1px;
+            transition: all 0.2s ease;
+          }
+          
+          .nav.nav-tabs.nav-pills.custom-nav-line .nav-item .nav-link:hover {
+            color: #0e121b;
+          }
+          
+          .nav.nav-tabs.nav-pills.custom-nav-line .nav-item .nav-link.active {
+            color: #0e121b !important;
+            border-bottom: 2px solid #0C6CFB;
+            background: transparent;
+          }
+          
+          /* Font options grid - 5 per row like Laravel */
+          .font-options-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 10px;
+          }
+          
+          /* Font option styling (Laravel style) */
+          .font-option-label {
+            cursor: pointer;
+            display: block;
+            position: relative;
+          }
+          
+          .font-option-box {
+            padding: 14px 16px;
+            border: 1px solid #e1e4ea;
+            border-radius: 10px;
+            text-align: left;
+            transition: all 0.15s ease;
+            position: relative;
+            background-color: #fff;
+            min-height: 90px;
+          }
+          
+          .font-option-box:hover {
+            border-color: #0d6efd;
+          }
+          
+          .font-option-box.active {
+            border-color: #0d6efd;
+            border-width: 2px;
+            padding: 13px 15px;
+          }
+          
+          /* Circle indicator on all boxes */
+          .font-option-box .checkmark {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 20px;
+            height: 20px;
+            background-color: transparent;
+            border: 2px solid #e1e4ea;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: transparent;
+            font-size: 11px;
+          }
+          
+          /* Active state - filled blue circle with checkmark */
+          .font-option-box.active .checkmark {
+            background-color: #0d6efd;
+            border-color: #0d6efd;
+            color: white;
+          }
+          
+          .font-option-box .font-preview {
+            font-size: 36px;
+            font-weight: 400;
+            display: block;
+            line-height: 1.1;
+            color: #1a1a1a;
+            margin-bottom: 6px;
+          }
+          
+          .font-option-box .font-name {
+            font-size: 13px;
+            color: #6b7280;
+            display: block;
+          }
+          
+          /* Color picker styling */
+          .color-picker-label {
+            display: block;
+            border: 2px solid #dee2e6;
+            transition: all 0.2s ease;
+          }
+          
+          .color-picker-label:hover {
+            border-color: #2563eb;
+            transform: scale(1.05);
+          }
+          
+          /* Custom Accordion Style - matches Laravel custom-accordion-style-1 */
+          .custom-accordion-style-1 .accordion-item {
+            margin-bottom: 12px;
+            border-radius: 12px;
+            border: 1px solid #e1e4ea;
+            overflow: hidden;
+            background-color: #fff;
+          }
+          
+          .custom-accordion-style-1 .accordion-item.active {
+            border-color: #0d6efd;
+            background-color: #fcfcfc;
+          }
+          
+          .custom-accordion-style-1 .accordion-button {
+            background-color: transparent;
+            padding: 16px 20px;
+            font-size: 15px;
+            font-weight: 500;
+            color: #0e121b;
+            border: none;
+            width: 100%;
+            text-align: left;
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+          }
+          
+          .custom-accordion-style-1 .accordion-button:not(.collapsed) {
+            color: #333;
+            background-color: transparent;
+            box-shadow: none;
+          }
+          
+          .custom-accordion-style-1 .accordion-button:focus {
+            box-shadow: none;
+            border-color: transparent;
+            outline: none;
+          }
+          
+          .custom-accordion-style-1 .accordion-button::after {
+            content: '';
+            width: 16px;
+            height: 16px;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='9 18 15 12 9 6'%3E%3C/polyline%3E%3C/svg%3E");
+            background-size: contain;
+            background-repeat: no-repeat;
+            margin-left: auto;
+            transition: transform 0.2s ease;
+          }
+          
+          .custom-accordion-style-1 .accordion-button:not(.collapsed)::after {
+            transform: rotate(90deg);
+          }
+          
+          .custom-accordion-style-1 .accordion-body {
+            padding: 0 20px 20px 20px;
+          }
+          
+          .custom-accordion-style-1 .accordion-button i {
+            color: #525866;
+            font-size: 18px;
+            margin-right: 10px;
+          }
+          
+          /* Section navigation (matches Laravel content-menu-items-tab) */
+          .sortable-section-nav {
+            display: flex;
+            flex-direction: column;
+          }
+          
+          .section-nav-item {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+            position: relative;
+          }
+          
+          .section-nav-item.disabled {
+            opacity: 0.5;
+          }
+          
+          .section-nav-btn {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 12px;
+            font-size: 13px;
+            font-weight: 500;
+            color: #4b5563;
+            background: transparent;
+            border: none;
+            text-align: left;
+            cursor: pointer;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+          }
+          
+          .section-nav-btn:hover {
+            color: #1f2937;
+          }
+          
+          .section-nav-btn.active {
+            background: #eff6ff;
+            color: #2563eb;
+          }
+          
+          .section-nav-btn i {
+            font-size: 15px;
+            opacity: 0.7;
+          }
+          
+          .section-delete-btn {
+            padding: 6px 8px;
+            background: transparent;
+            border: none;
+            color: #9ca3af;
+            cursor: pointer;
+            border-radius: 4px;
+            opacity: 0;
+            transition: all 0.2s ease;
+          }
+          
+          .section-nav-item:hover .section-delete-btn {
+            opacity: 1;
+          }
+          
+          .section-delete-btn:hover {
+            color: #ef4444;
+            background: #fef2f2;
+          }
+          
+          /* Section reorder buttons */
+          .section-reorder-btns {
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+          }
+          
+          .section-nav-item:hover .section-reorder-btns {
+            opacity: 1;
+          }
+          
+          .section-move-btn {
+            padding: 0;
+            width: 18px;
+            height: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: transparent;
+            border: none;
+            color: #9ca3af;
+            cursor: pointer;
+            transition: all 0.15s ease;
+          }
+          
+          .section-move-btn:hover:not(:disabled) {
+            color: #2563eb;
+            background: #eff6ff;
+          }
+          
+          .section-move-btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+          }
+          
+          .section-move-btn i {
+            font-size: 14px;
+          }
+          
+          /* Product image card */
+          .product-image-card {
+            border-radius: 8px;
+            overflow: hidden;
+          }
+          
+          .product-image-edit-btn {
+            opacity: 0;
+            transition: opacity 0.2s ease;
+            font-size: 11px;
+            padding: 4px 8px;
+            margin: 4px;
+            border-radius: 4px;
+          }
+          
+          .product-image-card:hover .product-image-edit-btn {
+            opacity: 1;
+          }
+          
+          /* AI Store Layout - matches Laravel */
+          .ai-store-header {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+          }
+          
+          .ai-store-container {
+            background-color: #f9fafb;
+          }
+          
+          /* Content Menu Sidebar - matches Laravel .content-menu-wrapper */
+          .content-menu-sidebar {
+            scrollbar-width: thin;
+            scrollbar-color: #d1d5db transparent;
+          }
+          
+          .content-menu-sidebar::-webkit-scrollbar {
+            width: 6px;
+          }
+          
+          .content-menu-sidebar::-webkit-scrollbar-track {
+            background: transparent;
+          }
+          
+          .content-menu-sidebar::-webkit-scrollbar-thumb {
+            background: #d1d5db;
+            border-radius: 3px;
+          }
+          
+          /* Content Menu Item Link - matches Laravel */
+          .content-menu-item-link {
+            display: flex;
+            align-items: center;
+            transition: all 0.3s;
+            color: rgb(82, 88, 102);
+            background-color: #fff;
+            border: none;
+            border-radius: 10px;
+            padding: 8px;
+            padding-right: 30px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+          }
+          
+          /* Note: Hover handled by .section-nav-item:hover, not individual link */
+          
+          .content-menu-item-link.active {
+            color: rgb(51, 92, 255);
+          }
+          
+          
+          /* Content Editor Wrapper - matches Laravel */
+          .content-editor-wrapper {
+            position: relative;
+            scrollbar-width: thin;
+            scrollbar-color: #d1d5db transparent;
+          }
+          
+          .content-editor-wrapper::-webkit-scrollbar {
+            width: 6px;
+          }
+          
+          .content-editor-wrapper::-webkit-scrollbar-track {
+            background: transparent;
+          }
+          
+          .content-editor-wrapper::-webkit-scrollbar-thumb {
+            background: #d1d5db;
+            border-radius: 3px;
+          }
+          
+          .content-editor {
+            scrollbar-width: thin;
+            scrollbar-color: #d1d5db transparent;
+          }
+          
+          .content-editor::-webkit-scrollbar {
+            width: 6px;
+          }
+          
+          .content-editor::-webkit-scrollbar-track {
+            background: transparent;
+          }
+          
+          .content-editor::-webkit-scrollbar-thumb {
+            background: #d1d5db;
+            border-radius: 3px;
+          }
+          
+          /* Add Section Button - matches Laravel */
+          .btn-add-new-section {
+            padding: 8px 8px 8px 8px;
+            display: flex;
+            align-items: center;
+            color: #0d6efd;
+            text-decoration: none;
+            border-radius: 10px;
+            transition: background-color 0.15s ease;
+            margin-bottom: 8px;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            width: 100%;
+          }
+          
+          .btn-add-new-section:hover {
+            background-color: rgba(153, 160, 174, 0.1);
+          }
+          
+          .btn-add-new-section .section-label {
+            font-size: 14px;
+            font-weight: 500;
+          }
+          
+          .btn-add-new-section .item-link-icon {
+            color: #0d6efd;
+            font-size: 16px;
+            margin-right: 8px;
+            width: 16px;
+            text-align: center;
+          }
+          
+          /* Add Section Popup - NO overlay background, just click-outside detection */
+          .add-section-popup-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 9998;
+            /* Transparent - no visible overlay */
+          }
+          
+          /* Add Section Dropdown - matches Laravel popup - positioned below button via inline style */
+          .add-section-popup {
+            position: fixed;
+            z-index: 9999;
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0,0,0,0.05);
+            width: 750px;
+            max-height: 450px;
+            overflow: hidden;
+          }
+          
+          .add-section-popup.show {
+            display: block;
+          }
+          
+          .add-section-popup-container {
+            display: flex;
+            flex-direction: column;
+            height: 450px;
+          }
+          
+          .add-section-popup-content {
+            display: flex;
+            flex: 1;
+            min-height: 0;
+          }
+          
+          .add-section-list {
+            width: 280px;
+            border-right: 1px solid #e9ecef;
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+          }
+          
+          .section-search-wrapper {
+            padding: 12px;
+            border-bottom: 1px solid #e9ecef;
+            position: relative;
+          }
+          
+          .section-search-wrapper i {
+            position: absolute;
+            left: 22px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #6b7280;
+            font-size: 14px;
+          }
+          
+          .section-search-input {
+            width: 100%;
+            padding: 8px 12px 8px 36px;
+            border: 1px solid #e1e4ea;
+            border-radius: 8px;
+            font-size: 13px;
+            outline: none;
+            transition: border-color 0.2s;
+          }
+          
+          .section-search-input:focus {
+            border-color: #0d6efd;
+          }
+          
+          .section-items-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 8px;
+          }
+          
+          .section-category {
+            margin-bottom: 12px;
+          }
+          
+          .section-category-header {
+            font-size: 11px;
+            font-weight: 600;
+            color: #6b7280;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 8px 8px 4px 8px;
+          }
+          
+          .section-item {
+            display: flex;
+            align-items: center;
+            width: 100%;
+            padding: 8px 12px;
+            border: none;
+            background: transparent;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            color: #374151;
+            transition: all 0.15s ease;
+            text-align: left;
+          }
+          
+          .section-item:hover {
+            background: #f3f4f6;
+          }
+          
+          .section-item.active {
+            background: #e0f2fe;
+            color: #0d6efd;
+          }
+          
+          .section-item-icon {
+            margin-right: 10px;
+            font-size: 16px;
+            color: #6b7280;
+          }
+          
+          .section-item.active .section-item-icon {
+            color: #0d6efd;
+          }
+          
+          .add-section-preview {
+            flex: 1;
+            background: #f9fafb;
+            display: flex;
+            flex-direction: column;
+          }
+          
+          .section-preview-content {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+          }
+          
+          .section-preview-placeholder,
+          .section-preview-loading {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            color: #9ca3af;
+          }
+          
+          .section-preview-placeholder i,
+          .section-preview-loading i,
+          .section-preview-placeholder svg,
+          .section-preview-loading svg {
+            font-size: 48px;
+            width: 48px;
+            height: 48px;
+          }
+          
+          .section-preview-iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            border-radius: 8px;
+            background: #fff;
+          }
+          
+          .add-section-popup-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+            padding: 12px 16px;
+            border-top: 1px solid #e9ecef;
+            background: #fff;
+          }
+          
+          /* Sortable Section Nav - matches Laravel */
+          .sortable-section-nav {
+            display: flex;
+            flex-direction: column;
+          }
+          
+          /* Section Nav Item - matches Laravel exactly */
+          .section-nav-item {
+            display: flex;
+            align-items: center;
+            position: relative;
+            padding: 8px;
+            border-radius: 10px;
+            transition: background-color 0.15s ease;
+          }
+          
+          /* NO background on hover - only icon change and eye appear */
+          .section-nav-item:hover {
+            background-color: transparent;
+          }
+          
+          /* Background ONLY for active/selected element */
+          .section-nav-item.active {
+            background-color: rgba(153, 160, 174, 0.1);
+          }
+          
+          .section-nav-item.hidden-section {
+            opacity: 0.5;
+          }
+          
+          /* Icon container - both icons positioned absolutely in same space */
+          .section-nav-item .icon-wrapper {
+            position: relative;
+            width: 16px;
+            height: 16px;
+            margin-right: 8px;
+            flex-shrink: 0;
+          }
+          
+          /* Section icon on the LEFT - visible by default */
+          .section-nav-item .section-icon {
+            color: #99a0ae;
+            font-size: 14px;
+            position: absolute;
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 16px;
+            text-align: center;
+            transition: opacity 0.15s ease;
+            z-index: 1;
+          }
+          
+          .section-nav-item.active .section-icon {
+            color: #335cff;
+          }
+          
+          /* Drag icon - hidden by default, replaces section icon on hover */
+          .section-nav-item .section-drag-icon {
+            color: #99a0ae;
+            font-size: 14px;
+            position: absolute;
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 16px;
+            text-align: center;
+            cursor: grab;
+            opacity: 0;
+            transition: opacity 0.15s ease;
+            z-index: 2;
+          }
+          
+          .section-nav-item .section-drag-icon:active {
+            cursor: grabbing;
+          }
+          
+          /* On hover: hide section icon, show drag icon */
+          .section-nav-item:hover .section-icon {
+            opacity: 0 !important;
+          }
+          
+          .section-nav-item:hover .section-drag-icon {
+            opacity: 1 !important;
+          }
+          
+          /* Drag & Drop visual feedback */
+          /* L'élément qu'on drag devient semi-transparent */
+          .section-nav-item.dragging {
+            opacity: 0.4;
+          }
+          
+          /* Pas d'indicateur bleu - juste le ghost natif du navigateur */
+          
+          /* Drag feedback */
+          .section-nav-item[draggable="true"] {
+            cursor: grab;
+          }
+          
+          .section-nav-item[draggable="true"]:active {
+            cursor: grabbing;
+          }
+          
+          .section-nav-item.dragging {
+            opacity: 0.5;
+          }
+          
+          /* Show visibility button on section hover */
+          .section-nav-item:hover .section-visibility-btn {
+            opacity: 1 !important;
+            visibility: visible !important;
+          }
+          
+          .section-nav-item .content-menu-item-link {
+            flex-grow: 1;
+            padding: 0;
+            border: none;
+            background: transparent !important;
+            color: #525866;
+            text-decoration: none;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            text-align: left;
+          }
+          
+          .section-nav-item .content-menu-item-link:hover,
+          .section-nav-item .content-menu-item-link:focus {
+            background: transparent !important;
+            outline: none;
+          }
+          
+          .section-nav-item.active .content-menu-item-link {
+            color: #335cff;
+          }
+          
+          /* Visibility button - appears on hover, on the RIGHT */
+          .section-nav-item .section-visibility-btn {
+            padding: 2px;
+            color: #99a0ae;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.15s ease, visibility 0.15s ease;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            margin-left: 4px;
+          }
+          
+          .section-nav-item .section-visibility-btn svg {
+            width: 12px;
+            height: 12px;
+          }
+          
+          .section-nav-item:hover .section-visibility-btn {
+            opacity: 1;
+            visibility: visible;
+          }
+          
+          .section-nav-item .section-visibility-btn:hover {
+            color: #525866;
+          }
+          
+          /* Preview Panel - matches Laravel #AIStorePreview */
+          .preview-panel {
+            display: flex;
+            flex-direction: column;
+          }
+          
+          .preview-iframe-container {
+            flex: 1;
+            min-height: 0;
+          }
+          
+          /* Preview Header - matches Laravel style */
+          .card-header.bg-light {
+            background-color: #f9fafb !important;
+          }
+          
+          /* Responsive: Hide sidebar on small screens */
+          @media (max-width: 991.98px) {
+            .content-menu-sidebar,
+            .content-editor-wrapper {
+              display: none !important;
+            }
+            
+            .preview-panel {
+              width: 100% !important;
+            }
+          }
+          
+          /* Small desktop - narrower panels */
+          @media (min-width: 992px) and (max-width: 1400px) {
+            .content-menu-sidebar {
+              width: 220px !important;
+              min-width: 220px !important;
+            }
+            
+            .content-editor-wrapper {
+              width: 300px !important;
+            }
+          }
+          
+          /* Horizontal solid divider */
+          .horizontal-solid-divider {
+            margin: 1rem 0;
+            border-top: 1px solid #e5e7eb;
+          }
+          
+          /* Small font sizes */
+          .fs-small {
+            font-size: 0.85rem;
+          }
+          
+          .fs-xs {
+            font-size: 0.75rem;
+          }
+          
+          /* Font weight */
+          .fw-500 {
+            font-weight: 500;
+          }
+          
+          .fw-600 {
+            font-weight: 600;
+          }
+
+          /* Text colors for icons */
+          .text-light-gray {
+            color: #99a0ae !important;
+          }
+
+          /* Tooltip z-index fix - removed native tooltip styles */
+          /* Use Radix UI Tooltip component instead */
+
+/* ========================================
+   IMAGE SELECTOR COMPONENT STYLES
+   Matches Laravel enhanced-upload-ai-image-with-list.css
+======================================== */
+
+.image-uploader {
+  margin-bottom: 2rem;
+}
+
+.upload-box {
+  border: 1px dashed #CACFD8;
+  background: #F5F7FA;
+  border-radius: 12px;
+  padding: 24px 20px;
+  text-align: center;
+  transition: all 0.3s ease;
+}
+
+.upload-box.drag-over {
+  border-color: #0d6efd;
+  background: #e7f1ff;
+  transform: scale(1.02);
+}
+
+.upload-image-btn {
+  position: relative;
+  border: none !important;
+  padding: 12px 24px;
+  border-radius: 12px;
+  box-shadow: none !important;
+  overflow: visible;
+  z-index: 1;
+  background: transparent !important;
+}
+
+.upload-image-btn::before {
+  content: "";
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  right: 8px;
+  bottom: 8px;
+  background: conic-gradient(from var(--angle, 0deg), #a0cbff, #d1bdff, #f4c2ff, #ffb9a2, #a0cbff);
+  border-radius: 16px;
+  z-index: -2;
+  animation: glowMove 5s linear infinite;
+  filter: blur(8px);
+}
+
+.upload-image-btn::after {
+  content: "";
+  position: absolute;
+  border: 1px solid #e2e5eb;
+  top: 2px;
+  left: 2px;
+  right: 2px;
+  bottom: 2px;
+  background: #ffffff;
+  border-radius: 10px;
+  z-index: -1;
+}
+
+.upload-image-btn i,
+.upload-image-btn span {
+  position: relative;
+  z-index: 1;
+}
+
+.text-purple {
+  color: #7c3aed;
+}
+
+@keyframes glowMove {
+  0% { --angle: 0deg; }
+  100% { --angle: 360deg; }
+}
+
+@property --angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
+/* Image Grid */
+.image-grid-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 8px;
+  position: relative;
+}
+
+.image-grid-list .image-card {
+  aspect-ratio: 1;
+  border-radius: 12px;
+  overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+  min-width: 130px;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  position: relative;
+}
+
+.image-grid-list .image-card:first-child {
+  grid-column: span 2;
+  grid-row: span 2;
+}
+
+.image-grid-list.expanded .image-card.hidden-image {
+  display: block !important;
+}
+
+/* Radio Container */
+.radio-container {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  margin: 0;
+}
+
+.radio-container input {
+  display: none;
+}
+
+.radio-container input:checked + .custom-image-radio .checkmark,
+.custom-image-radio.checked .checkmark,
+.checkmark.visible {
+  border-color: rgb(51, 92, 255) !important;
+  background-color: rgb(51, 92, 255) !important;
+}
+
+.radio-container input:checked + .custom-image-radio .checkmark .check-icon,
+.custom-image-radio.checked .checkmark .check-icon,
+.checkmark.visible .check-icon {
+  display: block !important;
+  color: #fff;
+}
+
+/* Selected image card */
+.image-card.selected .custom-image-radio {
+  border-color: rgb(51, 92, 255);
+  border-width: 2px;
+  box-shadow: 0 0 0 3px rgba(51, 92, 255, 0.2);
+}
+
+/* Custom Image Radio */
+.custom-image-radio {
+  border-radius: 8px;
+  width: 100%;
+  height: 100%;
+  background-color: #fff;
+  border: 1px solid #e1e4ea;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform: scale(0.98);
+  aspect-ratio: 1;
+  cursor: pointer;
+  position: relative;
+  min-height: 0;
+  flex: 1;
+}
+
+.custom-image-radio .upload-image-wrapper {
+  border-radius: 8px;
+  background-color: #f5f7fa;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.custom-image-radio .upload-image-wrapper img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Checkmark */
+.checkmark {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  background-color: white;
+  color: #0d6efd;
+  border-radius: 50%;
+  border: 1px solid rgb(225, 228, 234);
+  font-weight: bold;
+  width: 24px;
+  height: 24px;
+  font-size: 16px;
+  line-height: 24px;
+  text-align: center;
+  z-index: 10;
+}
+
+.checkmark .check-icon {
+  display: none;
+  color: #fff;
+}
+
+/* AI Generated Badge */
+.ai-generated-badge {
+  background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+  color: white;
+  font-size: 0.7rem;
+  z-index: 10;
+  font-weight: 600;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* Edit with AI Button */
+.edit-image-ai-btn {
+  position: absolute;
+  bottom: 4px;
+  right: 4px;
+  font-size: 10px;
+  border-radius: 12px;
+  padding: 4px 10px;
+  background: rgba(14, 18, 27, 0.24);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  color: #ffffff;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  pointer-events: auto !important;
+}
+
+.edit-image-ai-btn .edit-ai-icon {
+  width: 15px;
+  height: 15px;
+  object-fit: contain;
+  font-size: 14px;
+}
+
+.edit-image-ai-btn i.edit-ai-icon {
+  width: auto;
+  height: auto;
+}
+
+.edit-image-ai-btn:hover {
+  background: rgba(14, 18, 27, 0.4);
+}
+
+.edit-image-ai-btn:active {
+  transform: scale(0.95);
+}
+
+/* View More Overlay */
+.view-more-overlay {
+  position: absolute;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 5;
+  border-radius: 8px;
+  pointer-events: auto;
+  transition: opacity 0.2s ease, background 0.2s ease;
+}
+
+.view-more-overlay:hover {
+  background: rgba(0, 0, 0, 0.6);
+}
+
+.view-more-count {
+  color: #fff;
+  font-size: 24px;
+  font-weight: 600;
+}
+
+/* View Less Card */
+.view-less-card {
+  aspect-ratio: 1;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #f5f7fa;
+  border: 1px dashed #cacfd8;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.view-less-card:hover {
+  background: #e9ecef;
+  border-color: #adb5bd;
+}
+
+.view-less-btn {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  color: #6c757d;
+}
+
+.view-less-btn i {
+  font-size: 24px;
+}
+
+.view-less-btn span {
+  font-size: 12px;
+  font-weight: 500;
+}
+
+/* Hidden Image */
+.image-card.hidden-image {
+  display: none !important;
+}
+
+/* Expanded state */
+.image-grid-list.expanded {
+  grid-template-rows: auto;
+}
+
+.image-grid-list.expanded .view-more-overlay {
+  display: none !important;
+}
+
+.image-grid-list.expanded .view-less-card {
+  display: flex !important;
+}
