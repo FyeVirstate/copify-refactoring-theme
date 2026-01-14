@@ -6181,11 +6181,6 @@ input.export-url-with-icon.form-control,
 // Stepper with Curved Arrows (AutoDS + Hire Creator)
 .stepper-wrapper {
   position: relative;
-  display: flex !important;
-  flex-direction: row !important;
-  justify-content: center;
-  align-items: flex-start;
-  gap: 1rem;
 
   &::before,
   &::after {
@@ -6196,6 +6191,8 @@ input.export-url-with-icon.form-control,
     background-position: center;
     background-size: contain;
     top: 0;
+    pointer-events: none;
+    z-index: 1;
   }
 
   &::before {
@@ -6211,23 +6208,9 @@ input.export-url-with-icon.form-control,
   }
 
   @media (max-width: 767px) {
-    flex-direction: column !important;
-    
     &::before,
     &::after {
       display: none;
-    }
-  }
-
-  .col-md-4 {
-    @media (min-width: 768px) {
-      flex: 0 0 auto;
-      width: 33.33333333%;
-    }
-
-    @media (max-width: 767px) {
-      width: 100%;
-      margin-bottom: 1.5rem;
     }
   }
 }
@@ -6321,11 +6304,28 @@ input.export-url-with-icon.form-control,
   gap: 8px;
   align-items: stretch;
   justify-content: center;
-  margin-bottom: 20px;
+  margin-bottom: 0; // No margin-bottom - validation message is directly below
 
   @media (max-width: 768px) {
     flex-direction: column;
     gap: 12px;
+  }
+}
+
+// URL validation message - close to input (like Laravel)
+.url-validation-message {
+  margin-top: 4px !important;
+  margin-bottom: 0 !important;
+  padding-left: 0;
+  font-size: 13px;
+  line-height: 1.4;
+  
+  &.success {
+    color: #10b981;
+  }
+  
+  &.error {
+    color: #ef4444;
   }
 }
 
@@ -6343,6 +6343,56 @@ input.export-url-with-icon.form-control,
   }
 }
 
+// When favicon is present, add proper left padding - needs higher specificity to override Tailwind px-3
+input.ai-shop-url-input.has-favicon,
+.ai-shop-url-input.has-favicon {
+  padding-left: 44px !important; // 12px (left) + 20px (favicon) + 12px (space)
+}
+
+// Validation state colors - needs !important to override Tailwind and focus styles
+// Also adds right padding for the validation icons (check, error, spinner)
+input.ai-shop-url-input.validation-valid,
+.ai-shop-url-input.validation-valid {
+  border-color: #10b981 !important;
+  color: #10b981 !important;
+  border-width: 2px !important;
+  padding-right: 44px !important; // Space for checkmark icon
+  
+  &:focus {
+    border-color: #10b981 !important;
+    box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2) !important;
+    outline: none !important;
+  }
+}
+
+input.ai-shop-url-input.validation-invalid,
+.ai-shop-url-input.validation-invalid {
+  border-color: #ef4444 !important;
+  color: #ef4444 !important;
+  border-width: 2px !important;
+  padding-right: 44px !important; // Space for error icon
+  
+  &:focus {
+    border-color: #ef4444 !important;
+    box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.2) !important;
+    outline: none !important;
+  }
+}
+
+input.ai-shop-url-input.validation-validating,
+.ai-shop-url-input.validation-validating {
+  border-color: #335cff !important;
+  color: #335cff !important;
+  border-width: 2px !important;
+  padding-right: 44px !important; // Space for loading spinner
+  
+  &:focus {
+    border-color: #335cff !important;
+    box-shadow: 0 0 0 2px rgba(51, 92, 255, 0.2) !important;
+    outline: none !important;
+  }
+}
+
 .ai-shop-lang-select {
   width: 150px;
   min-width: 150px;
@@ -6353,6 +6403,11 @@ input.export-url-with-icon.form-control,
   height: 48px !important;
   min-height: 48px !important;
   max-height: 48px !important;
+
+  // When inside a wrapper with flag prefix, add left padding
+  .position-relative & {
+    padding-left: 40px !important;
+  }
 
   @media (max-width: 768px) {
     width: 100%;
@@ -6366,12 +6421,47 @@ input.export-url-with-icon.form-control,
   padding-right: 24px;
   font-size: 14px;
   flex-shrink: 0;
-  height: 48px !important;
-  min-height: 48px !important;
-  max-height: 48px !important;
   display: flex;
+
+  // Laravel style: btn-form-inline sets height to 40px
+  &.btn-form-inline {
+    height: 40px !important;
+    min-height: 40px !important;
+    max-height: 40px !important;
+  }
+
+  // Default height when not btn-form-inline
+  &:not(.btn-form-inline) {
+    height: 48px !important;
+    min-height: 48px !important;
+    max-height: 48px !important;
+  }
   align-items: center;
   justify-content: center;
+
+  // Laravel style: apply-filters-btn
+  &.apply-filters-btn {
+    background-color: #0C6CFB !important;
+    color: #fff !important;
+    transition: all 0.3s ease-in;
+
+    &:hover, &:active, &:focus {
+      color: #fff !important;
+      background-color: #0a5ae0 !important;
+    }
+
+    &.btn-loading {
+      background: #F5F7FA !important;
+      border: 1px solid rgba(255, 255, 255, 0.2) !important;
+      box-shadow: 0px 1px 2px 0px rgba(14, 18, 27, 0.24) !important;
+      color: rgba(202, 207, 216, 1) !important;
+      opacity: 1;
+
+      &:hover, &:active, &:focus {
+        color: rgba(202, 207, 216, 1) !important;
+      }
+    }
+  }
 
   @media (max-width: 768px) {
     width: 100%;
@@ -6712,4 +6802,48 @@ input.export-url-with-icon.form-control,
     opacity: 0.7;
     transform: scale(1.1);
   }
+}
+
+// ===================================
+// Supplier Page Styles (duplicates removed - see Stepper styles above)
+// ===================================
+
+// Profile page styles
+.profilePage-img {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  overflow: hidden;
+  background-color: #f3f4f6;
+  
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+}
+
+.border-b-gray {
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.rounded-15 {
+  border-radius: 15px;
+}
+
+.border-gray {
+  border: 1px solid #e5e7eb;
+}
+
+.fs-15 {
+  font-size: 15px;
+}
+
+.py-12 {
+  padding-top: 12px;
+  padding-bottom: 12px;
+}
+
+.w-max-width-xl {
+  max-width: 1200px;
 }

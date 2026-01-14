@@ -100,30 +100,71 @@ function beautifyUrlForValidation(url: string): string {
   return cleaned;
 }
 
-// Clean URL - trim everything after .html for AliExpress URLs and clean Amazon URLs
+// Extract domain from URL for favicon
+function extractDomainFromUrl(url: string): string | null {
+  if (!url || typeof url !== 'string') return null;
+  
+  try {
+    // Add https:// if missing for proper parsing
+    let urlToParse = url.trim();
+    if (!urlToParse.startsWith('http://') && !urlToParse.startsWith('https://')) {
+      urlToParse = 'https://' + urlToParse;
+    }
+    
+    const urlObj = new URL(urlToParse);
+    let domain = urlObj.hostname;
+    
+    // Remove www. prefix
+    if (domain.startsWith('www.')) {
+      domain = domain.substring(4);
+    }
+    
+    return domain;
+  } catch (e) {
+    return null;
+  }
+}
+
+// Get favicon URL using Google's favicon service
+function getFaviconUrl(url: string): string {
+  const domain = extractDomainFromUrl(url);
+  if (!domain) return '';
+  return `https://www.google.com/s2/favicons?domain=${domain}&sz=32`;
+}
+
+// Clean URL - trim everything after .html or .htm for ALL URLs
+// Also remove query parameters (utm_source, etc.) and fragments from product URLs
 // This matches Laravel behavior where URLs are cleaned before processing
 function cleanProductUrl(url: string): string {
   if (!url || typeof url !== 'string') return url;
   
   let cleaned = url.trim();
   
-  // Detect URL type
-  const urlType = detectUrlType(cleaned);
+  // Trim everything after .html or .htm (including query params, fragments, etc.)
+  // This works for AliExpress, Amazon, and any other URLs with .html/.htm
+  // Example: https://fr.aliexpress.com/item/1005009828380377.html?spm=a2g0o...&gps-id=...
+  // Becomes: https://fr.aliexpress.com/item/1005009828380377.html
   
-  if (urlType === 'aliexpress') {
-    // AliExpress: trim everything after .html (including query params like ?spm=...)
-    // Example: https://www.aliexpress.com/item/1005006123456789.html?spm=a2g0o... 
-    // Becomes: https://www.aliexpress.com/item/1005006123456789.html
-    const htmlIndex = cleaned.indexOf('.html');
-    if (htmlIndex !== -1) {
-      cleaned = cleaned.substring(0, htmlIndex + 5); // +5 to include ".html"
+  // Check for .html first (more common)
+  const htmlIndex = cleaned.indexOf('.html');
+  if (htmlIndex !== -1) {
+    cleaned = cleaned.substring(0, htmlIndex + 5); // +5 to include ".html"
+    return cleaned;
+  }
+  
+  // Check for .htm (less common but exists)
+  const htmIndex = cleaned.indexOf('.htm');
+  if (htmIndex !== -1) {
+    // Make sure it's not part of .html
+    if (cleaned.charAt(htmIndex + 4) !== 'l') {
+      cleaned = cleaned.substring(0, htmIndex + 4); // +4 to include ".htm"
+      return cleaned;
     }
-  } else if (urlType === 'amazon') {
-    // Amazon: clean URL to just the product page
-    // Remove query params and ref tags
-    // Example: https://www.amazon.com/dp/B08N5WRWNW/ref=sr_1_1?keywords=...
-    // Becomes: https://www.amazon.com/dp/B08N5WRWNW
-    
+  }
+  
+  // For Amazon URLs, clean to just the product page
+  const urlType = detectUrlType(cleaned);
+  if (urlType === 'amazon') {
     // Extract ASIN from various Amazon URL formats
     const asinPatterns = [
       /amazon\.([a-z.]+)\/dp\/([A-Z0-9]{10})/i,
@@ -137,7 +178,33 @@ function cleanProductUrl(url: string): string {
         const domain = match[1];
         const asin = match[2];
         cleaned = `https://www.amazon.${domain}/dp/${asin}`;
-        break;
+        return cleaned;
+      }
+    }
+  }
+  
+  // For Shopify and other product URLs, remove query parameters and fragments
+  // This cleans URLs like: https://store.com/products/product-name?utm_source=...&variant=123
+  // To: https://store.com/products/product-name
+  // Also works for any URL with /products/ or /collections/ paths
+  if (cleaned.includes('/products/') || cleaned.includes('/collections/')) {
+    try {
+      const urlObj = new URL(cleaned.startsWith('http') ? cleaned : 'https://' + cleaned);
+      // Remove all query params and hash
+      cleaned = urlObj.origin + urlObj.pathname;
+      // Remove trailing slash if any
+      if (cleaned.endsWith('/')) {
+        cleaned = cleaned.slice(0, -1);
+      }
+    } catch (e) {
+      // If URL parsing fails, try simple string manipulation
+      const questionIndex = cleaned.indexOf('?');
+      if (questionIndex !== -1) {
+        cleaned = cleaned.substring(0, questionIndex);
+      }
+      const hashIndex = cleaned.indexOf('#');
+      if (hashIndex !== -1) {
+        cleaned = cleaned.substring(0, hashIndex);
       }
     }
   }
@@ -741,6 +808,7 @@ export default function AIShopPage() {
   // Step 1: Import
   const [productUrl, setProductUrl] = useState("");
   const [selectedLanguage, setSelectedLanguage] = useState("en");
+  const [showLangDropdown, setShowLangDropdown] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationProgress, setGenerationProgress] = useState(0);
   const [generationStage, setGenerationStage] = useState(1);
@@ -754,6 +822,8 @@ export default function AIShopPage() {
     message: ''
   });
   const urlValidationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const urlTrimTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [displayUrl, setDisplayUrl] = useState(""); // URL displayed in input (may have extra chars)
   
   // Preview data for skeleton loader
   const [previewData, setPreviewData] = useState<{
@@ -811,6 +881,20 @@ export default function AIShopPage() {
     loadHistory();
   }, [loadHistory]);
 
+  // Close language dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest('.ai-shop-lang-dropdown') && !target.closest('.position-absolute.bg-white')) {
+        setShowLangDropdown(false);
+      }
+    };
+    if (showLangDropdown) {
+      document.addEventListener('click', handleClickOutside);
+    }
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, [showLangDropdown]);
+
   // Refresh preview when content changes (debounced)
   useEffect(() => {
     if (generatedProductId && currentStep === 3) {
@@ -826,7 +910,7 @@ export default function AIShopPage() {
   const hasCredits = stats?.storeGeneration.isUnlimited || credits > 0;
 
   // URL validation handler with debounce (like Laravel - doesn't modify input)
-  const validateProductUrl = useCallback(async (url: string) => {
+  const validateProductUrl = useCallback(async (url: string, skipTrimCheck: boolean = false) => {
     // Clear previous timeout
     if (urlValidationTimeoutRef.current) {
       clearTimeout(urlValidationTimeoutRef.current);
@@ -843,20 +927,38 @@ export default function AIShopPage() {
     
     // Debounce validation (like Laravel setTimeout 500ms)
     urlValidationTimeoutRef.current = setTimeout(async () => {
-      // Add https if needed for validation only (don't modify user input)
-      const urlForValidation = beautifyUrlForValidation(url);
+      // Clean URL for validation (trim after .html/.htm)
+      const cleanedUrl = cleanProductUrl(url);
+      const urlForValidation = beautifyUrlForValidation(cleanedUrl);
       const urlType = detectUrlType(urlForValidation);
       
       console.log('[URL Validation] Type detected:', urlType, 'URL:', urlForValidation);
       
+      // Check if URL has extra characters after .html/.htm
+      const hasExtraAfterHtml = (url.includes('.html') && url.indexOf('.html') + 5 < url.length) ||
+                                (url.includes('.htm') && !url.includes('.html') && url.indexOf('.htm') + 4 < url.length);
+      
+      if (hasExtraAfterHtml && !skipTrimCheck) {
+        // URL has extra characters after .html/.htm - don't show error, just validate the cleaned version
+        // The trim will happen automatically after a delay or on blur
+        const cleanedForCheck = cleanProductUrl(urlForValidation);
+        const cleanedType = detectUrlType(beautifyUrlForValidation(cleanedForCheck));
+        
+        if (cleanedType === 'aliexpress' || cleanedType === 'amazon' || cleanedType === 'shopify') {
+          // Valid URL structure, just needs trimming - show validating state
+          setUrlValidation({ status: 'validating', type: cleanedType, message: '' });
+          return;
+        }
+      }
+      
       if (urlType === 'aliexpress') {
-        // Validate AliExpress URL format - must end with .html
-        const aliRegex = /aliexpress\.com\/item\/(\d+)\.html$/i;
+        // Validate AliExpress URL format - check if it has .html/.htm
+        const aliRegex = /aliexpress\.com\/item\/(\d+)\.html?/i;
         if (aliRegex.test(urlForValidation)) {
           setUrlValidation({
             status: 'valid',
             type: 'aliexpress',
-            message: 'URL de produit valide'
+            message: 'URL de produit valide.'
           });
         } else {
           // Check if it's partially valid (missing .html ending)
@@ -879,7 +981,7 @@ export default function AIShopPage() {
         setUrlValidation({
           status: 'valid',
           type: 'amazon',
-          message: 'URL de produit valide'
+          message: 'URL de produit valide.'
         });
       } else if (urlType === 'shopify') {
         // Validate Shopify URL - must have /products/ path
@@ -887,7 +989,7 @@ export default function AIShopPage() {
           setUrlValidation({
             status: 'valid',
             type: 'shopify',
-            message: 'URL de produit valide'
+            message: 'URL de produit valide.'
           });
         } else {
           setUrlValidation({
@@ -917,39 +1019,101 @@ export default function AIShopPage() {
     }, 500); // 500ms debounce like Laravel
   }, []);
 
-  // Handle URL input change - DON'T modify user input while typing, just validate
+  // Handle URL input change - show full URL, trim after delay
   const handleUrlChange = useCallback((value: string) => {
-    // Set the raw value - don't beautify while typing
+    // Clear any existing trim timeout
+    if (urlTrimTimeoutRef.current) {
+      clearTimeout(urlTrimTimeoutRef.current);
+    }
+    
+    // Update display URL (shows what user types)
+    setDisplayUrl(value);
     setProductUrl(value);
+    
     // Validate the URL
     validateProductUrl(value);
+    
+    // Check if URL has extra characters after .html/.htm
+    const hasExtraAfterHtml = (value.includes('.html') && value.indexOf('.html') + 5 < value.length) ||
+                              (value.includes('.htm') && !value.includes('.html') && value.indexOf('.htm') + 4 < value.length);
+    
+    if (hasExtraAfterHtml) {
+      // Auto-trim after 2.5 seconds (like Laravel - let user see full URL briefly)
+      urlTrimTimeoutRef.current = setTimeout(() => {
+        const cleanedUrl = cleanProductUrl(value);
+        if (cleanedUrl !== value) {
+          setDisplayUrl(cleanedUrl);
+          setProductUrl(cleanedUrl);
+          validateProductUrl(cleanedUrl, true); // Skip trim check since we just trimmed
+        }
+      }, 2500); // 2.5 seconds delay
+    }
   }, [validateProductUrl]);
 
   // Handle URL paste - clean the URL immediately after paste
   const handleUrlPaste = useCallback((e: React.ClipboardEvent<HTMLInputElement>) => {
     e.preventDefault();
     const pastedText = e.clipboardData.getData('text');
-    const cleanedUrl = cleanProductUrl(pastedText);
-    setProductUrl(cleanedUrl);
-    validateProductUrl(cleanedUrl);
+    
+    // Clear any existing trim timeout
+    if (urlTrimTimeoutRef.current) {
+      clearTimeout(urlTrimTimeoutRef.current);
+    }
+    
+    // Show full URL first, then trim after delay
+    setDisplayUrl(pastedText);
+    setProductUrl(pastedText);
+    validateProductUrl(pastedText);
+    
+    // Auto-trim after 2.5 seconds
+    urlTrimTimeoutRef.current = setTimeout(() => {
+      const cleanedUrl = cleanProductUrl(pastedText);
+      if (cleanedUrl !== pastedText) {
+        setDisplayUrl(cleanedUrl);
+        setProductUrl(cleanedUrl);
+        validateProductUrl(cleanedUrl, true);
+      }
+    }, 2500);
   }, [validateProductUrl]);
 
-  // Handle URL blur - clean the URL when user finishes typing
+  // Handle URL blur - clean the URL immediately when user finishes typing
   const handleUrlBlur = useCallback(() => {
-    if (productUrl) {
-      const cleanedUrl = cleanProductUrl(productUrl);
-      if (cleanedUrl !== productUrl) {
+    // Clear any pending trim timeout
+    if (urlTrimTimeoutRef.current) {
+      clearTimeout(urlTrimTimeoutRef.current);
+    }
+    
+    if (displayUrl || productUrl) {
+      const currentUrl = displayUrl || productUrl;
+      const cleanedUrl = cleanProductUrl(currentUrl);
+      
+      if (cleanedUrl !== currentUrl) {
+        // Trim immediately on blur
+        setDisplayUrl(cleanedUrl);
         setProductUrl(cleanedUrl);
-        validateProductUrl(cleanedUrl);
+        validateProductUrl(cleanedUrl, true);
+      } else {
+        // Just validate if no trimming needed
+        validateProductUrl(cleanedUrl, true);
       }
     }
-  }, [productUrl, validateProductUrl]);
+  }, [displayUrl, productUrl, validateProductUrl]);
+
+  // Initialize displayUrl with productUrl
+  useEffect(() => {
+    if (!displayUrl && productUrl) {
+      setDisplayUrl(productUrl);
+    }
+  }, [productUrl, displayUrl]);
 
   // Cleanup validation timeout on unmount
   useEffect(() => {
     return () => {
       if (urlValidationTimeoutRef.current) {
         clearTimeout(urlValidationTimeoutRef.current);
+      }
+      if (urlTrimTimeoutRef.current) {
+        clearTimeout(urlTrimTimeoutRef.current);
       }
     };
   }, []);
@@ -959,7 +1123,7 @@ export default function AIShopPage() {
     return LANGUAGES.find(l => l.code === lang)?.flag || '🌐';
   };
 
-  // Get relative time (e.g., "1 hour ago", "12 minutes ago")
+  // Get relative time in French (e.g., "il y a 1 heure", "il y a 12 minutes")
   const getRelativeTime = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
@@ -967,17 +1131,31 @@ export default function AIShopPage() {
     const diffMins = Math.floor(diffMs / 60000);
     const diffHours = Math.floor(diffMs / 3600000);
     const diffDays = Math.floor(diffMs / 86400000);
+    const diffMonths = Math.floor(diffDays / 30);
 
-    if (diffMins < 1) return 'Just now';
-    if (diffMins < 60) return `${diffMins} minute${diffMins > 1 ? 's' : ''} ago`;
-    if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
-    if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
-    return date.toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' });
+    if (diffMins < 1) return "À l'instant";
+    if (diffMins < 60) return `il y a ${diffMins} minute${diffMins > 1 ? 's' : ''}`;
+    if (diffHours < 24) return `il y a ${diffHours} heure${diffHours > 1 ? 's' : ''}`;
+    if (diffDays < 30) return `il y a ${diffDays} jour${diffDays > 1 ? 's' : ''}`;
+    if (diffMonths < 12) return `il y a ${diffMonths} mois`;
+    return date.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
   };
 
   // Step 1: Generate AI content
   const handleGenerate = async () => {
-    if (!productUrl.trim()) {
+    // Clean URL before generating (ensure we use the trimmed version)
+    const currentUrl = displayUrl || productUrl;
+    const cleanedUrl = cleanProductUrl(currentUrl);
+    
+    // Update both URLs to cleaned version
+    if (cleanedUrl !== currentUrl) {
+      setDisplayUrl(cleanedUrl);
+      setProductUrl(cleanedUrl);
+    }
+    
+    const finalUrl = cleanedUrl || productUrl;
+    
+    if (!finalUrl.trim()) {
       setError("Veuillez entrer l'URL d'un produit");
       return;
     }
@@ -988,8 +1166,8 @@ export default function AIShopPage() {
       return;
     }
 
-    const urlType = detectUrlType(productUrl);
-    console.log('[Generate] Starting generation for URL type:', urlType);
+    const urlType = detectUrlType(finalUrl);
+    console.log('[Generate] Starting generation for URL type:', urlType, 'URL:', finalUrl);
 
     setIsGenerating(true);
     setError(null);
@@ -1005,7 +1183,7 @@ export default function AIShopPage() {
         const previewResponse = await fetch('/api/ai/fetch-product-preview', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ productUrl }),
+          body: JSON.stringify({ productUrl: finalUrl }),
         });
 
         if (previewResponse.ok) {
@@ -1080,7 +1258,7 @@ export default function AIShopPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          productUrl, 
+          productUrl: finalUrl, 
           language: selectedLanguage 
         }),
       });
@@ -1451,6 +1629,9 @@ export default function AIShopPage() {
         @keyframes spin {
           from { transform: rotate(0deg); }
           to { transform: rotate(360deg); }
+        }
+        .spin-animation {
+          animation: spin 1s linear infinite;
         }
         
         /* Form control with side button */
@@ -1869,14 +2050,43 @@ export default function AIShopPage() {
                   <div className="ai-shop-input-wrapper mx-auto">
                     <div className="ai-shop-input-section">
                       <div className="position-relative" style={{ flexGrow: 1, width: '400px', maxWidth: '100%' }}>
+                        {/* Favicon prefix (left side) */}
+                        {displayUrl && extractDomainFromUrl(displayUrl) && (
+                          <div 
+                            className="position-absolute"
+                            style={{
+                              left: '12px',
+                              top: '50%',
+                              transform: 'translateY(-50%)',
+                              width: '20px',
+                              height: '20px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              zIndex: 10,
+                              pointerEvents: 'none' // Don't block clicks
+                            }}
+                          >
+                            <img 
+                              src={getFaviconUrl(displayUrl)}
+                              alt=""
+                              style={{
+                                width: '20px',
+                                height: '20px',
+                                objectFit: 'contain'
+                              }}
+                              onError={(e) => {
+                                // Hide favicon on error
+                                (e.target as HTMLImageElement).style.display = 'none';
+                              }}
+                            />
+                          </div>
+                        )}
                         <Input
                           type="text"
-                          className={`ai-shop-url-input form-control design-2 ${
-                            urlValidation.status === 'valid' ? 'input-success' : 
-                            urlValidation.status === 'invalid' ? 'input-error' : ''
-                          }`}
+                          className={`ai-shop-url-input form-control design-2 ${displayUrl && extractDomainFromUrl(displayUrl) ? 'has-favicon' : ''} ${urlValidation.status === 'valid' ? 'validation-valid' : ''} ${urlValidation.status === 'invalid' ? 'validation-invalid' : ''} ${urlValidation.status === 'validating' ? 'validation-validating' : ''}`}
                           placeholder="https://www.aliexpress.com/item/10050082978909342.html"
-                          value={productUrl}
+                          value={displayUrl}
                           onChange={(e) => handleUrlChange(e.target.value)}
                           onBlur={handleUrlBlur}
                           onPaste={handleUrlPaste}
@@ -1886,8 +2096,11 @@ export default function AIShopPage() {
                               handleGenerate();
                             }
                           }}
+                          style={{
+                            transition: 'border-color 0.2s ease, color 0.2s ease'
+                          }}
                         />
-                        {/* Validation loader */}
+                        {/* Validation loader - right side icon */}
                         {urlValidation.status === 'validating' && (
                           <span 
                             className="position-absolute" 
@@ -1895,57 +2108,167 @@ export default function AIShopPage() {
                               right: '12px', 
                               top: '50%', 
                               transform: 'translateY(-50%)',
-                              color: '#99a0ae'
+                              color: '#335cff',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center'
                             }}
                           >
-                            <i className="ri-loader-4-line spin-animation"></i>
+                            <i className="ri-loader-4-line spin-animation" style={{ fontSize: '18px' }}></i>
+                          </span>
+                        )}
+                        {/* Success checkmark */}
+                        {urlValidation.status === 'valid' && (
+                          <span 
+                            className="position-absolute" 
+                            style={{ 
+                              right: '12px', 
+                              top: '50%', 
+                              transform: 'translateY(-50%)',
+                              color: '#10b981',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center'
+                            }}
+                          >
+                            <i className="ri-checkbox-circle-fill" style={{ fontSize: '18px' }}></i>
                           </span>
                         )}
                       </div>
 
-                      <select
-                        className="ai-shop-lang-select form-select design-2"
-                        value={selectedLanguage}
-                        onChange={(e) => setSelectedLanguage(e.target.value)}
-                        disabled={isGenerating}
-                      >
-                        {LANGUAGES.map(lang => (
-                          <option key={lang.code} value={lang.code}>
-                            {lang.flag} {lang.name}
-                          </option>
-                        ))}
-                      </select>
+                      {/* Custom Language Dropdown with Flag Images */}
+                      <div className="position-relative" style={{ width: 'auto' }}>
+                        <div 
+                          className="ai-shop-lang-dropdown form-select design-2 d-flex align-items-center gap-2"
+                          onClick={() => !isGenerating && setShowLangDropdown(!showLangDropdown)}
+                          style={{
+                            borderColor: '#e1e4ea',
+                            borderWidth: '1px',
+                            height: '48px',
+                            minWidth: '150px',
+                            cursor: isGenerating ? 'not-allowed' : 'pointer',
+                            opacity: isGenerating ? 0.6 : 1
+                          }}
+                        >
+                          <img 
+                            src={`/flags/${selectedLanguage === 'en' ? 'gb' : selectedLanguage}.svg`}
+                            alt=""
+                            style={{ 
+                              width: '22px', 
+                              height: '16px', 
+                              objectFit: 'cover', 
+                              borderRadius: '2px',
+                              boxShadow: '0 1px 2px rgba(0,0,0,0.1)'
+                            }}
+                          />
+                          <span style={{ fontSize: '14px' }}>{LANGUAGES.find(l => l.code === selectedLanguage)?.name}</span>
+                        </div>
+                        
+                        {/* Dropdown Menu */}
+                        {showLangDropdown && (
+                          <div 
+                            className="position-absolute bg-white shadow-sm"
+                            style={{
+                              top: '100%',
+                              left: 0,
+                              right: 0,
+                              marginTop: '4px',
+                              borderRadius: '8px',
+                              border: '1px solid #e1e4ea',
+                              zIndex: 1000,
+                              overflow: 'hidden'
+                            }}
+                          >
+                            {LANGUAGES.map(lang => (
+                              <div
+                                key={lang.code}
+                                className="d-flex align-items-center gap-2 px-3 py-2"
+                                onClick={() => {
+                                  setSelectedLanguage(lang.code);
+                                  setShowLangDropdown(false);
+                                }}
+                                style={{
+                                  cursor: 'pointer',
+                                  backgroundColor: selectedLanguage === lang.code ? '#f0f7ff' : 'transparent',
+                                  transition: 'background-color 0.15s ease'
+                                }}
+                                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f5f7fa'}
+                                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = selectedLanguage === lang.code ? '#f0f7ff' : 'transparent'}
+                              >
+                                <img 
+                                  src={`/flags/${lang.code === 'en' ? 'gb' : lang.code}.svg`}
+                                  alt=""
+                                  style={{ 
+                                    width: '22px', 
+                                    height: '16px', 
+                                    objectFit: 'cover', 
+                                    borderRadius: '2px',
+                                    boxShadow: '0 1px 2px rgba(0,0,0,0.1)'
+                                  }}
+                                />
+                                <span style={{ fontSize: '14px' }}>{lang.name}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
 
                       <Button
                         onClick={handleGenerate}
-                        className="ai-shop-generate-btn btn btn-primary"
+                        className="ai-shop-generate-btn btn apply-filters-btn"
                         disabled={isGenerating || urlValidation.status !== 'valid' || !hasCredits}
+                        style={{
+                          backgroundColor: '#0C6CFB',
+                          borderColor: '#0C6CFB',
+                          color: '#fff',
+                          fontWeight: 500,
+                          height: '48px',
+                          padding: '0 20px',
+                          borderRadius: '8px',
+                          border: 'none',
+                          transition: 'all 0.3s ease-in',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px'
+                        }}
+                        onMouseEnter={(e) => {
+                          if (!e.currentTarget.disabled) {
+                            e.currentTarget.style.backgroundColor = '#0a5ae0';
+                            e.currentTarget.style.borderColor = '#0a5ae0';
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (!e.currentTarget.disabled) {
+                            e.currentTarget.style.backgroundColor = '#0C6CFB';
+                            e.currentTarget.style.borderColor = '#0C6CFB';
+                          }
+                        }}
                       >
                         {isGenerating ? (
                           <>
-                            <span className="spinner-border spinner-border-sm me-2" role="status"></span>
+                            <span className="spinner-border spinner-border-sm" role="status" style={{ width: '14px', height: '14px', borderWidth: '2px' }}></span>
                             Génération...
                           </>
                         ) : (
                           <>
-                            <i className="ri-sparkling-line me-2"></i>
+                            <i className="ri-sparkling-line" style={{ fontSize: '16px' }}></i>
                             Générer
                           </>
                         )}
                       </Button>
                     </div>
 
-                    {/* URL Validation Message */}
+                    {/* URL Validation Message - close to input, no margin-top */}
                     {urlValidation.status === 'valid' && (
-                      <div className="url-validation-message success mt-2 d-flex align-items-center gap-2">
-                        <i className="ri-checkbox-circle-fill text-success"></i>
-                        <span className="text-success fs-small">{urlValidation.message}</span>
+                      <div className="url-validation-message success d-flex align-items-center gap-2" style={{ marginTop: '4px', marginBottom: 0 }}>
+                        <i className="ri-checkbox-circle-fill" style={{ color: '#10b981', fontSize: '14px' }}></i>
+                        <span style={{ color: '#10b981', fontSize: '13px', fontWeight: 400 }}>{urlValidation.message}</span>
                       </div>
                     )}
                     {urlValidation.status === 'invalid' && (
-                      <div className="url-validation-message error mt-2 d-flex align-items-center gap-2">
-                        <i className="ri-error-warning-fill text-danger"></i>
-                        <span className="text-danger fs-small">{urlValidation.message}</span>
+                      <div className="url-validation-message error d-flex align-items-center gap-2" style={{ marginTop: '4px', marginBottom: 0 }}>
+                        <i className="ri-error-warning-fill" style={{ color: '#ef4444', fontSize: '14px' }}></i>
+                        <span style={{ color: '#ef4444', fontSize: '13px', fontWeight: 400 }}>{urlValidation.message}</span>
                       </div>
                     )}
 
@@ -1973,17 +2296,17 @@ export default function AIShopPage() {
               {/* History Section - hidden when generating */}
               {!isGenerating && (
               <div className="table-view mx-auto mt-5" style={{ maxWidth: '1200px' }}>
-                <h3 className="fs-normal fw-600 mb-4">History</h3>
+                <h3 className="fs-normal fw-600 mb-4">Historique</h3>
 
                 <div className="table-wrapper" style={{ overflowX: 'auto', paddingBottom: '50px' }}>
-                  <Table className="table mb-0 table-hover" style={{ minWidth: '700px' }}>
+                  <Table className="table mb-0" style={{ minWidth: '700px', border: '1px solid #dee2e6', borderRadius: '8px', borderCollapse: 'separate', borderSpacing: 0, overflow: 'hidden' }}>
                     <TableHeader>
-                      <TableRow className="border-0" style={{ backgroundColor: '#f8fafc' }}>
-                        <TableHead className="border-0 fw-500 py-3" style={{ color: '#64748b', fontSize: '13px' }}>Product</TableHead>
-                        <TableHead className="border-0 fw-500 py-3" style={{ color: '#64748b', fontSize: '13px' }}>Language</TableHead>
-                        <TableHead className="border-0 fw-500 py-3" style={{ color: '#64748b', fontSize: '13px' }}>Type</TableHead>
-                        <TableHead className="border-0 fw-500 py-3" style={{ color: '#64748b', fontSize: '13px' }}>Last Update</TableHead>
-                        <TableHead className="border-0 fw-500 py-3 text-end" style={{ color: '#64748b', fontSize: '13px' }}>Actions</TableHead>
+                      <TableRow style={{ backgroundColor: 'rgba(245, 247, 250, 1)' }}>
+                        <TableHead className="fw-500 py-3 px-3 border-bottom" style={{ color: '#525866', fontSize: '13px', fontWeight: 500, backgroundColor: 'rgba(245, 247, 250, 1)' }}>Les produits</TableHead>
+                        <TableHead className="fw-500 py-3 px-3 text-center border-bottom" style={{ color: '#525866', fontSize: '13px', fontWeight: 500, backgroundColor: 'rgba(245, 247, 250, 1)' }}>Langue du site</TableHead>
+                        <TableHead className="fw-500 py-3 px-3 text-center border-bottom" style={{ color: '#525866', fontSize: '13px', fontWeight: 500, backgroundColor: 'rgba(245, 247, 250, 1)' }}>Type</TableHead>
+                        <TableHead className="fw-500 py-3 px-3 border-bottom" style={{ color: '#525866', fontSize: '13px', fontWeight: 500, backgroundColor: 'rgba(245, 247, 250, 1)' }}>Dernière mise à jour</TableHead>
+                        <TableHead className="fw-500 py-3 px-3 text-end border-bottom" style={{ color: '#525866', fontSize: '13px', fontWeight: 500, backgroundColor: 'rgba(245, 247, 250, 1)' }}>Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -1997,69 +2320,106 @@ export default function AIShopPage() {
                         </TableRow>
                       ) : generationHistory.length > 0 ? (
                         generationHistory.map((item) => (
-                          <TableRow key={item.id} className="border-bottom">
-                            <TableCell className="align-middle py-3">
+                          <TableRow key={item.id} className="table-row-hover" style={{ borderBottom: '1px solid #e9ecef' }}>
+                            <TableCell className="align-middle py-3 px-3">
                               <div className="d-flex align-items-center gap-3">
                                 <div className="position-relative">
                                   <img 
                                     src={item.image} 
                                     alt={item.title} 
                                     className="rounded" 
-                                    style={{ width: '64px', height: '64px', objectFit: 'cover' }} 
+                                    style={{ width: '56px', height: '56px', objectFit: 'cover', border: '1px solid #e9ecef' }} 
                                     onError={(e) => { (e.target as HTMLImageElement).src = '/img_not_found.png'; }} 
                                   />
-                                  {/* Sparkle decoration on image */}
-                                  <span className="position-absolute" style={{ top: '-4px', right: '-4px', fontSize: '12px' }}>✨</span>
                                 </div>
                                 <div>
-                                  <p className="mb-1 fw-500" style={{ fontSize: '14px', color: '#1e293b' }}>{item.title}</p>
+                                  <p className="mb-1 fw-500" style={{ fontSize: '14px', color: '#212529' }}>{item.title}</p>
                                   <a 
                                     href={item.productUrl} 
                                     target="_blank" 
                                     rel="noopener noreferrer" 
-                                    className="text-decoration-none" 
-                                    style={{ fontSize: '12px', color: '#3b82f6' }}
+                                    className="text-decoration-none d-flex align-items-center gap-2" 
+                                    style={{ fontSize: '12px', color: '#6c757d' }}
                                   >
-                                    {item.productUrl.length > 40 ? item.productUrl.substring(0, 40) + '...' : item.productUrl}
+                                    {/* Favicon */}
+                                    {extractDomainFromUrl(item.productUrl) && (
+                                      <img 
+                                        src={getFaviconUrl(item.productUrl)}
+                                        alt=""
+                                        style={{
+                                          width: '14px',
+                                          height: '14px',
+                                          objectFit: 'contain',
+                                          flexShrink: 0
+                                        }}
+                                        onError={(e) => {
+                                          (e.target as HTMLImageElement).style.display = 'none';
+                                        }}
+                                      />
+                                    )}
+                                    <span>
+                                      {item.productUrl.length > 30 ? item.productUrl.substring(0, 30) + '...' : item.productUrl}
+                                    </span>
                                   </a>
                                 </div>
                               </div>
                             </TableCell>
-                            <TableCell className="align-middle py-3">
-                              <span style={{ fontSize: '20px' }}>{getLanguageFlag(item.language)}</span>
+                            <TableCell className="align-middle py-3 px-3 text-center">
+                              {/* Real flag image */}
+                              <img 
+                                src={`/flags/${item.language === 'en' ? 'gb' : item.language}.svg`}
+                                alt={getLanguageFlag(item.language)}
+                                style={{ width: '28px', height: '20px', objectFit: 'cover', borderRadius: '2px', boxShadow: '0 1px 3px rgba(0,0,0,0.12)' }}
+                                onError={(e) => {
+                                  // Fallback to emoji if flag not found
+                                  (e.target as HTMLImageElement).style.display = 'none';
+                                  const span = document.createElement('span');
+                                  span.textContent = getLanguageFlag(item.language);
+                                  span.style.fontSize = '20px';
+                                  (e.target as HTMLImageElement).parentElement?.appendChild(span);
+                                }}
+                              />
                             </TableCell>
-                            <TableCell className="align-middle py-3">
+                            <TableCell className="align-middle py-3 px-3 text-center">
                               <span 
                                 className="badge px-3 py-2" 
                                 style={{ 
-                                  backgroundColor: '#3b82f6', 
+                                  backgroundColor: '#0d6efd', 
                                   color: '#fff', 
-                                  borderRadius: '6px',
+                                  borderRadius: '20px',
                                   fontSize: '12px',
                                   fontWeight: 500
                                 }}
                               >
-                                Store
+                                Boutique
                               </span>
                             </TableCell>
-                            <TableCell className="align-middle py-3" style={{ color: '#64748b', fontSize: '13px' }}>
+                            <TableCell className="align-middle py-3 px-3" style={{ color: '#6c757d', fontSize: '13px' }}>
                               {getRelativeTime(item.createdAt)}
                             </TableCell>
-                            <TableCell className="align-middle py-3 text-end">
+                            <TableCell className="align-middle py-3 px-3 text-end">
                               <a 
                                 href={`/dashboard/ai-shop/${item.id}`} 
-                                className="btn text-decoration-none d-inline-flex align-items-center gap-1"
+                                className="btn btn-secondary text-decoration-none d-inline-flex align-items-center gap-2"
                                 style={{ 
-                                  border: '1px solid #e2e8f0',
+                                  border: '1px solid #e2e5eb',
                                   borderRadius: '8px',
-                                  padding: '6px 14px',
-                                  fontSize: '13px',
-                                  color: '#475569',
-                                  backgroundColor: '#fff'
+                                  fontSize: '15px',
+                                  fontWeight: "medium",
+                                  color: 'black',
+                                  backgroundColor: '#FFFFFF',
+                                  boxShadow: '0px 2px 2px 0px rgba(164, 172, 185, 0.2)',
+                                  transition: 'all 0.15s ease',
+                                }}
+                                onMouseEnter={(e) => {
+                                  e.currentTarget.style.boxShadow = '0px 2px 4px 0px rgba(164, 172, 185, 0.6)';
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.currentTarget.style.boxShadow = '0px 2px 2px 0px rgba(164, 172, 185, 0.2)';
                                 }}
                               >
-                                <i className="ri-edit-line" style={{ fontSize: '14px' }}></i>
-                                Configure
+                                <i className="ri-pencil-line me-1" style={{ fontSize: '14px', color: '#a4acb9' }}></i>
+                                Configurer
                               </a>
                             </TableCell>
                           </TableRow>
@@ -2069,11 +2429,11 @@ export default function AIShopPage() {
                           <TableCell colSpan={5} className="text-center py-5">
                             <div className="d-flex flex-column align-items-center gap-3">
                               <div className="d-flex align-items-center justify-content-center rounded-circle" style={{ width: '56px', height: '56px', backgroundColor: '#EFF6FF' }}>
-                                <i className="ri-store-2-line" style={{ fontSize: '28px', color: '#0c6cfb' }}></i>
+                                <i className="ri-store-2-line" style={{ fontSize: '28px', color: '#0d6efd' }}></i>
                               </div>
                               <div>
-                                <h4 className="fw-600 fs-normal mb-1">No store generated</h4>
-                                <p className="text-sub fs-small mb-0">Enter an AliExpress or Amazon product link to create your first store.</p>
+                                <h4 className="fw-600 fs-normal mb-1">Aucune boutique générée</h4>
+                                <p className="text-sub fs-small mb-0">Entrez un lien de produit AliExpress, Shopify ou Amazon pour créer votre première boutique.</p>
                               </div>
                             </div>
                           </TableCell>
