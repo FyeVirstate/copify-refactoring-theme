@@ -92,6 +92,8 @@ export interface SectionProps {
   updateNestedField: (arrayField: string, index: number, field: string, value: string) => void;
   regenerateField: (fieldName: string, currentValue: string) => void;
   regeneratingField: string | null;
+  successField?: string | null;  // Field that was successfully regenerated (shows green border)
+  errorField?: string | null;    // Field that had an error (shows red border)
   images?: string[];
   onEditImage?: (imageUrl: string) => void;
   onGenerateImage?: () => void;

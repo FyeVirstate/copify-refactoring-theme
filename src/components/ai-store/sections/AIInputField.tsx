@@ -10,12 +10,15 @@ interface AIInputFieldProps {
   onChange: (value: string) => void;
   onRegenerate?: () => void;
   isRegenerating?: boolean;
+  isSuccess?: boolean;   // Show green border
+  isError?: boolean;     // Show red border
   placeholder?: string;
   type?: 'text' | 'textarea' | 'number';
   rows?: number;
   icon?: string;
   showRegenerateButton?: boolean;
   hint?: string;
+  disabled?: boolean;    // Disable all regeneration (when another field is regenerating)
 }
 
 export const AIInputField: React.FC<AIInputFieldProps> = ({
@@ -24,13 +27,26 @@ export const AIInputField: React.FC<AIInputFieldProps> = ({
   onChange,
   onRegenerate,
   isRegenerating = false,
+  isSuccess = false,
+  isError = false,
   placeholder,
   type = 'text',
   rows = 4,
   icon,
   showRegenerateButton = true,
   hint,
+  disabled = false,
 }) => {
+  // Build class name based on state
+  const getFieldClassName = () => {
+    let className = 'form-control form-control-sm';
+    if (showRegenerateButton && type !== 'number') className += ' form-control-w-side-button';
+    if (isRegenerating) className += ' field-regenerating';
+    if (isSuccess) className += ' field-success';
+    if (isError) className += ' field-error';
+    return className;
+  };
+
   return (
     <TooltipProvider>
       <div className="mb-3">
@@ -43,7 +59,7 @@ export const AIInputField: React.FC<AIInputFieldProps> = ({
             <textarea
               value={value}
               onChange={(e) => onChange(e.target.value)}
-              className={`form-control form-control-sm ${showRegenerateButton ? 'form-control-w-side-button' : ''} ${isRegenerating ? 'field-regenerating' : ''}`}
+              className={getFieldClassName()}
               placeholder={placeholder}
               rows={rows}
               disabled={isRegenerating}
@@ -62,7 +78,7 @@ export const AIInputField: React.FC<AIInputFieldProps> = ({
               type="text"
               value={value}
               onChange={(e) => onChange(e.target.value)}
-              className={`form-control form-control-sm ${showRegenerateButton ? 'form-control-w-side-button' : ''} ${isRegenerating ? 'field-regenerating' : ''}`}
+              className={getFieldClassName()}
               placeholder={placeholder}
               disabled={isRegenerating}
             />
@@ -70,8 +86,9 @@ export const AIInputField: React.FC<AIInputFieldProps> = ({
           {showRegenerateButton && onRegenerate && type !== 'number' && (
             <RegenerateButton
               onClick={onRegenerate}
-              disabled={isRegenerating}
+              disabled={isRegenerating || disabled}
               isRegenerating={isRegenerating}
+              isError={isError}
               position={type === 'textarea' ? 'top' : 'middle'}
             />
           )}

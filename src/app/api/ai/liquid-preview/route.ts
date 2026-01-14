@@ -1194,8 +1194,8 @@ function buildGlobalContext(
   images: string[],
   themeKey: string
 ) {
-  // Force "YOUR BRAND" for navbar - not editable for now
-  const storeName = 'YOUR BRAND'
+  // Use store_name from aiContent (comes from Step 2 "Nom de votre boutique")
+  const storeName = (aiContent.store_name as string) || 'YOUR BRAND'
   // Default colors match Laravel and frontend: #6f6254 (brownish) and #e6e1dc (cream)
   const primaryColor = (aiContent.primary_color_picker as string) || '#6f6254'
   const tertiaryColor = (aiContent.tertiary_color_picker as string) || '#e6e1dc'
@@ -1483,6 +1483,53 @@ function buildGlobalContext(
 }
 
 /**
+ * Map frontend section IDs to template section types
+ * This matches the SECTION_TYPE_MAP from the frontend exactly
+ * 
+ * IMPORTANT: Template sections often have random suffixes like 'pdp_benefits_xKfG6U'
+ * So we need to match by TYPE, not just ID
+ * 
+ * NOTE: The theme_v4 template uses:
+ * - header-with-marquee: Testimonial cards with names (Elena Marwel, Jackson, etc.)
+ * - marquee: Black bar with scrolling text
+ * There is NO product-reviews section in theme_v4!
+ */
+const FRONTEND_TO_TEMPLATE_TYPE_MAP: Record<string, string[]> = {
+  // Product Page Sections - each maps to possible template types
+  'product-information': ['pdp-main-product', 'featured-product', 'main'],
+  'featured-product': ['pdp-main-product', 'featured-product', 'main'],
+  'general': ['featured-product'],
+  // First "Témoignages" - testimonial cards with reviewer names
+  'review': ['header-with-marquee', 'product-reviews', 'reviews'],
+  'reviews': ['header-with-marquee', 'product-reviews', 'reviews'],
+  'product-reviews': ['header-with-marquee', 'product-reviews'],
+  'timeline': ['timeline-points', 'timeline'],
+  'what-makes-us-different': ['pdp-benefits', 'benefits'],
+  'comparison-table': ['pdp-comparison-table', 'comparison-table'],
+  'pdp-comparison-table': ['pdp-comparison-table'],
+  'clinical-section': ['pdp-statistics-column', 'statistics'],
+  // Second "Témoignages" - black bar marquee
+  'testimonials-marquee': ['marquee'],
+  'hero': ['img-with-txt', 'image-with-text', 'hero'],
+  'faqs': ['faq', 'image-faq'],
+  'faq': ['faq', 'image-faq'],
+  'image-faq': ['image-faq', 'faq'],
+  'product-section': ['product-section-1', 'product-section'],
+  // Homepage Sections
+  'testimonials': ['header-with-marquee'],
+  'header-with-marquee': ['header-with-marquee'],
+  'middle-page': ['header-with-marquee'],
+  'video-grid': ['video-gris-slider', 'video-grid'],
+  'video-gris-slider': ['video-gris-slider'],
+  'image-with-text': ['image-with-text'],
+  'newsletter': ['custom-newsletter', 'newsletter'],
+  // Other Sections
+  'images': ['product-images'],
+  'announcement-bar': ['announcement-bar'],
+  'rich-text': ['rich-text'],
+}
+
+/**
  * Prepare sections array for Liquid service
  * Uses ContentMappingService for proper AI content application (matching Laravel)
  * Respects hidden_sections and section_order from aiContent
@@ -1510,12 +1557,82 @@ function prepareSectionsForLiquid(
   // Header sections first (announcement-bar, header)
   const headerTypes = ['announcement-bar', 'header']
   
-  // Note: For now, we always use the template order because the frontend uses
-  // different section IDs (like 'product-section', 'review') than the template IDs
-  // (like 'main', 'pdp_benefits_XYZ123'). This needs to be fixed in the frontend.
-  // TODO: Implement proper section order/visibility once frontend uses real template IDs
-  const hiddenSections = new Set<string>() // Disabled for now
-  const effectiveOrder = order // Always use template order
+  // Get hidden sections from aiContent and map frontend IDs to template section types
+  const hiddenFrontendIds = (aiContent.hidden_sections as string[]) || []
+  const hiddenTemplateTypes = new Set<string>()
+  
+  // Convert frontend section IDs to template section types (each frontend ID can map to multiple template types)
+  hiddenFrontendIds.forEach(frontendId => {
+    const templateTypes = FRONTEND_TO_TEMPLATE_TYPE_MAP[frontendId] || [frontendId]
+    templateTypes.forEach(templateType => {
+      hiddenTemplateTypes.add(templateType)
+    })
+  })
+  
+  // Also add the frontend ID itself in case it matches directly
+  hiddenFrontendIds.forEach(id => {
+    hiddenTemplateTypes.add(id)
+  })
+  
+  // Get section order from aiContent - this is the order from the frontend sidebar
+  const frontendSectionOrder = (aiContent.section_order as string[]) || []
+  
+  // Build a map from template section type to template section ID
+  const templateTypeToId: Record<string, string> = {}
+  for (const sectionId of order) {
+    const section = templateSections[sectionId]
+    if (section) {
+      templateTypeToId[section.type] = sectionId
+    }
+  }
+  
+  // Convert frontend section order to template section IDs
+  // This allows drag & drop reordering to affect the preview
+  let effectiveOrder = [...order]
+  
+  if (frontendSectionOrder.length > 0) {
+    // Build ordered list based on frontend order
+    const orderedTemplateIds: string[] = []
+    const usedIds = new Set<string>()
+    
+    // First, add sections in the frontend order
+    for (const frontendId of frontendSectionOrder) {
+      const templateTypes = FRONTEND_TO_TEMPLATE_TYPE_MAP[frontendId] || [frontendId]
+      
+      // Find matching template section ID
+      for (const sectionId of order) {
+        if (usedIds.has(sectionId)) continue
+        
+        const section = templateSections[sectionId]
+        if (!section) continue
+        
+        const sectionType = section.type
+        // Check if this template section matches the frontend section
+        for (const templateType of templateTypes) {
+          const normalizedTemplate = templateType.replace(/-/g, '_').toLowerCase()
+          const normalizedSectionType = sectionType.replace(/-/g, '_').toLowerCase()
+          
+          if (normalizedSectionType === normalizedTemplate ||
+              normalizedSectionType.startsWith(normalizedTemplate) ||
+              normalizedSectionType.includes(normalizedTemplate)) {
+            orderedTemplateIds.push(sectionId)
+            usedIds.add(sectionId)
+            break
+          }
+        }
+        if (usedIds.has(sectionId)) break
+      }
+    }
+    
+    // Add any remaining template sections that weren't in the frontend order
+    for (const sectionId of order) {
+      if (!usedIds.has(sectionId)) {
+        orderedTemplateIds.push(sectionId)
+      }
+    }
+    
+    effectiveOrder = orderedTemplateIds
+  }
   
   // Migrate AI content to ensure all required fields exist
   const migratedContent = migrateAiContent(aiContent)
@@ -1526,13 +1643,40 @@ function prepareSectionsForLiquid(
   
   // Process each section in order
   for (const sectionId of effectiveOrder) {
-    // Skip hidden sections
-    if (hiddenSections.has(sectionId)) continue
-    
     const section = templateSections[sectionId]
     if (!section || section.disabled) continue
     
     const sectionType = section.type
+    
+    // Skip hidden sections - check both section ID and section type
+    // Also check for partial matches (template IDs often have random suffixes like "pdp_benefits_xKfG6U")
+    const isHiddenById = hiddenTemplateTypes.has(sectionId)
+    const isHiddenByType = hiddenTemplateTypes.has(sectionType)
+    
+    // Check for partial matches - section type might have random suffix like "pdp_benefits_xKfG6U"
+    // We only match if the section type STARTS with the hidden type (not just contains it)
+    // This prevents "header-with-marquee" from matching when we're looking for "marquee"
+    let isHiddenByPartialMatch = false
+    for (const hiddenType of hiddenTemplateTypes) {
+      // Normalize both for comparison (replace - with _ for consistency)
+      const normalizedHidden = hiddenType.replace(/-/g, '_').toLowerCase()
+      const normalizedSectionType = sectionType.replace(/-/g, '_').toLowerCase()
+      const normalizedSectionId = sectionId.replace(/-/g, '_').toLowerCase()
+      
+      // Only match if section type/id STARTS with or EQUALS the hidden type
+      // Do NOT use .includes() as it would match "header_with_marquee" for "marquee"
+      if (normalizedSectionType === normalizedHidden ||
+          normalizedSectionType.startsWith(normalizedHidden + '_') ||
+          normalizedSectionId === normalizedHidden ||
+          normalizedSectionId.startsWith(normalizedHidden + '_')) {
+        isHiddenByPartialMatch = true
+        break
+      }
+    }
+    
+    if (isHiddenById || isHiddenByType || isHiddenByPartialMatch) {
+      continue
+    }
     let settings = { ...(section.settings || {}) }
     let blocks = section.blocks ? JSON.parse(JSON.stringify(section.blocks)) : {} as Record<string, BlockData>
     const blockOrder = [...(section.block_order || [])]
@@ -1572,6 +1716,23 @@ function generateWysiwygScript(): string {
   return `
 <script>
 (function() {
+  // Prevent scroll from bubbling to parent window
+  // Add CSS to ensure iframe scroll doesn't affect parent
+  var scrollPreventionStyle = document.createElement('style');
+  scrollPreventionStyle.id = 'wysiwyg-scroll-prevention';
+  scrollPreventionStyle.textContent = \`
+    html, body {
+      overflow-x: hidden !important;
+    }
+    /* Prevent scroll chaining to parent */
+    * {
+      overscroll-behavior: contain !important;
+    }
+  \`;
+  if (!document.getElementById('wysiwyg-scroll-prevention')) {
+    document.head.appendChild(scrollPreventionStyle);
+  }
+  
   // WYSIWYG Preview Communication - Listen for messages from parent window
   var currentHighlightedElement = null;
   var highlightOverlay = null;
@@ -1580,18 +1741,26 @@ function generateWysiwygScript(): string {
   // Section type to CSS selector mapping (matching Laravel exactly)
   var sectionSelectors = {
     // Product Page Sections
+    'pdp-main-product': '[data-section-type="pdp-main-product"], [data-section-type="featured-product"], .featured-product, .main_product-custom, section[id*="featured-product"], section[id*="main-product"], section[id="main"], .main-product, .product-info-section',
     'featured-product': '[data-section-type="featured-product"], .featured-product, .main_product-custom, section[id*="featured-product"], section[id*="main-product"], .main-product, .product-info-section',
     'product-section-1': '[data-section-type="product-section-1"], .product-section-1, section[id*="product-section"], section[id*="product_section"]',
     'pdp-benefits': '[data-section-type="pdp-benefits"], .pdp-benefits, .pdp_benefits_mainwrapper, section[id*="pdp_benefits"], section[id*="pdp-benefits"]',
     'pdp-statistics-column': '[data-section-type="pdp-statistics-column"], .pdp-statistics, .pdp_statistics__column_mainwrapper, section[id*="pdp_statistics"], section[id*="clinical"]',
-    'image-faq': '[data-section-type="image-faq"], [data-section-type="faq"], .image-faq, .image_faq_mainwrapper, .store-faq-section, .faq-wp, [class*="faq-wp-faq"], [class*="faq_Kgq"], section[id*="image_faq"], section[id*="image-faq"], section[id*="faq"]',
-    'faq': '[data-section-type="faq"], [data-section-type="image-faq"], .image-faq, .image_faq_mainwrapper, .store-faq-section, .faq-wp, [class*="faq-wp-faq"], [class*="faq_Kgq"], section[id*="image_faq"], section[id*="image-faq"], section[id*="faq"]',
+    'image-faq': '[data-section-type="image-faq"], .image-faq, .image_faq_mainwrapper, section[id*="image_faq"], section[id*="image-faq"]',
+    'faq': '[data-section-type="faq"], .faq-wp, [class*="faq-wp-faq"], section[id*="faq_"]:not([id*="image_faq"])',
     'pdp-comparison-table': '[data-section-type="pdp-comparison-table"], .pdp-comparison-table, .pdp_comparison_table_mainwrapper, section[id*="comparison"], section[id*="pdp_comparison"]',
-    'product-reviews': '[data-section-type="product-reviews"], .product-reviews, .scrolling__card_marquee, [class*="marq-header_with_marquee"], section[id*="reviews"], section[id*="product-reviews"]',
+    
+    // First Témoignages - testimonial cards with reviewer names (header-with-marquee)
+    // This is the scrolling__card_marquee with individual reviewer cards like Emma K., Jackson etc.
+    'header-with-marquee': '[data-section-type="header-with-marquee"], .header_with_marquee__mainWrapper, .scrolling__card_marquee, section[id*="header_with_marquee"]',
+    
+    // Second Témoignages - black bar with scrolling text (marquee)
+    // This is the squeeze_scroller / black banner section
+    // Shopify wraps sections in div#shopify-section-{sectionId}, so we look for that pattern
+    'marquee': '[data-section-type="marquee"], .squeeze_scroller_main, .squeeze_scroller_data, [id^="shopify-section-marquee_"], section[id^="marquee_"]',
     
     // Homepage Sections  
-    'img-with-txt': '[data-section-type="img-with-txt"], .img-with-txt, .shopall-img_with_txt, section[id*="img-with-txt"], section[id*="img_with_txt"], section[id*="hero"]',
-    'header-with-marquee': '[data-section-type="header-with-marquee"], .header-with-marquee, .header_with_marquee__mainWrapper, .scrolling__card_marquee, .squeeze_scroller_main, .squeeze_scroller_data, .squeeze_scroller_inner, section[id*="header_with_marquee"], section[id*="header-with-marquee"], section[id*="marquee"], section[id*="squeeze_scroller"], section[class*="squeeze_scroller"]',
+    'img-with-txt': '[data-section-type="img-with-txt"], .img-with-txt, .shopall-img_with_txt, section[id*="img-with-txt"], section[id*="img_with_txt"]',
     'timeline-points': '[data-section-type="timeline-points"], .timeline-points, .timeline__main__wrapper, section[id*="timeline"]',
     'video-gris-slider': '[data-section-type="video-gris-slider"], .video-gris-slider, section[id*="video"]',
     'image-with-text': '[data-section-type="image-with-text"], .image-with-text, .image_with_text__wrapper, section[id*="image-with-text"]',
@@ -1604,36 +1773,60 @@ function generateWysiwygScript(): string {
   };
   
   function findSectionElement(sectionType) {
-    // Special handling for product-reviews (first testimonials) to find scrolling__card_marquee
-    if (sectionType === 'product-reviews') {
-      // Try scrolling__card_marquee first
-      var marqueeEl = document.querySelector('.scrolling__card_marquee');
-      if (marqueeEl) {
+    // Special handling for header-with-marquee (first Témoignages - testimonial cards with names)
+    if (sectionType === 'header-with-marquee') {
+      // Try section with id containing "header_with_marquee" first
+      var hwmEl = document.querySelector('section[id*="header_with_marquee"]');
+      if (hwmEl) {
+        console.log('[WYSIWYG] Found header_with_marquee section by id');
+        return hwmEl;
+      }
+      // Try scrolling__card_marquee (testimonial cards container)
+      hwmEl = document.querySelector('.scrolling__card_marquee');
+      if (hwmEl) {
         console.log('[WYSIWYG] Found scrolling__card_marquee');
-        return marqueeEl;
+        return hwmEl;
       }
-      // Try marq-header_with_marquee_B8fi3m or similar
-      marqueeEl = document.querySelector('[class*="marq-header_with_marquee"]');
-      if (marqueeEl) {
-        console.log('[WYSIWYG] Found marq-header_with_marquee element');
-        return marqueeEl;
-      }
-      // Try element with gradient color-scheme-1 classes
-      var elements = document.querySelectorAll('.scrolling__card_marquee, [class*="marq-header_with_marquee"]');
-      for (var i = 0; i < elements.length; i++) {
-        if (elements[i].classList.contains('gradient') || elements[i].classList.contains('color-scheme-1')) {
-          console.log('[WYSIWYG] Found scrolling__card_marquee with gradient/color-scheme');
-          return elements[i];
-        }
-      }
-      if (elements.length > 0) {
-        console.log('[WYSIWYG] Found scrolling__card_marquee element by class');
-        return elements[0];
+      // Try header_with_marquee__mainWrapper
+      hwmEl = document.querySelector('.header_with_marquee__mainWrapper');
+      if (hwmEl) {
+        console.log('[WYSIWYG] Found header_with_marquee__mainWrapper');
+        return hwmEl;
       }
     }
     
-    // Special handling for featured-product to find main_product-custom
-    if (sectionType === 'featured-product') {
+    // Special handling for marquee (second Témoignages - black bar with scrolling text)
+    if (sectionType === 'marquee') {
+      // Try Shopify section wrapper with id starting with "shopify-section-marquee_"
+      var marqueeWrapper = document.querySelector('[id^="shopify-section-marquee_"]');
+      if (marqueeWrapper) {
+        console.log('[WYSIWYG] Found marquee Shopify wrapper');
+        return marqueeWrapper;
+      }
+      // Try squeeze_scroller (black bar)
+      var squeezeEl = document.querySelector('.squeeze_scroller_main');
+      if (squeezeEl) {
+        console.log('[WYSIWYG] Found squeeze_scroller_main');
+        return squeezeEl;
+      }
+      squeezeEl = document.querySelector('.squeeze_scroller_data');
+      if (squeezeEl) {
+        console.log('[WYSIWYG] Found squeeze_scroller_data');
+        return squeezeEl;
+      }
+      // Try any section with marquee in id but NOT header_with_marquee
+      var allSections = document.querySelectorAll('[id*="marquee"]');
+      for (var i = 0; i < allSections.length; i++) {
+        var elId = allSections[i].id || '';
+        if (elId.includes('marquee') && !elId.includes('header_with_marquee')) {
+          console.log('[WYSIWYG] Found marquee element by id pattern:', elId);
+          return allSections[i];
+        }
+      }
+    }
+    
+    // Special handling for pdp-main-product and featured-product
+    if (sectionType === 'pdp-main-product' || sectionType === 'featured-product') {
       var productEl = document.querySelector('.main_product-custom');
       if (productEl) {
         console.log('[WYSIWYG] Found main_product-custom');
@@ -1641,27 +1834,8 @@ function generateWysiwygScript(): string {
       }
     }
     
-    // Special handling for header-with-marquee to find squeeze_scroller
-    if (sectionType === 'header-with-marquee') {
-      // Try squeeze_scroller_main first (most specific)
-      var squeezeEl = document.querySelector('.squeeze_scroller_main');
-      if (squeezeEl) {
-        console.log('[WYSIWYG] Found squeeze_scroller_main');
-        return squeezeEl;
-      }
-      // Try squeeze_scroller_data
-      squeezeEl = document.querySelector('.squeeze_scroller_data');
-      if (squeezeEl) {
-        console.log('[WYSIWYG] Found squeeze_scroller_data');
-        return squeezeEl;
-      }
-      // Try any element with squeeze_scroller in class
-      var squeezeElements = document.querySelectorAll('[class*="squeeze_scroller"]');
-      if (squeezeElements.length > 0) {
-        console.log('[WYSIWYG] Found squeeze_scroller element by class');
-        return squeezeElements[0];
-      }
-    }
+    // NOTE: header-with-marquee is now handled at the top with the correct selectors
+    // (scrolling__card_marquee = testimonial cards, NOT squeeze_scroller which is the black bar)
     
     // Special handling for FAQ to find store-faq-section
     if (sectionType === 'faq' || sectionType === 'image-faq') {
@@ -1724,13 +1898,27 @@ function generateWysiwygScript(): string {
     return null;
   }
   
-  function scrollToSection(sectionType) {
-    console.log('[WYSIWYG] Scrolling to section:', sectionType);
+  function scrollToSection(sectionType, noHighlight) {
+    console.log('[WYSIWYG] Scrolling to section:', sectionType, 'noHighlight:', noHighlight);
     var element = findSectionElement(sectionType);
     if (element) {
       console.log('[WYSIWYG] Found element:', element.id || element.className);
-      element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      highlightElement(element);
+      // Use manual scroll calculation to prevent scroll from affecting parent window
+      // This keeps scrolling contained within the iframe
+      var rect = element.getBoundingClientRect();
+      var currentScrollY = window.scrollY || window.pageYOffset || document.documentElement.scrollTop;
+      var viewportHeight = window.innerHeight || document.documentElement.clientHeight;
+      // Calculate target scroll position to center the element
+      var targetScrollY = currentScrollY + rect.top - (viewportHeight / 2) + (rect.height / 2);
+      // Scroll smoothly within iframe only
+      window.scrollTo({
+        top: Math.max(0, targetScrollY),
+        behavior: 'smooth'
+      });
+      // Only highlight if not explicitly disabled (e.g., after edit refresh)
+      if (!noHighlight) {
+        highlightElement(element);
+      }
     } else {
       console.log('[WYSIWYG] Section not found:', sectionType);
     }
@@ -1840,13 +2028,14 @@ function generateWysiwygScript(): string {
     switch (data.type) {
       case 'scrollToSection':
         if (data.sectionType) {
-          scrollToSection(data.sectionType);
+          // Pass noHighlight flag (true = scroll only, no blue box)
+          scrollToSection(data.sectionType, data.noHighlight);
         }
         break;
         
       case 'highlightInput':
         if (data.sectionType) {
-          scrollToSection(data.sectionType);
+          scrollToSection(data.sectionType, false);
         }
         break;
         
@@ -2103,33 +2292,39 @@ export async function GET(request: NextRequest) {
     const context = buildGlobalContext(aiContent, productData, images, themeKey)
     const sections = prepareSectionsForLiquid(templateSections, order, aiContent, images)
     
-    // Force "YOUR BRAND" in header/navbar sections and product title in featured-product
+    // Use store name from aiContent for header/navbar sections ONLY (not header-with-marquee!)
+    const headerStoreName = (aiContent.store_name as string) || 'YOUR BRAND'
+    
     for (const section of sections) {
-      // Force navbar title to "YOUR BRAND" - check ALL blocks in header section
-      if (section.type === 'header' || section.type === 'navbar' || section.id?.includes('header')) {
+      // Set store name ONLY in the actual header/navbar section - NOT header-with-marquee
+      // header-with-marquee is a testimonials section that should use persuasiveContent.header
+      const sectionType = section.type || ''
+      const isActualHeader = (sectionType === 'header' || sectionType === 'navbar') && 
+                             !sectionType.includes('marquee')
+      if (isActualHeader) {
         if (section.settings) {
-          // Force all possible title/heading settings
-          section.settings.title = 'YOUR BRAND'
-          section.settings.heading = 'YOUR BRAND'
-          section.settings.text = 'YOUR BRAND'
-          section.settings.link_text = 'YOUR BRAND'
-          section.settings.logo_text = 'YOUR BRAND'
-          section.settings.brand_name = 'YOUR BRAND'
+          // Set all possible title/heading settings to store name
+          section.settings.title = headerStoreName
+          section.settings.heading = headerStoreName
+          section.settings.text = headerStoreName
+          section.settings.link_text = headerStoreName
+          section.settings.logo_text = headerStoreName
+          section.settings.brand_name = headerStoreName
         }
         // Check ALL blocks in header section, regardless of type
         if (section.blocks) {
           for (const blockId of Object.keys(section.blocks)) {
             const block = section.blocks[blockId] as BlockData
             if (block.settings) {
-              // Force all possible title/heading settings in ALL blocks
-              block.settings.title = 'YOUR BRAND'
-              block.settings.heading = 'YOUR BRAND'
-              block.settings.text = 'YOUR BRAND'
-              block.settings.link_text = 'YOUR BRAND'
-              block.settings.logo_text = 'YOUR BRAND'
-              block.settings.brand_name = 'YOUR BRAND'
-              block.settings.h1 = 'YOUR BRAND'
-              block.settings.h2 = 'YOUR BRAND'
+              // Set all possible title/heading settings in ALL blocks
+              block.settings.title = headerStoreName
+              block.settings.heading = headerStoreName
+              block.settings.text = headerStoreName
+              block.settings.link_text = headerStoreName
+              block.settings.logo_text = headerStoreName
+              block.settings.brand_name = headerStoreName
+              block.settings.h1 = headerStoreName
+              block.settings.h2 = headerStoreName
             }
           }
         }
@@ -2328,33 +2523,39 @@ export async function POST(request: NextRequest) {
     const context = buildGlobalContext(aiContent, productData, images, themeKey)
     const sections = prepareSectionsForLiquid(templateSections, order, aiContent, images)
     
-    // Force "YOUR BRAND" in header/navbar sections and product title in featured-product
+    // Use store name from aiContent for header/navbar sections ONLY (not header-with-marquee!)
+    const headerStoreName = (aiContent.store_name as string) || 'YOUR BRAND'
+    
     for (const section of sections) {
-      // Force navbar title to "YOUR BRAND" - check ALL blocks in header section
-      if (section.type === 'header' || section.type === 'navbar' || section.id?.includes('header')) {
+      // Set store name ONLY in the actual header/navbar section - NOT header-with-marquee
+      // header-with-marquee is a testimonials section that should use persuasiveContent.header
+      const sectionType = section.type || ''
+      const isActualHeader = (sectionType === 'header' || sectionType === 'navbar') && 
+                             !sectionType.includes('marquee')
+      if (isActualHeader) {
         if (section.settings) {
-          // Force all possible title/heading settings
-          section.settings.title = 'YOUR BRAND'
-          section.settings.heading = 'YOUR BRAND'
-          section.settings.text = 'YOUR BRAND'
-          section.settings.link_text = 'YOUR BRAND'
-          section.settings.logo_text = 'YOUR BRAND'
-          section.settings.brand_name = 'YOUR BRAND'
+          // Set all possible title/heading settings to store name
+          section.settings.title = headerStoreName
+          section.settings.heading = headerStoreName
+          section.settings.text = headerStoreName
+          section.settings.link_text = headerStoreName
+          section.settings.logo_text = headerStoreName
+          section.settings.brand_name = headerStoreName
         }
         // Check ALL blocks in header section, regardless of type
         if (section.blocks) {
           for (const blockId of Object.keys(section.blocks)) {
             const block = section.blocks[blockId] as BlockData
             if (block.settings) {
-              // Force all possible title/heading settings in ALL blocks
-              block.settings.title = 'YOUR BRAND'
-              block.settings.heading = 'YOUR BRAND'
-              block.settings.text = 'YOUR BRAND'
-              block.settings.link_text = 'YOUR BRAND'
-              block.settings.logo_text = 'YOUR BRAND'
-              block.settings.brand_name = 'YOUR BRAND'
-              block.settings.h1 = 'YOUR BRAND'
-              block.settings.h2 = 'YOUR BRAND'
+              // Set all possible title/heading settings in ALL blocks
+              block.settings.title = headerStoreName
+              block.settings.heading = headerStoreName
+              block.settings.text = headerStoreName
+              block.settings.link_text = headerStoreName
+              block.settings.logo_text = headerStoreName
+              block.settings.brand_name = headerStoreName
+              block.settings.h1 = headerStoreName
+              block.settings.h2 = headerStoreName
             }
           }
         }

@@ -76,23 +76,31 @@ const HOME_PAGE_SECTIONS = [
 
 // Map sidebar section IDs to theme section types (matching Laravel sectionTypeMap exactly)
 // Defined outside component to prevent re-creation on every render
+// 
+// NOTE: theme_v4 template sections:
+// - pdp-main-product: Main product info section
+// - header-with-marquee: Testimonial cards with reviewer names (first Témoignages)
+// - marquee: Black bar with scrolling text (second Témoignages)
+// - There is NO product-reviews section in theme_v4!
 const SECTION_TYPE_MAP: Record<string, string> = {
-  // Product Page Sections (from Laravel)
-  'product-information': 'featured-product',          // First section - product info
-  'featured-product': 'featured-product',
+  // Product Page Sections
+  'product-information': 'pdp-main-product',          // First section - product info
+  'featured-product': 'pdp-main-product',
   'general': 'featured-product',
-  'review': 'product-reviews',                        // Reviews/testimonials cards
-  'reviews': 'product-reviews',
-  'product-reviews': 'product-reviews',
+  // First Témoignages - testimonial cards with names (text-spacing icon)
+  'review': 'header-with-marquee',                    // Testimonial cards section
+  'reviews': 'header-with-marquee',
+  'product-reviews': 'header-with-marquee',
   'timeline': 'timeline-points',                      // Comment Faire / How it works
   'what-makes-us-different': 'pdp-benefits',          // Caractéristiques / Benefits
   'comparison-table': 'pdp-comparison-table',         // Tableau Comparatif
   'pdp-comparison-table': 'pdp-comparison-table',
   'clinical-section': 'pdp-statistics-column',        // Statistiques
-  'testimonials-marquee': 'header-with-marquee',      // Black bar testimonials (star icon)
+  // Second Témoignages - black bar marquee (star icon)
+  'testimonials-marquee': 'marquee',                  // Black bar scrolling text
   'hero': 'img-with-txt',                             // Hero section
-  'faqs': 'image-faq',                                // FAQ
-  'faq': 'image-faq',
+  'faqs': 'faq',                                      // FAQ section
+  'faq': 'faq',
   'image-faq': 'image-faq',
   'product-section': 'product-section-1',             // Product section (last)
   
@@ -282,15 +290,17 @@ export default function AIShopEditorPage() {
   // ========================================
 
   // Send message to preview iframe for section highlight/scroll
-  const scrollPreviewToSection = useCallback((sectionId: string) => {
+  // noHighlight = true means scroll only, don't show the blue box (used after edit refresh)
+  const scrollPreviewToSection = useCallback((sectionId: string, noHighlight: boolean = false) => {
     const iframe = previewIframeRef.current;
-    console.log('[WYSIWYG] scrollPreviewToSection called:', sectionId, 'iframe:', !!iframe);
+    console.log('[WYSIWYG] scrollPreviewToSection called:', sectionId, 'noHighlight:', noHighlight, 'iframe:', !!iframe);
     if (iframe && iframe.contentWindow) {
       const sectionType = SECTION_TYPE_MAP[sectionId] || sectionId;
-      console.log('[WYSIWYG] Sending postMessage to iframe:', { type: 'scrollToSection', sectionType });
+      console.log('[WYSIWYG] Sending postMessage to iframe:', { type: 'scrollToSection', sectionType, noHighlight });
       iframe.contentWindow.postMessage({
         type: 'scrollToSection',
-        sectionType: sectionType
+        sectionType: sectionType,
+        noHighlight: noHighlight
       }, '*');
     } else {
       console.log('[WYSIWYG] iframe or contentWindow not available');
@@ -320,10 +330,17 @@ export default function AIShopEditorPage() {
     }
   }, []);
 
-  // Handle section hover - scroll preview to section
+  // Hidden sections state (sections toggled off) - declared early for use in callbacks
+  const [hiddenSections, setHiddenSections] = useState<Set<string>>(new Set());
+
+  // Handle section hover - scroll preview to section (only if section is visible)
   const handleSectionHover = useCallback((sectionId: string) => {
+    // Don't scroll/highlight if section is hidden
+    if (hiddenSections.has(sectionId)) {
+      return;
+    }
     scrollPreviewToSection(sectionId);
-  }, [scrollPreviewToSection]);
+  }, [scrollPreviewToSection, hiddenSections]);
 
   // Handle section leave - clear highlight
   const handleSectionLeave = useCallback(() => {
@@ -413,12 +430,17 @@ export default function AIShopEditorPage() {
         }
       }
       
+      // Get store name from aiContent or product title - ensure it's always set
+      const storeNameValue = aiContent.store_name || data.product.title || 'YOUR BRAND';
+      
       const defaultContent = {
         primary_color_picker: '#6f6254',
         tertiary_color_picker: '#e6e1dc',
         font_family_input: 'Inter',
         ...defaultSectionImages,
         ...aiContent,
+        // Ensure store_name is always set (overwrites aiContent if it was undefined)
+        store_name: storeNameValue,
       };
       // Ensure RGB values are calculated
       if (!defaultContent.primary_rgbcolor_picker && defaultContent.primary_color_picker) {
@@ -427,7 +449,22 @@ export default function AIShopEditorPage() {
       if (!defaultContent.tertiary_rgbcolor_picker && defaultContent.tertiary_color_picker) {
         defaultContent.tertiary_rgbcolor_picker = hexToRgbString(defaultContent.tertiary_color_picker as string);
       }
+      // Ensure product-information is never in hidden_sections (clean it if present)
+      if (defaultContent.hidden_sections && Array.isArray(defaultContent.hidden_sections)) {
+        defaultContent.hidden_sections = (defaultContent.hidden_sections as string[]).filter(
+          id => id !== 'product-information' && id !== 'featured-product'
+        );
+      }
+      
       setEditedContent(defaultContent);
+      
+      // Initialize hidden sections state (excluding product-information)
+      if (defaultContent.hidden_sections && Array.isArray(defaultContent.hidden_sections)) {
+        const cleanedHidden = (defaultContent.hidden_sections as string[]).filter(
+          id => id !== 'product-information' && id !== 'featured-product'
+        );
+        setHiddenSections(new Set(cleanedHidden));
+      }
       
       // Initialize Step 2 state from loaded product - only first 5 selected by default (like Laravel)
       if (aiContent.images && aiContent.images.length > 0) {
@@ -609,17 +646,18 @@ export default function AIShopEditorPage() {
   }, []);
 
   // Auto-refresh preview ONLY when product loads or showPreview changes (not on refreshPreview change)
+  // Only trigger when on step 3 where preview is visible
   // Use ref to avoid dependency on refreshPreview which changes with editedContent
   const productLoadedRef = useRef(false);
   useEffect(() => {
-    if (product && showPreview && !productLoadedRef.current) {
+    if (product && showPreview && currentStep === 3 && !productLoadedRef.current) {
       productLoadedRef.current = true;
       const timer = setTimeout(() => {
         refreshPreviewRef.current();
       }, 500);
       return () => clearTimeout(timer);
     }
-  }, [product, showPreview]);
+  }, [product, showPreview, currentStep]);
 
   // Real-time preview when editedContent changes (debounced)
   // Use a ref for content comparison to avoid infinite loops
@@ -629,7 +667,8 @@ export default function AIShopEditorPage() {
   useEffect(() => {
     const contentStr = JSON.stringify(editedContent);
     // Skip initial load and only trigger on actual content changes
-    if (product && showPreview && contentStr !== lastEditedContentRef.current) {
+    // Also only trigger when on step 3 (Customize) where preview is visible
+    if (product && showPreview && currentStep === 3 && contentStr !== lastEditedContentRef.current) {
       if (!initialLoadRef.current) {
         triggerDebouncedRefresh();
       } else {
@@ -637,38 +676,169 @@ export default function AIShopEditorPage() {
       }
       lastEditedContentRef.current = contentStr;
     }
-  }, [editedContent, product, showPreview, triggerDebouncedRefresh]);
+  }, [editedContent, product, showPreview, currentStep, triggerDebouncedRefresh]);
+
+  // Infer field type from field name (matches Laravel data-field-type approach)
+  const inferFieldType = (fieldName: string): string => {
+    const name = fieldName.toLowerCase();
+    
+    // Title fields
+    if (name === 'title' || name.includes('heading') || name.includes('header')) return 'headline';
+    
+    // Description fields
+    if (name === 'description' || name.includes('paragraph') || name.includes('subheading')) return 'description';
+    if (name.includes('submain') || name.includes('sub_main')) return 'description';
+    
+    // Benefit fields
+    if (name.includes('benefit') || name.includes('advantage')) return 'benefit';
+    
+    // Feature fields
+    if (name.includes('feature') || name.includes('functionality')) return 'feature';
+    
+    // Testimonial fields
+    if (name.includes('testimonial') || name.includes('review')) return 'testimonial';
+    
+    // FAQ fields
+    if (name.includes('question')) return 'question';
+    if (name.includes('answer') || name.includes('faq')) return 'faq';
+    
+    // Shipping/Delivery
+    if (name.includes('delivery') || name.includes('shipping')) return 'shipping';
+    
+    // Timeline fields
+    if (name.includes('timeframe') || name.includes('step') || name.includes('period')) return 'timeline_step';
+    if (name.includes('timeline') && name.includes('description')) return 'timeline_description';
+    
+    // Statistics/Clinical
+    if (name.includes('percentage') || name.includes('percent') || name.includes('stat')) return 'percentage';
+    if (name.includes('clinical') || name.includes('result')) return 'stat_description';
+    
+    // Special sections
+    if (name.includes('catchy') || name.includes('main')) return 'headline';
+    if (name.includes('guarantee') || name.includes('badge')) return 'benefit';
+    if (name.includes('offer') || name.includes('announcement')) return 'headline';
+    
+    // Button text (CTA)
+    if (name.includes('button') || name.includes('cta')) return 'button_cta';
+    
+    // Default to text
+    return 'text';
+  };
+
+  // Track which field was successfully regenerated (for green border)
+  const [successField, setSuccessField] = useState<string | null>(null);
+  // Track which field has an error (for red border)
+  const [errorField, setErrorField] = useState<string | null>(null);
 
   // Regenerate a field using AI
   const regenerateField = async (fieldName: string, currentValue: string) => {
+    // Block if already regenerating another field
+    if (regeneratingField) {
+      return;
+    }
+
     setRegeneratingField(fieldName);
+    setSuccessField(null);
+    setErrorField(null);
+    
     try {
+      // Infer field type from field name
+      const fieldType = inferFieldType(fieldName);
+      
       const response = await fetch('/api/ai/regenerate-field', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           fieldName,
-          currentValue,
+          currentValue: currentValue || '', // Allow empty - AI will generate
+          fieldType,
           productTitle: editedContent.title,
           productDescription: editedContent.description,
-          language: editedContent.language || 'fr',
+          language: product?.language || editedContent.language || 'en',
+          seed: currentValue || '',
+          generateIfEmpty: !currentValue || currentValue.trim() === '', // Flag for API
         }),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to regenerate');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to regenerate');
       }
 
       const data = await response.json();
       if (data.newValue) {
-        updateField(fieldName, data.newValue);
-        setSuccessMessage(`${fieldName} régénéré avec succès !`);
-        setTimeout(() => setSuccessMessage(null), 2000);
+        // Pattern 1: Nested array fields like "testimonials[0][header]", "faq[0][question]"
+        const nestedArrayMatch = fieldName.match(/^(\w+)\[(\d+)\]\[(\w+)\]$/);
+        // Pattern 2: Simple array fields like "features[0]", "benefits[0]"
+        const simpleArrayMatch = fieldName.match(/^(\w+)\[(\d+)\]$/);
+        // Pattern 3: Dot notation like "comparison.heading", "persuasiveContent.paragraph"
+        const dotMatch = fieldName.match(/^(\w+)\.(\w+)$/);
+        
+        if (nestedArrayMatch) {
+          // Handle nested array fields: testimonials[0][header]
+          const [, arrayName, indexStr, subField] = nestedArrayMatch;
+          const index = parseInt(indexStr, 10);
+          setEditedContent(prev => {
+            const array = [...(prev[arrayName] as Array<Record<string, string>> || [])];
+            if (array[index]) {
+              array[index] = { ...array[index], [subField]: data.newValue };
+            } else {
+              // Create the item if it doesn't exist
+              while (array.length <= index) {
+                array.push({});
+              }
+              array[index] = { [subField]: data.newValue };
+            }
+            return { ...prev, [arrayName]: array };
+          });
+        } else if (simpleArrayMatch) {
+          // Handle simple array fields: features[0], benefits[0]
+          const [, arrayName, indexStr] = simpleArrayMatch;
+          const index = parseInt(indexStr, 10);
+          setEditedContent(prev => {
+            // Handle field name aliases (advantages can come from benefits)
+            let sourceArray = prev[arrayName];
+            let targetField = arrayName;
+            
+            if (!Array.isArray(sourceArray)) {
+              if (arrayName === 'advantages' && Array.isArray(prev['benefits'])) {
+                sourceArray = prev['benefits'];
+                targetField = 'benefits';
+              } else if (arrayName === 'benefits' && Array.isArray(prev['advantages'])) {
+                sourceArray = prev['advantages'];
+                targetField = 'advantages';
+              }
+            }
+            
+            if (Array.isArray(sourceArray)) {
+              const newArray = [...sourceArray];
+              newArray[index] = data.newValue;
+              return { ...prev, [targetField]: newArray };
+            }
+            
+            console.warn(`Array field '${arrayName}' not found in content`);
+            return prev;
+          });
+        } else if (dotMatch) {
+          // Handle dot notation: comparison.heading, persuasiveContent.paragraph
+          const [, objectName, subField] = dotMatch;
+          setEditedContent(prev => {
+            const obj = (prev[objectName] as Record<string, unknown>) || {};
+            return { ...prev, [objectName]: { ...obj, [subField]: data.newValue } };
+          });
+        } else {
+          // Simple field name
+          updateField(fieldName, data.newValue);
+        }
+        // Set success for THIS specific field
+        setSuccessField(fieldName);
+        setTimeout(() => setSuccessField(null), 2000);
       }
     } catch (err) {
       console.error('Regeneration error:', err);
-      setError('Échec de la régénération. Veuillez réessayer.');
-      setTimeout(() => setError(null), 3000);
+      // Set error for THIS specific field (not global error)
+      setErrorField(fieldName);
+      setTimeout(() => setErrorField(null), 3000);
     } finally {
       setRegeneratingField(null);
     }
@@ -710,6 +880,34 @@ export default function AIShopEditorPage() {
       return { ...prev, [field]: array };
     });
   };
+
+  // Navigate to step 2 - sync store_name from editedContent
+  const goToStep2 = useCallback(() => {
+    // Sync store_name from editedContent back to storeName state
+    if (editedContent.store_name) {
+      setStoreName(editedContent.store_name as string);
+    }
+    setCurrentStep(2);
+  }, [editedContent.store_name]);
+
+  // Navigate to step 3 - sync store_name to editedContent and refresh preview
+  const goToStep3 = useCallback(() => {
+    setEditedContent(prev => ({
+      ...prev,
+      selectedMainImages: selectedImages,
+      store_name: storeName,
+    }));
+    setCurrentStep(3);
+    // Refresh preview after a short delay to ensure step change is complete
+    setTimeout(() => {
+      refreshPreviewRef.current();
+    }, 300);
+  }, [selectedImages, storeName]);
+
+  // Navigate to step 4
+  const goToStep4 = useCallback(() => {
+    setCurrentStep(4);
+  }, []);
 
   // Save changes
   const handleSave = async () => {
@@ -1067,9 +1265,6 @@ export default function AIShopEditorPage() {
   // Drag & drop state
   const [draggingIndex, setDraggingIndex] = useState<number | null>(null);
   
-  // Hidden sections state (sections toggled off)
-  const [hiddenSections, setHiddenSections] = useState<Set<string>>(new Set());
-  
   // Reset section order when page type changes
   useEffect(() => {
     const sections = pageType === 'home' ? HOME_PAGE_SECTIONS : PRODUCT_PAGE_SECTIONS;
@@ -1077,6 +1272,20 @@ export default function AIShopEditorPage() {
     setHiddenSections(new Set());
     setDynamicSections([]);
   }, [pageType]);
+  
+  // Ensure product-information is never hidden (even if loaded from database)
+  // Check and clean hidden_sections when editedContent changes
+  useEffect(() => {
+    const hiddenSectionsArray = (editedContent.hidden_sections as string[]) || [];
+    if (hiddenSectionsArray.includes('product-information') || hiddenSectionsArray.includes('featured-product')) {
+      const cleaned = hiddenSectionsArray.filter(id => id !== 'product-information' && id !== 'featured-product');
+      setEditedContent(prev => ({
+        ...prev,
+        hidden_sections: cleaned,
+      }));
+      setHiddenSections(new Set(cleaned));
+    }
+  }, [editedContent.hidden_sections]);
   
   // Get ordered sections based on sectionOrder (includes both default and dynamic sections)
   const themeSections = sectionOrder
@@ -1093,6 +1302,11 @@ export default function AIShopEditorPage() {
 
   // Toggle section visibility
   const toggleSectionVisibility = (sectionId: string) => {
+    // Prevent hiding/deleting "product-information" section - it's required
+    if (sectionId === 'product-information' || sectionId === 'featured-product') {
+      return;
+    }
+    
     setHiddenSections(prev => {
       const newSet = new Set(prev);
       if (newSet.has(sectionId)) {
@@ -1100,10 +1314,14 @@ export default function AIShopEditorPage() {
       } else {
         newSet.add(sectionId);
       }
+      // Ensure product-information is never in hidden_sections
+      newSet.delete('product-information');
+      newSet.delete('featured-product');
+      
       // Update editedContent with hidden_sections for API
       setEditedContent(prevContent => ({
         ...prevContent,
-        hidden_sections: Array.from(newSet),
+        hidden_sections: Array.from(newSet).filter(id => id !== 'product-information' && id !== 'featured-product'),
       }));
       return newSet;
     });
@@ -1211,7 +1429,7 @@ export default function AIShopEditorPage() {
             <li className="nav-item d-flex align-items-center">
               <button 
                 className={`nav-link step-pill fw-500 d-flex align-items-center ${currentStep === 2 ? 'active' : ''} ${currentStep > 2 ? 'completed' : ''}`}
-                onClick={() => setCurrentStep(2)}
+                onClick={goToStep2}
               >
                 <i className="ri-file-check-line nav-icon me-2"></i><span className="nav-text fs-small">2. Sélectionner</span>
               </button>
@@ -1220,7 +1438,7 @@ export default function AIShopEditorPage() {
             <li className="nav-item d-flex align-items-center">
               <button 
                 className={`nav-link step-pill fw-500 d-flex align-items-center ${currentStep === 3 ? 'active' : ''} ${currentStep > 3 ? 'completed' : ''}`}
-                onClick={() => currentStep >= 2 && setCurrentStep(3)}
+                onClick={() => currentStep >= 2 && goToStep3()}
                 style={{ opacity: currentStep < 2 ? 0.5 : 1, cursor: currentStep < 2 ? 'not-allowed' : 'pointer' }}
               >
                 <i className="ri-settings-4-line nav-icon me-2"></i><span className="nav-text fs-small">3. Personnaliser</span>
@@ -1230,7 +1448,7 @@ export default function AIShopEditorPage() {
             <li className="nav-item d-flex align-items-center">
               <button 
                 className={`nav-link step-pill fw-500 d-flex align-items-center ${currentStep === 4 ? 'active' : ''}`}
-                onClick={() => currentStep >= 3 && setCurrentStep(4)}
+                onClick={() => currentStep >= 3 && goToStep4()}
                 style={{ opacity: currentStep < 3 ? 0.5 : 1, cursor: currentStep < 3 ? 'not-allowed' : 'pointer' }}
               >
                 <i className="ri-export-line nav-icon me-2"></i><span className="nav-text fs-small">4. Mettre à jour le thème</span>
@@ -1637,16 +1855,7 @@ export default function AIShopEditorPage() {
                     padding: '8px 24px',
                     border: 'none'
                   }}
-                  onClick={() => {
-                    // Update the edited content with selected images (as selectedMainImages) and store name
-                    // Keep original images intact, store selected ones separately
-                    setEditedContent(prev => ({
-                      ...prev,
-                      selectedMainImages: selectedImages,
-                      store_name: storeName,
-                    }));
-                    setCurrentStep(3);
-                  }}
+                  onClick={goToStep3}
                   disabled={selectedImages.length === 0}
                 >
                   Suivant
@@ -1762,14 +1971,27 @@ export default function AIShopEditorPage() {
                         key={section.id} 
                         className={`section-nav-item ${hiddenSections.has(section.id) ? 'hidden-section' : ''} ${activeSection === section.id ? 'active' : ''} ${draggingIndex === index ? 'dragging' : ''}`}
                         data-section-type={SECTION_TYPE_MAP[section.id] || section.id}
-                        draggable
+                        draggable={section.id !== 'product-information' && section.id !== 'featured-product'}
                         onDragStart={(e) => {
+                          // Prevent dragging product-information section
+                          if (section.id === 'product-information' || section.id === 'featured-product') {
+                            e.preventDefault();
+                            return;
+                          }
                           e.dataTransfer.effectAllowed = 'move';
                           e.dataTransfer.setData('text/plain', section.id);
                           setDraggingIndex(index);
                         }}
                         onDragEnd={() => {
                           setDraggingIndex(null);
+                          // Sync section_order to editedContent for API when drag ends
+                          setSectionOrder(currentOrder => {
+                            setEditedContent(prevContent => ({
+                              ...prevContent,
+                              section_order: currentOrder,
+                            }));
+                            return currentOrder;
+                          });
                         }}
                         onDragOver={(e) => {
                           e.preventDefault();
@@ -1787,9 +2009,24 @@ export default function AIShopEditorPage() {
                         onDrop={(e) => {
                           e.preventDefault();
                           setDraggingIndex(null);
+                          // Update editedContent with section_order for API on drop
+                          setEditedContent(prevContent => ({
+                            ...prevContent,
+                            section_order: sectionOrder,
+                          }));
                         }}
-                        onMouseEnter={() => handleSectionHover(section.id)}
-                        onMouseLeave={handleSectionLeave}
+                        onMouseEnter={() => {
+                          // Only hover/scroll if section is visible
+                          if (!hiddenSections.has(section.id)) {
+                            handleSectionHover(section.id);
+                          }
+                        }}
+                        onMouseLeave={() => {
+                          // Only clear highlight if section was visible
+                          if (!hiddenSections.has(section.id)) {
+                            handleSectionLeave();
+                          }
+                        }}
                       >
                         {/* Icon wrapper - contains both icons in same space */}
                         <div className="icon-wrapper">
@@ -1804,26 +2041,28 @@ export default function AIShopEditorPage() {
                           {section.label}
                         </button>
                         
-                        {/* Visibility toggle button - appears on hover */}
-                        <button 
-                          className="section-visibility-btn"
-                          onClick={(e) => { e.stopPropagation(); toggleSectionVisibility(section.id); }}
-                          title={hiddenSections.has(section.id) ? "Show section" : "Hide section"}
-                        >
-                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                            {hiddenSections.has(section.id) ? (
-                              <>
-                                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
-                                <line x1="1" y1="1" x2="23" y2="23"/>
-                              </>
-                            ) : (
-                              <>
-                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                                <circle cx="12" cy="12" r="3"/>
-                              </>
-                            )}
-                          </svg>
-                        </button>
+                        {/* Visibility toggle button - appears on hover, hidden for first section (product-information) */}
+                        {section.id !== 'product-information' && (
+                          <button 
+                            className="section-visibility-btn"
+                            onClick={(e) => { e.stopPropagation(); toggleSectionVisibility(section.id); }}
+                            title={hiddenSections.has(section.id) ? "Show section" : "Hide section"}
+                          >
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                              {hiddenSections.has(section.id) ? (
+                                <>
+                                  <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
+                                  <line x1="1" y1="1" x2="23" y2="23"/>
+                                </>
+                              ) : (
+                                <>
+                                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                                  <circle cx="12" cy="12" r="3"/>
+                                </>
+                              )}
+                            </svg>
+                          </button>
+                        )}
                       </div>
                     ))}
                   </nav>
@@ -2129,6 +2368,8 @@ export default function AIShopEditorPage() {
                       updateNestedField={updateNestedField}
                       regenerateField={regenerateField}
                       regeneratingField={regeneratingField}
+                      successField={successField}
+                      errorField={errorField}
                       images={allOriginalImages.length > 0 ? allOriginalImages : ((editedContent.images as string[]) || [])}
                     />
                   )}
@@ -2141,6 +2382,8 @@ export default function AIShopEditorPage() {
                       updateNestedField={updateNestedField}
                       regenerateField={regenerateField}
                       regeneratingField={regeneratingField}
+                      successField={successField}
+                      errorField={errorField}
                     />
                       )}
 
@@ -2152,6 +2395,8 @@ export default function AIShopEditorPage() {
                       updateNestedField={updateNestedField}
                       regenerateField={regenerateField}
                       regeneratingField={regeneratingField}
+                      successField={successField}
+                      errorField={errorField}
                     />
                   )}
 
@@ -2163,6 +2408,8 @@ export default function AIShopEditorPage() {
                       updateNestedField={updateNestedField}
                       regenerateField={regenerateField}
                       regeneratingField={regeneratingField}
+                      successField={successField}
+                      errorField={errorField}
                       images={allOriginalImages.length > 0 ? allOriginalImages : ((editedContent.images as string[]) || [])}
                       onEditImage={(imageUrl) => {
                         setAiEditorSelectedImage(imageUrl);
@@ -2185,6 +2432,8 @@ export default function AIShopEditorPage() {
                       updateNestedField={updateNestedField}
                       regenerateField={regenerateField}
                       regeneratingField={regeneratingField}
+                      successField={successField}
+                      errorField={errorField}
                     />
                       )}
 
@@ -2196,6 +2445,8 @@ export default function AIShopEditorPage() {
                       updateNestedField={updateNestedField}
                       regenerateField={regenerateField}
                       regeneratingField={regeneratingField}
+                      successField={successField}
+                      errorField={errorField}
                       images={allOriginalImages.length > 0 ? allOriginalImages : ((editedContent.images as string[]) || [])}
                       onEditImage={(imageUrl) => {
                         setAiEditorSelectedImage(imageUrl);
@@ -2218,6 +2469,8 @@ export default function AIShopEditorPage() {
                       updateNestedField={updateNestedField}
                       regenerateField={regenerateField}
                       regeneratingField={regeneratingField}
+                      successField={successField}
+                      errorField={errorField}
                       images={allOriginalImages.length > 0 ? allOriginalImages : ((editedContent.images as string[]) || [])}
                       onEditImage={(imageUrl) => {
                         setAiEditorSelectedImage(imageUrl);
@@ -2240,6 +2493,8 @@ export default function AIShopEditorPage() {
                       updateNestedField={updateNestedField}
                       regenerateField={regenerateField}
                       regeneratingField={regeneratingField}
+                      successField={successField}
+                      errorField={errorField}
                       images={allOriginalImages.length > 0 ? allOriginalImages : ((editedContent.images as string[]) || [])}
                       onEditImage={(imageUrl) => {
                         setAiEditorSelectedImage(imageUrl);
@@ -2263,6 +2518,8 @@ export default function AIShopEditorPage() {
                       updateNestedField={updateNestedField}
                       regenerateField={regenerateField}
                       regeneratingField={regeneratingField}
+                      successField={successField}
+                      errorField={errorField}
                       images={allOriginalImages.length > 0 ? allOriginalImages : ((editedContent.images as string[]) || [])}
                       onEditImage={(imageUrl) => {
                         setAiEditorSelectedImage(imageUrl);
@@ -2285,6 +2542,8 @@ export default function AIShopEditorPage() {
                       updateNestedField={updateNestedField}
                       regenerateField={regenerateField}
                       regeneratingField={regeneratingField}
+                      successField={successField}
+                      errorField={errorField}
                       images={allOriginalImages.length > 0 ? allOriginalImages : ((editedContent.images as string[]) || [])}
                       onEditImage={(imageUrl) => {
                         setAiEditorSelectedImage(imageUrl);
@@ -2307,6 +2566,8 @@ export default function AIShopEditorPage() {
                       updateNestedField={updateNestedField}
                       regenerateField={regenerateField}
                       regeneratingField={regeneratingField}
+                      successField={successField}
+                      errorField={errorField}
                       images={allOriginalImages.length > 0 ? allOriginalImages : ((editedContent.images as string[]) || [])}
                       onEditImage={(imageUrl) => {
                         setAiEditorSelectedImage(imageUrl);
@@ -2329,6 +2590,8 @@ export default function AIShopEditorPage() {
                       updateNestedField={updateNestedField}
                       regenerateField={regenerateField}
                       regeneratingField={regeneratingField}
+                      successField={successField}
+                      errorField={errorField}
                     />
                   )}
 
@@ -2363,6 +2626,8 @@ export default function AIShopEditorPage() {
                       updateNestedField={updateNestedField}
                       regenerateField={regenerateField}
                       regeneratingField={regeneratingField}
+                      successField={successField}
+                      errorField={errorField}
                     />
                   )}
 
@@ -2374,6 +2639,8 @@ export default function AIShopEditorPage() {
                       updateNestedField={updateNestedField}
                       regenerateField={regenerateField}
                       regeneratingField={regeneratingField}
+                      successField={successField}
+                      errorField={errorField}
                       images={allOriginalImages.length > 0 ? allOriginalImages : ((editedContent.images as string[]) || [])}
                     />
                   )}
@@ -2391,17 +2658,27 @@ export default function AIShopEditorPage() {
               borderTop: '1px solid rgb(228, 228, 231)',
               height: '65px',
             }}>
-              <button className="btn btn-secondary" type="button" style={{ 
-                backgroundColor: '#fff',
-                borderColor: '#d1d5db',
-                color: '#374151',
-              }}>
-                    Retour
-                  </button>
-              <button className="btn btn-primary" type="button" style={{ backgroundColor: '#0c6cfb', borderColor: '#0c6cfb' }}>
-                    Suivant
-                  </button>
-                </div>
+              <button 
+                className="btn btn-secondary" 
+                type="button" 
+                style={{ 
+                  backgroundColor: '#fff',
+                  borderColor: '#d1d5db',
+                  color: '#374151',
+                }}
+                onClick={goToStep2}
+              >
+                Retour
+              </button>
+              <button 
+                className="btn btn-primary" 
+                type="button" 
+                style={{ backgroundColor: '#0c6cfb', borderColor: '#0c6cfb' }}
+                onClick={goToStep4}
+              >
+                Suivant
+              </button>
+            </div>
               </div>
             {/* End of left-panel-container */}
 
@@ -2409,7 +2686,7 @@ export default function AIShopEditorPage() {
             <div 
               className={`preview-panel bg-weak-50 flex-grow-1 ${!showPreview ? 'd-none d-lg-block' : ''}`}
               id="AIStorePreview"
-              style={{ height: '100%', overflow: 'hidden', backgroundColor: '#f5f7fa' }}
+              style={{ height: '100%', overflow: 'hidden', backgroundColor: '#f5f7fa', overscrollBehavior: 'contain' }}
             >
                 <div 
                   className={`h-100 d-flex flex-column ${previewExpanded ? 'preview-expanded' : ''}`}
@@ -2464,7 +2741,7 @@ export default function AIShopEditorPage() {
                   </div>
                   
                   {/* Preview Content - bg matches Laravel bg-weak-50 = #f5f7fa */}
-                  <div className="preview-iframe-container flex-grow-1 position-relative d-flex justify-content-center" style={{ backgroundColor: '#f5f7fa', overflow: 'hidden' }}>
+                  <div className="preview-iframe-container flex-grow-1 position-relative d-flex justify-content-center" style={{ backgroundColor: '#f5f7fa', overflow: 'hidden', overscrollBehavior: 'contain' }}>
                     <div 
                       className={`preview-iframe-wrapper ${previewDevice === 'mobile' ? 'preview-mobile' : 'preview-desktop'}`}
                       style={{
@@ -2472,6 +2749,7 @@ export default function AIShopEditorPage() {
                         height: '95%',
                         transition: 'width 0.3s ease',
                         backgroundColor: '#fff',
+                        overscrollBehavior: 'contain',
                         boxShadow: previewDevice === 'mobile' ? '0 4px 20px rgba(0,0,0,0.15)' : 'none',
                         borderRadius: previewDevice === 'mobile' ? '20px' : '20px',
                         overflow: 'hidden',
@@ -2649,8 +2927,19 @@ export default function AIShopEditorPage() {
                           backgroundColor: '#fff',
                           opacity: isPreviewLoading ? 0 : 1,
                           transition: 'opacity 0.3s ease',
+                          overscrollBehavior: 'contain',
                         }}
-                        onLoad={() => setIsPreviewLoading(false)}
+                        onLoad={() => {
+                          setIsPreviewLoading(false);
+                          // After preview loads, scroll to the active section (without highlight!)
+                          // Small delay to ensure iframe content is fully rendered
+                          setTimeout(() => {
+                            if (activeSection) {
+                              // noHighlight=true: only scroll, don't show blue box during edit
+                              scrollPreviewToSection(activeSection, true);
+                            }
+                          }, 300);
+                        }}
                         title="Aperçu de la boutique"
                       />
                     </div>

@@ -100,6 +100,51 @@ function beautifyUrlForValidation(url: string): string {
   return cleaned;
 }
 
+// Clean URL - trim everything after .html for AliExpress URLs and clean Amazon URLs
+// This matches Laravel behavior where URLs are cleaned before processing
+function cleanProductUrl(url: string): string {
+  if (!url || typeof url !== 'string') return url;
+  
+  let cleaned = url.trim();
+  
+  // Detect URL type
+  const urlType = detectUrlType(cleaned);
+  
+  if (urlType === 'aliexpress') {
+    // AliExpress: trim everything after .html (including query params like ?spm=...)
+    // Example: https://www.aliexpress.com/item/1005006123456789.html?spm=a2g0o... 
+    // Becomes: https://www.aliexpress.com/item/1005006123456789.html
+    const htmlIndex = cleaned.indexOf('.html');
+    if (htmlIndex !== -1) {
+      cleaned = cleaned.substring(0, htmlIndex + 5); // +5 to include ".html"
+    }
+  } else if (urlType === 'amazon') {
+    // Amazon: clean URL to just the product page
+    // Remove query params and ref tags
+    // Example: https://www.amazon.com/dp/B08N5WRWNW/ref=sr_1_1?keywords=...
+    // Becomes: https://www.amazon.com/dp/B08N5WRWNW
+    
+    // Extract ASIN from various Amazon URL formats
+    const asinPatterns = [
+      /amazon\.([a-z.]+)\/dp\/([A-Z0-9]{10})/i,
+      /amazon\.([a-z.]+)\/gp\/product\/([A-Z0-9]{10})/i,
+      /amazon\.([a-z.]+)\/.*\/dp\/([A-Z0-9]{10})/i,
+    ];
+    
+    for (const pattern of asinPatterns) {
+      const match = cleaned.match(pattern);
+      if (match) {
+        const domain = match[1];
+        const asin = match[2];
+        cleaned = `https://www.amazon.${domain}/dp/${asin}`;
+        break;
+      }
+    }
+  }
+  
+  return cleaned;
+}
+
 interface AIContent {
   // Basic product info
   title: string;
@@ -872,13 +917,33 @@ export default function AIShopPage() {
     }, 500); // 500ms debounce like Laravel
   }, []);
 
-  // Handle URL input change - DON'T modify user input, just validate
+  // Handle URL input change - DON'T modify user input while typing, just validate
   const handleUrlChange = useCallback((value: string) => {
     // Set the raw value - don't beautify while typing
     setProductUrl(value);
     // Validate the URL
     validateProductUrl(value);
   }, [validateProductUrl]);
+
+  // Handle URL paste - clean the URL immediately after paste
+  const handleUrlPaste = useCallback((e: React.ClipboardEvent<HTMLInputElement>) => {
+    e.preventDefault();
+    const pastedText = e.clipboardData.getData('text');
+    const cleanedUrl = cleanProductUrl(pastedText);
+    setProductUrl(cleanedUrl);
+    validateProductUrl(cleanedUrl);
+  }, [validateProductUrl]);
+
+  // Handle URL blur - clean the URL when user finishes typing
+  const handleUrlBlur = useCallback(() => {
+    if (productUrl) {
+      const cleanedUrl = cleanProductUrl(productUrl);
+      if (cleanedUrl !== productUrl) {
+        setProductUrl(cleanedUrl);
+        validateProductUrl(cleanedUrl);
+      }
+    }
+  }, [productUrl, validateProductUrl]);
 
   // Cleanup validation timeout on unmount
   useEffect(() => {
@@ -1152,18 +1217,67 @@ export default function AIShopPage() {
     }
   };
 
+  // Infer field type from field name (matches Laravel data-field-type approach)
+  const inferFieldType = (fieldName: string): string => {
+    const name = fieldName.toLowerCase();
+    
+    // Title fields
+    if (name === 'title' || name.includes('heading') || name.includes('header')) return 'headline';
+    
+    // Description fields
+    if (name === 'description' || name.includes('paragraph') || name.includes('subheading')) return 'description';
+    if (name.includes('submain') || name.includes('sub_main')) return 'description';
+    
+    // Benefit fields
+    if (name.includes('benefit') || name.includes('advantage')) return 'benefit';
+    
+    // Feature fields
+    if (name.includes('feature') || name.includes('functionality')) return 'feature';
+    
+    // Testimonial fields
+    if (name.includes('testimonial') || name.includes('review')) return 'testimonial';
+    
+    // FAQ fields
+    if (name.includes('question')) return 'question';
+    if (name.includes('answer') || name.includes('faq')) return 'faq';
+    
+    // Shipping/Delivery
+    if (name.includes('delivery') || name.includes('shipping')) return 'shipping';
+    
+    // Timeline fields
+    if (name.includes('timeframe') || name.includes('step') || name.includes('period')) return 'timeline_step';
+    if (name.includes('timeline') && name.includes('description')) return 'timeline_description';
+    
+    // Statistics/Clinical
+    if (name.includes('percentage') || name.includes('percent') || name.includes('stat')) return 'percentage';
+    if (name.includes('clinical') || name.includes('result')) return 'stat_description';
+    
+    // Special sections
+    if (name.includes('catchy') || name.includes('hero') || name.includes('main')) return 'headline';
+    if (name.includes('guarantee') || name.includes('badge')) return 'benefit';
+    if (name.includes('offer') || name.includes('announcement')) return 'headline';
+    
+    // Default to text
+    return 'text';
+  };
+
   // Regenerate individual field with AI
   const handleRegenerateField = async (fieldName: string, currentValue: string): Promise<string> => {
     try {
+      // Infer field type from field name
+      const fieldType = inferFieldType(fieldName);
+      
       const response = await fetch('/api/ai/regenerate-field', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           fieldName,
           currentValue,
+          fieldType,
           productTitle: aiContent?.title || '',
           productDescription: aiContent?.description || '',
-          language: selectedLanguage,
+          language: selectedLanguage || 'fr', // Default to French
+          seed: currentValue,
         }),
       });
 
@@ -1764,6 +1878,8 @@ export default function AIShopPage() {
                           placeholder="https://www.aliexpress.com/item/10050082978909342.html"
                           value={productUrl}
                           onChange={(e) => handleUrlChange(e.target.value)}
+                          onBlur={handleUrlBlur}
+                          onPaste={handleUrlPaste}
                           disabled={isGenerating || !hasCredits}
                           onKeyDown={(e) => {
                             if (e.key === 'Enter' && !isGenerating && hasCredits && urlValidation.status === 'valid') {

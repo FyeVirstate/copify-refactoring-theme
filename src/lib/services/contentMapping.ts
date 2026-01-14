@@ -728,17 +728,19 @@ export function applyContentToBlocks(
     }
     
     // === NAVBAR / HEADER TITLE (must be checked BEFORE title blocks) ===
-    // Ensure navbar always shows "YOUR BRAND" or store_name, never the product title
-    // This handles header__heading-link which should always be "YOUR BRAND"
+    // Ensure navbar always shows store_name, never the product title
+    // This handles header__heading-link which should always be store_name
+    // IMPORTANT: Exclude header-with-marquee - that's a testimonials section!
+    const isActualHeader = (normalizedType === 'header' || normalizedType === 'navbar') && 
+                           !sectionType.includes('header-with-marquee') && !sectionType.includes('marquee');
     if (blockType === 'navbar_title' || blockType === 'header_title' || blockType === 'navbar-title' ||
         blockType === 'heading-link' || blockType === 'header_heading' ||
-        (blockType === 'title' && (normalizedType === 'header' || normalizedType === 'navbar' || sectionType.includes('header')))) {
-      // Use store_name or "YOUR BRAND" for navbar, never the product title
-      // Force "YOUR BRAND" for header__heading-link
-      block.settings.title = 'YOUR BRAND'
-      block.settings.heading = 'YOUR BRAND'
-      block.settings.text = 'YOUR BRAND'
-      block.settings.link_text = 'YOUR BRAND'
+        (blockType === 'title' && isActualHeader)) {
+      // Use store_name for navbar
+      block.settings.title = storeName
+      block.settings.heading = storeName
+      block.settings.text = storeName
+      block.settings.link_text = storeName
     }
     // === PRODUCT TITLE BLOCKS (h2 product__title in featured-product) ===
     // This should use the "Titre du produit" from "Informations sur le produit" section
@@ -780,11 +782,14 @@ export function applyContentToBlocks(
     
     // === HEADING BLOCKS ===
     if (blockType === 'heading') {
-      // Skip heading blocks for header/navbar sections - they should use "YOUR BRAND"
-      if (normalizedType === 'header' || normalizedType === 'navbar' || sectionType.includes('header')) {
-        block.settings.heading = 'YOUR BRAND'
-        block.settings.title = 'YOUR BRAND'
-        block.settings.text = 'YOUR BRAND'
+      // Skip heading blocks for actual header/navbar sections - they should use store_name
+      // IMPORTANT: Exclude header-with-marquee - that's a testimonials section!
+      const isHeaderSection = (normalizedType === 'header' || normalizedType === 'navbar') && 
+                              !sectionType.includes('header-with-marquee') && !sectionType.includes('marquee');
+      if (isHeaderSection) {
+        block.settings.heading = storeName
+        block.settings.title = storeName
+        block.settings.text = storeName
       } else {
         const imageWithText = (aiContent.imageWithText as Record<string, string>) || {}
         if (normalizedType.includes('text-and-image')) {
@@ -816,6 +821,14 @@ export function applyContentToBlocks(
         if (text) {
           block.settings.text = '<p>' + text + '</p>'
         }
+      }
+    }
+    
+    // === BUTTON BLOCKS (img-with-txt hero section) ===
+    if (blockType === 'button') {
+      const heroButtonText = (aiContent.heroButtonText as string) || ''
+      if (heroButtonText) {
+        block.settings.text = heroButtonText
       }
     }
     

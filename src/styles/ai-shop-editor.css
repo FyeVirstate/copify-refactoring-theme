@@ -1,11 +1,18 @@
         /* Match Laravel ai_store.css layout structure */
         
+        /* Prevent scroll chaining from iframe to main page */
+        body,
+        html {
+          overscroll-behavior-y: contain !important;
+        }
+        
         /* Data view container - fixed height, no overflow */
         .section-two .data-view {
             height: calc(100vh - 32px) !important;
             display: flex !important;
             flex-direction: column !important;
             overflow: hidden !important;
+            overscroll-behavior: contain !important;
           }
           
           /* Content menu sidebar - scrollable */
@@ -32,6 +39,22 @@
             height: calc(100vh - 115px) !important;
             overflow-y: auto !important;
             overflow-x: hidden !important;
+            /* Prevent scroll from affecting parent page */
+            overscroll-behavior: contain !important;
+            -webkit-overflow-scrolling: touch;
+          }
+          
+          /* Preview iframe container - prevent scroll propagation */
+          .preview-iframe-container,
+          .preview-iframe-wrapper {
+            overscroll-behavior: contain !important;
+            overflow: hidden !important;
+          }
+          
+          /* Preview iframe itself - prevent scroll chaining */
+          iframe[title="Aperçu de la boutique"] {
+            overscroll-behavior: contain !important;
+            display: block;
           }
           
           /* Left panel container - holds sidebar + content + footer */
@@ -120,11 +143,24 @@
             transform: scale(1.1);
           }
           
-          /* When regenerating, always show the button */
-          .regenerate-field-btn:disabled {
+          /* When THIS SPECIFIC button is regenerating, always show it */
+          /* Don't show ALL disabled buttons - only the one actively regenerating */
+          .regenerate-field-btn.is-regenerating {
             opacity: 1 !important;
             visibility: visible !important;
-            cursor: not-allowed;
+            cursor: wait;
+          }
+          
+          /* Also show button after successful regeneration */
+          .regenerate-field-btn.just-regenerated-btn {
+            opacity: 1 !important;
+            visibility: visible !important;
+          }
+          
+          /* Show button when there's an error */
+          .regenerate-field-btn.has-error-btn {
+            opacity: 1 !important;
+            visibility: visible !important;
           }
           
           /* Hide regenerate button on number inputs */
@@ -163,10 +199,26 @@
           /* Green border after successful regeneration */
           .just-regenerated .form-control,
           .just-regenerated input.form-control,
-          .just-regenerated textarea.form-control {
+          .just-regenerated textarea.form-control,
+          .field-success,
+          input.field-success,
+          textarea.field-success,
+          .form-control.field-success {
             border-color: #10b981 !important;
             border-width: 2px !important;
             box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1) !important;
+            transition: border-color 0.3s ease, box-shadow 0.3s ease !important;
+          }
+          
+          /* Red border for error state */
+          .field-error,
+          input.field-error,
+          textarea.field-error,
+          .form-control.field-error {
+            border-color: #ef4444 !important;
+            border-width: 2px !important;
+            box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1) !important;
+            transition: border-color 0.3s ease, box-shadow 0.3s ease !important;
           }
           
           /* Ensure input container doesn't clip the tooltip */
@@ -1137,6 +1189,27 @@
           
           .section-nav-item.hidden-section {
             opacity: 0.5;
+          }
+          
+          /* Disable hover effects for hidden sections */
+          .section-nav-item.hidden-section:hover {
+            background-color: transparent !important;
+          }
+          
+          .section-nav-item.hidden-section:hover .section-icon {
+            opacity: 1 !important;
+          }
+          
+          .section-nav-item.hidden-section:hover .section-drag-icon {
+            opacity: 0 !important;
+          }
+          
+          .section-nav-item.hidden-section .content-menu-item-link {
+            cursor: default;
+          }
+          
+          .section-nav-item.hidden-section .content-menu-item-link:hover {
+            color: inherit;
           }
           
           /* Icon container - both icons positioned absolutely in same space */
