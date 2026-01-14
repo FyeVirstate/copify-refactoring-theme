@@ -12,7 +12,7 @@ export default NextAuth(authConfig).auth
 
 export const config = {
   matcher: [
-    // Match all routes except static files and images
-    '/((?!_next/static|_next/image|favicon.ico|public|flags|img|images|.*\\.svg$|.*\\.png$|.*\\.jpg$|.*\\.jpeg$|.*\\.gif$|.*\\.ico$).*)',
+    // Match all routes except static files, images, and shopify assets API
+    '/((?!_next/static|_next/image|favicon.ico|public|flags|img|images|api/shopify|.*\\.svg$|.*\\.png$|.*\\.jpg$|.*\\.jpeg$|.*\\.gif$|.*\\.ico$|.*\\.css$|.*\\.js$|.*\\.woff2?$).*)',
   ],
 }
