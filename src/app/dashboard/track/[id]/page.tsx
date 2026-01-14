@@ -123,8 +123,8 @@ const MapViewComponent: React.FC<MapViewProps> = ({ countries, defaultCountry, g
           <span style={{ fontSize: 14, fontWeight: 500, color: '#111827' }}>
             {hoveredCountry.name}
           </span>
-          {hoveredCountry.hasData ? (
-            <span style={{ fontSize: 14, color: '#6B7280' }}>{Math.round(hoveredCountry.value)}%</span>
+          {hoveredCountry.hasData && hoveredCountry.value !== null ? (
+            <span style={{ fontSize: 14, color: '#6B7280' }}>{Math.round(hoveredCountry.value ?? 0)}%</span>
           ) : (
             <span style={{ fontSize: 12, color: '#9CA3AF', fontStyle: 'italic' }}>No data</span>
           )}
@@ -1633,7 +1633,7 @@ export default function TrackDetailsPage({ params }: { params: Promise<{ id: str
                           <FlagImage code={c.code} size={24} />
                           <span>{c.country}</span>
                         </span>
-                        <span style={{ fontSize: 14, color: '#6B7280', fontWeight: 500 }}>{c.pct} %</span>
+                        <span style={{ fontSize: 14, color: '#6B7280', fontWeight: 500 }}>{Math.round(c.pct)} %</span>
                       </div>
                     ))}
                   </>
@@ -1734,172 +1734,243 @@ export default function TrackDetailsPage({ params }: { params: Promise<{ id: str
 
 
           {/* PRODUCTS SECTION */}
-          <div style={{ ...cardStyle, position: 'relative' }}>
+          <div className="products-section-box">
             {/* Tabs header */}
-            <div style={{ 
+            <ul style={{ 
               display: 'flex', 
-              alignItems: 'center',
-              padding: '0 24px',
-              borderBottom: '1px solid #E5E7EB'
+              alignItems: 'stretch',
+              gap: 24,
+              flexWrap: 'nowrap',
+              paddingRight: 55,
+              borderBottom: '1px solid #dee2e6',
+              margin: 0,
+              padding: 0,
+              listStyle: 'none'
             }}>
-              <button 
-                onClick={() => setActiveProductTab('bestsellers')} 
-                style={{ 
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 8,
-                  padding: '16px 0',
-                  marginRight: 32,
-                  border: 'none', 
-                  background: 'none', 
-                  borderBottom: activeProductTab === 'bestsellers' ? '3px solid #3B82F6' : '3px solid transparent',
-                  fontWeight: 500, 
-                  fontSize: 14, 
-                  cursor: 'pointer',
-                  color: activeProductTab === 'bestsellers' ? '#111827' : '#6B7280'
-                }}
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/>
-                </svg>
-                Meilleures ventes
-              </button>
-              <button 
-                onClick={() => setActiveProductTab('latest')} 
-                style={{ 
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 8,
-                  padding: '16px 0', 
-                  border: 'none', 
-                  background: 'none', 
-                  borderBottom: activeProductTab === 'latest' ? '3px solid #3B82F6' : '3px solid transparent',
-                  fontWeight: 500, 
-                  fontSize: 14, 
-                  cursor: 'pointer',
-                  color: activeProductTab === 'latest' ? '#111827' : '#6B7280'
-                }}
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M3 11l18-5v12L3 14v-3z"/>
-                  <path d="M11.6 16.8a3 3 0 11-5.8-1.6"/>
-                </svg>
-                Derniers produits ajoutés sur le site
-              </button>
-              
-              {/* Find Supplier button */}
-              <div style={{ marginLeft: 'auto' }}>
-                <a 
-                  href="https://autods.com" 
-                  target="_blank"
-                  rel="noopener noreferrer"
+              <li>
+                <button 
+                  onClick={() => setActiveProductTab('bestsellers')} 
                   style={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    gap: 8, 
-                    padding: '8px 14px', 
-                    border: '1px solid #E5E7EB', 
-                    borderRadius: 8, 
-                    background: '#fff', 
-                    fontSize: 13, 
-                    fontWeight: 500,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    padding: '16px 14px',
+                    border: 'none', 
+                    background: 'none', 
+                    borderBottom: activeProductTab === 'bestsellers' ? '2px solid #0C6CFB' : '2px solid transparent',
+                    fontWeight: 500, 
+                    fontSize: 14, 
                     cursor: 'pointer',
-                    color: '#374151',
-                    textDecoration: 'none',
-                    boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+                    color: '#0E121B'
                   }}
                 >
-                  <img 
-                    src="/img/autods-logo.jpeg" 
-                    alt="AutoDS" 
-                    style={{ width: 24, height: 24, borderRadius: 4 }}
-                    onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                  />
-                  Trouver mon Fournisseur
-                </a>
-              </div>
+                  <i className="ri-thumb-up-line" style={{ 
+                    marginRight: 6, 
+                    color: activeProductTab === 'bestsellers' ? '#0C6CFB' : '#525866',
+                    fontSize: 15
+                  }}></i>
+                  Meilleures ventes
+                </button>
+              </li>
+              <li>
+                <button 
+                  onClick={() => setActiveProductTab('latest')} 
+                  style={{ 
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    padding: '16px 14px', 
+                    border: 'none', 
+                    background: 'none', 
+                    borderBottom: activeProductTab === 'latest' ? '2px solid #0C6CFB' : '2px solid transparent',
+                    fontWeight: 500, 
+                    fontSize: 14, 
+                    cursor: 'pointer',
+                    color: '#0E121B'
+                  }}
+                >
+                  <i className="ri-megaphone-line" style={{ 
+                    marginRight: 6, 
+                    color: activeProductTab === 'latest' ? '#0C6CFB' : '#525866',
+                    fontSize: 15
+                  }}></i>
+                  Derniers produits ajoutés sur le site
+                </button>
+              </li>
+            </ul>
+              
+            {/* Find Supplier button - positioned absolute top right */}
+            <div style={{ position: 'absolute', right: 18, top: 20 }}>
+              <a 
+                href="https://autods.com" 
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: 8, 
+                  padding: '8px 14px', 
+                  border: '1px solid #E5E7EB', 
+                  borderRadius: 8, 
+                  background: '#fff', 
+                  fontSize: 13, 
+                  fontWeight: 500,
+                  cursor: 'pointer',
+                  color: '#374151',
+                  textDecoration: 'none',
+                  boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+                }}
+              >
+                <img 
+                  src="/img/autods-logo.jpeg" 
+                  alt="AutoDS" 
+                  style={{ width: 24, height: 24, borderRadius: 8 }}
+                  onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                />
+                Trouver mon Fournisseur
+              </a>
             </div>
             
-            {/* Products list */}
-            <div style={{ padding: '0' }}>
+            {/* Products list - mt-4 = 24px */}
+            <div className="mt-4 w-100">
               {(activeProductTab === 'bestsellers' ? bestsellerProducts : latestProducts)
                 .slice(0, showAllProducts ? undefined : 3)
                 .map((p, idx) => (
                 <div key={p.id} style={{ 
                   display: 'flex', 
                   alignItems: 'center', 
-                  padding: '16px 24px', 
-                  borderBottom: '1px solid #F3F4F6'
+                  marginBottom: 12 
                 }}>
-                  <span style={{ 
-                    width: 28, 
-                    fontSize: 14, 
-                    fontWeight: 600, 
-                    color: '#374151' 
-                  }}>{idx + 1}</span>
-                  <img 
-                    src={p.imageUrl || 'https://via.placeholder.com/80'} 
-                    alt={p.title || ''} 
-                    style={{ 
-                      width: 56, 
-                      height: 56, 
-                      borderRadius: 8, 
-                      objectFit: 'cover', 
-                      marginRight: 16,
-                      border: '1px solid #E5E7EB'
-                    }} 
-                    onError={(e) => { (e.target as HTMLImageElement).src = 'https://via.placeholder.com/80'; }}
-                  />
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 500, fontSize: 14, color: '#111827', marginBottom: 4 }}>{p.title}</div>
-                    <a 
-                      href={`https://${shopDetails.shop.url}/products/${p.handle}`} 
-                      target="_blank" 
-                      rel="noopener noreferrer" 
-                      style={{ color: '#3B82F6', fontSize: 13, textDecoration: 'none' }}
-                    >
-                      Voir le produit
-                    </a>
-                    {activeProductTab === 'latest' && p.createdAt && (
-                      <div style={{ fontSize: 12, color: '#9CA3AF', marginTop: 4 }}>
-                        {formatTimeAgo(p.createdAt)} <span style={{ marginLeft: 8 }}>{formatDate(p.createdAt)}</span>
-                      </div>
-                    )}
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <span style={{ 
-                      color: '#0EA5E9', 
-                      fontWeight: 600, 
-                      fontSize: 15
+                  {/* Numéros uniquement pour "Meilleures ventes" */}
+                  {activeProductTab === 'bestsellers' && (
+                    <div style={{ 
+                      marginRight: 12,
+                      minWidth: 16
                     }}>
-                      {shopDetails.shop.currency === 'USD' ? '$' : '€'}{p.price || 0}
-                    </span>
-                    <a 
-                      href={`https://www.aliexpress.com/wholesale?SearchText=${encodeURIComponent(p.title || '')}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      style={{ 
-                        padding: '8px 16px',
-                        border: '1px solid #E5E7EB', 
-                        borderRadius: 6, 
-                        background: '#fff', 
-                        cursor: 'pointer',
+                      <p style={{ 
+                        color: '#1f2937', 
+                        marginBottom: 0, 
+                        fontWeight: 700,
+                        fontSize: 14
+                      }}>{idx + 1}</p>
+                    </div>
+                  )}
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    width: '100%',
+                    border: '1px solid rgba(0, 0, 0, 0.12)',
+                    borderRadius: 8,
+                    paddingRight: 16,
+                    overflow: 'hidden'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                      <div style={{
+                        width: 80,
+                        height: 80,
                         display: 'flex',
                         alignItems: 'center',
-                        gap: 6,
-                        fontSize: 13,
-                        color: '#374151',
-                        textDecoration: 'none'
-                      }}
-                    >
-                      <img 
-                        src="/img/icons/aliexpress-icon.png" 
-                        alt="AliExpress" 
-                        style={{ width: 16, height: 16 }}
-                        onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                      />
-                      Trouver sur Aliexpress
-                    </a>
+                        justifyContent: 'center',
+                        borderRadius: 8,
+                        backgroundColor: '#f8f9fa',
+                        flexShrink: 0
+                      }}>
+                        <img 
+                          src={p.imageUrl || 'https://via.placeholder.com/80'} 
+                          alt={p.title || ''} 
+                          style={{ 
+                            maxWidth: '100%',
+                            maxHeight: '100%',
+                            width: 'auto',
+                            height: 'auto',
+                            objectFit: 'contain',
+                            objectPosition: 'center'
+                          }} 
+                          onError={(e) => { (e.target as HTMLImageElement).src = 'https://via.placeholder.com/80'; }}
+                        />
+                      </div>
+                      {/* mx-2 mx-md-3 py-2 */}
+                      <div className="mx-2 mx-md-3 py-2" style={{ flex: 1 }}>
+                        <h4 className="fs-normal mb-0 mb-md-1 fw-regular product_title" style={{ 
+                          fontWeight: 400, 
+                          fontSize: 14, 
+                          color: '#111827',
+                          maxHeight: '2.4em',
+                          lineHeight: '1.2em',
+                          overflow: 'hidden',
+                          marginBottom: 0
+                        }}>{p.title}</h4>
+                        <a 
+                          href={`https://${shopDetails.shop.url}/products/${p.handle}`} 
+                          target="_blank" 
+                          rel="noopener noreferrer" 
+                          style={{ 
+                            color: '#0d6efd', 
+                            fontSize: 13, 
+                            textDecoration: 'none',
+                            whiteSpace: 'nowrap'
+                          }}
+                        >
+                          Voir le produit
+                        </a>
+                        {activeProductTab === 'latest' && p.createdAt && (
+                          <div style={{ fontSize: 12, color: '#6B7280', marginTop: 4 }}>
+                            <span style={{ fontWeight: 600 }}>{formatTimeAgo(p.createdAt)}</span>
+                            <span style={{ marginLeft: 8 }}>{formatDate(p.createdAt)}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    {/* Actions à droite */}
+                    <div style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: 8,
+                      flexShrink: 0,
+                      padding: '8px 0'
+                    }}>
+                      {/* Prix */}
+                      <span style={{ 
+                        color: '#0c6cfb', 
+                        fontWeight: 600, 
+                        fontSize: 18,
+                        whiteSpace: 'nowrap'
+                      }}>
+                        {shopDetails.shop.currency === 'USD' ? '$' : '€'}{p.price || 0}
+                      </span>
+                      {/* Bouton Trouver sur Aliexpress */}
+                      <div className="d-flex justify-content-end ms-3">
+                        <a 
+                          href={`https://www.aliexpress.com/wholesale?SearchText=${encodeURIComponent(p.title || '')}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{ 
+                            border: '1px solid #E5E7EB', 
+                            borderRadius: 8, 
+                            background: '#fff', 
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 6,
+                            padding: '8px 12px',
+                            fontSize: 13,
+                            color: '#374151',
+                            textDecoration: 'none',
+                            whiteSpace: 'nowrap',
+                            flexShrink: 0
+                          }}
+                        >
+                          <img 
+                            src="/img/icons/aliexpress-icon.png" 
+                            alt="AliExpress" 
+                            style={{ width: 16, height: 16, flexShrink: 0 }}
+                            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                          />
+                          Trouver sur Aliexpress
+                        </a>
+                      </div>
+                    </div>
                   </div>
                 </div>
               ))}

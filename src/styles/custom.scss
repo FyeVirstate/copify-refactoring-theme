@@ -2861,6 +2861,22 @@ input[type="radio"] {
   border-radius: 15px !important;
 }
 
+// Products section container - matches Laravel exactly
+.products-section-box {
+  border: 1px solid #E5E7EB;
+  background: #fff;
+  border-radius: 15px;
+  padding: 14px 14px; // mobile
+  margin-top: 12px;
+  margin-bottom: 12px;
+  width: 100%;
+  position: relative;
+  
+  @media (min-width: 768px) {
+    padding: 12px 20px; // desktop - comme Laravel px-md-4
+  }
+}
+
 // Width utilities
 .w-max-width-xl {
   max-width: 1400px;
@@ -6847,3 +6863,34 @@ input.ai-shop-url-input.validation-validating,
 .w-max-width-xl {
   max-width: 1200px;
 }
+
+// Product styles for track page (matching Laravel)
+.product-title {
+  @media (max-width: 767px) {
+    font-size: 0.875rem !important;
+  }
+}
+
+.price-text {
+  font-size: 20px;
+  color: #0c6cfb;
+  
+  @media (max-width: 991px) {
+    font-size: 16px;
+  }
+  
+  @media (max-width: 767px) {
+    font-size: 14px;
+  }
+}
+
+.show-simillar-products-btn {
+  @media (max-width: 1199px) {
+    padding: 8px !important;
+    
+    span {
+      display: none !important;
+    }
+  }
+}
+
