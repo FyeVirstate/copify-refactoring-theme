@@ -80,32 +80,60 @@ export const FeaturedProductSection: React.FC<SectionProps> = ({
         <div className="mb-3">
           <label className="form-label text-dark fw-500 mb-1 fs-xs">
             <i className="ri-price-tag-3-line me-1 text-light-gray"></i>
-            Prix du vente du produit
+            Prix de vente du produit
           </label>
           <div className="position-relative">
             <input
-              type="number"
+              type="text"
+              inputMode="decimal"
               className="form-control form-control-sm"
               value={content.price || ''}
-              onChange={(e) => updateField('price', parseFloat(e.target.value) || 0)}
-              placeholder="59.99"
+              onChange={(e) => {
+                const value = e.target.value.replace(',', '.');
+                // Allow empty, numbers, and one decimal point
+                if (value === '' || /^\d*\.?\d*$/.test(value)) {
+                  updateField('price', value === '' ? '' : value);
+                }
+              }}
+              onBlur={(e) => {
+                const value = parseFloat(e.target.value.replace(',', '.'));
+                if (!isNaN(value)) {
+                  updateField('price', value);
+                }
+              }}
+              placeholder="69.90"
             />
           </div>
         </div>
 
-        {/* Comparer au prix - ligne par ligne */}
+        {/* Prix barré (ancien prix) - ligne par ligne */}
         <div className="mb-3">
           <label className="form-label text-dark fw-500 mb-1 fs-xs">
             <i className="ri-price-tag-2-line me-1 text-light-gray"></i>
-            Comparer au prix
+            Prix barré (ancien prix)
           </label>
           <div className="position-relative">
             <input
-              type="number"
+              type="text"
+              inputMode="decimal"
               className="form-control form-control-sm"
               value={content.compareAtPrice || content.compare_at_price || ''}
-              onChange={(e) => updateField('compare_at_price', parseFloat(e.target.value) || 0)}
-              placeholder="61.99"
+              onChange={(e) => {
+                const value = e.target.value.replace(',', '.');
+                // Allow empty, numbers, and one decimal point
+                if (value === '' || /^\d*\.?\d*$/.test(value)) {
+                  updateField('compareAtPrice', value === '' ? '' : value);
+                  updateField('compare_at_price', value === '' ? '' : value);
+                }
+              }}
+              onBlur={(e) => {
+                const value = parseFloat(e.target.value.replace(',', '.'));
+                if (!isNaN(value)) {
+                  updateField('compareAtPrice', value);
+                  updateField('compare_at_price', value);
+                }
+              }}
+              placeholder="174.90"
             />
           </div>
         </div>

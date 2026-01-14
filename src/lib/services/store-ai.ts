@@ -216,6 +216,47 @@ function parseAIResponse(response: string): Partial<AIStoreContent> {
 }
 
 /**
+ * Calculate retail price with x3 markup, ending in X9.90, X9.90, etc.
+ * Examples: 69.90, 49.90, 39.90, 29.90, 19.90, 9.90
+ */
+function calculateRetailPrice(basePrice: number): number {
+  // Multiply by 3
+  const multiplied = basePrice * 3;
+  
+  // Round to nearest price ending in X9.90
+  // Price tiers: 9.90, 19.90, 29.90, 39.90, 49.90, 59.90, 69.90, 79.90, 89.90, 99.90, etc.
+  const tens = Math.floor(multiplied / 10);
+  const remainder = multiplied % 10;
+  
+  // If the price is close to X9.90, round to that tier
+  if (remainder >= 5) {
+    // Round up to X9.90
+    return (tens + 1) * 10 - 0.10;
+  } else {
+    // Round down to previous X9.90
+    return tens * 10 - 0.10;
+  }
+}
+
+/**
+ * Calculate compare at price (strikethrough) = retail price × 2.5
+ * Also rounds to X9.90 format
+ */
+function calculateCompareAtPrice(retailPrice: number): number {
+  const multiplied = retailPrice * 2.5;
+  
+  // Round to nearest price ending in X9.90
+  const tens = Math.floor(multiplied / 10);
+  const remainder = multiplied % 10;
+  
+  if (remainder >= 5) {
+    return (tens + 1) * 10 - 0.10;
+  } else {
+    return tens * 10 - 0.10;
+  }
+}
+
+/**
  * Generate AI store content from product data
  */
 export async function generateStoreContent(
@@ -244,13 +285,22 @@ export async function generateStoreContent(
     ...(productData.description?.images || []),
   ];
 
+  // Calculate retail prices with markup
+  // x3 for selling price, ending in X9.90
+  // x2.5 for compare at price (barré)
+  const basePrice = productData.price || 0;
+  const retailPrice = calculateRetailPrice(basePrice);
+  const compareAtPrice = calculateCompareAtPrice(retailPrice);
+  
+  console.log(`[Price] Base: ${basePrice} → Retail: ${retailPrice} → Compare: ${compareAtPrice}`);
+
   // Build the final content object
   const storeContent: AIStoreContent = {
     // Basic info
     title: aiContent.title || productData.title,
     description: aiContent.description || '',
-    price: productData.price,
-    compareAtPrice: productData.originalPrice,
+    price: retailPrice,
+    compareAtPrice: compareAtPrice,
     
     // Landing page content
     header: aiContent.header || '',

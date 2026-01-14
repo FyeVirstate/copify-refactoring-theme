@@ -20,9 +20,7 @@ function getPrismaClient(): PrismaClient | null {
 
   // Create new instance
   const client = new PrismaClient({
-    log: process.env.NODE_ENV === 'development' 
-      ? ['query', 'error', 'warn'] 
-      : ['error'],
+    log: ['error', 'warn'],
   })
 
   // Store in global scope to prevent multiple instances

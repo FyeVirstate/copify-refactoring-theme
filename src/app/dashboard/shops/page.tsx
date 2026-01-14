@@ -39,6 +39,7 @@ import {
 } from "@/components/filters";
 import { useShops, ShopsFilters } from "@/lib/hooks/use-shops";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import TutorialModal, { TUTORIAL_CONFIGS } from "@/components/TutorialModal";
 
 // Interface for user stats
 interface UserStats {
@@ -206,6 +207,7 @@ export default function ShopsPage() {
   const [videoData, setVideoData] = useState<{ url: string; preview: string } | null>(null);
   const [toastAlerts, setToastAlerts] = useState<ToastAlert[]>([]);
   const [userStats, setUserStats] = useState<UserStats | null>(null);
+  const [showTutorialModal, setShowTutorialModal] = useState(false);
   
   const { 
     shops, 
@@ -778,11 +780,18 @@ export default function ShopsPage() {
         title="Top Boutiques"
         subtitle="Découvrez les meilleures boutiques identifiées par notre IA"
         showTutorialButton={true}
-        onTutorialClick={() => console.log("Tutoriel clicked")}
+        onTutorialClick={() => setShowTutorialModal(true)}
         icon="ri-store-2-line"
         iconType="icon"
         showStats={false}
         showLimitedStats={true}
+      />
+
+      {/* Tutorial Modal */}
+      <TutorialModal
+        isOpen={showTutorialModal}
+        onClose={() => setShowTutorialModal(false)}
+        config={TUTORIAL_CONFIGS.shops}
       />
 
       <div className="bg-white home-content-wrapper">

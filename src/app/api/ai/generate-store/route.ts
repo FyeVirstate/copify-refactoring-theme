@@ -5,6 +5,7 @@ import { fetchAliExpressProduct, extractProductId } from '@/lib/services/aliexpr
 import { fetchAmazonProduct, extractAmazonAsin, buildAmazonProductUrl } from '@/lib/services/amazon';
 import { generateStoreContent, getLanguageName } from '@/lib/services/store-ai';
 import { FalAIService } from '@/lib/services/fal-ai';
+import { generateColorPalette, ColorPalette } from '@/lib/services/color-palette';
 
 export const maxDuration = 120; // Allow up to 120 seconds for AI generation + image generation
 
@@ -394,7 +395,57 @@ export async function POST(request: NextRequest) {
       console.log(`[AI Store] ⚠️ Skipping AI image generation - FAL_KEY or OPENAI_API_KEY not configured or no images available`);
     }
 
-    // Return the generated content with AI images
+    // Step 5: Generate color palette based on product images
+    let suggestedColorPalette: ColorPalette | null = null;
+    
+    try {
+      // Use the first AI-generated image if available, otherwise use the first product image
+      const imageForColorAnalysis = aiGeneratedImages.length > 0 
+        ? aiGeneratedImages[0].image_url 
+        : (Array.isArray(aiContent.images) && aiContent.images.length > 0 
+          ? aiContent.images[0] as string
+          : null);
+      
+      if (imageForColorAnalysis) {
+        console.log(`[AI Store] 🎨 Generating color palette from image...`);
+        suggestedColorPalette = await generateColorPalette(
+          imageForColorAnalysis,
+          aiContent.title as string
+        );
+        console.log(`[AI Store] ✅ Color palette generated: ${suggestedColorPalette.name}`);
+        
+        // Update aiContent with suggested colors
+        const updatedAiContent = {
+          ...aiContent,
+          suggestedColors: {
+            primary: suggestedColorPalette.primary,
+            secondary: suggestedColorPalette.secondary,
+            accent: suggestedColorPalette.accent,
+            background: suggestedColorPalette.background,
+            text: suggestedColorPalette.text,
+          },
+          colorPalette: suggestedColorPalette,
+        };
+        
+        // Save updated aiContent with color palette
+        await prisma.generate_products.update({
+          where: { id: generatedProduct.id },
+          data: {
+            aicontent: updatedAiContent as unknown as object,
+            updated_at: new Date(),
+          },
+        });
+        console.log(`[AI Store] ✅ Saved color palette to product ${generatedProduct.id}`);
+        
+        // Update local aiContent for response
+        Object.assign(aiContent, updatedAiContent);
+      }
+    } catch (colorError) {
+      console.error(`[AI Store] ❌ Error generating color palette:`, colorError);
+      // Don't fail the request if color generation fails
+    }
+
+    // Return the generated content with AI images and color palette
     return NextResponse.json({
       success: true,
       productId: Number(generatedProduct.id),
@@ -407,7 +458,8 @@ export async function POST(request: NextRequest) {
       },
       aiContent,
       productData,
-      aiGeneratedImages, // Include AI generated images in response
+      aiGeneratedImages,
+      suggestedColorPalette, // Include suggested color palette
     });
 
   } catch (error) {

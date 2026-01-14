@@ -65,8 +65,9 @@ export function normalizeImageUrl(url: string): string {
 /**
  * Safely extract price from various formats
  * Handles: "1.99-5.99", "1.99", 1.99, { min: 1.99, max: 5.99 }, etc.
+ * For ranges, takes the MAX price (second value) which is typically the real price
  */
-function extractPrice(value: unknown): number {
+function extractPrice(value: unknown, takeMax: boolean = true): number {
   if (value === null || value === undefined) {
     return 0;
   }
@@ -78,16 +79,21 @@ function extractPrice(value: unknown): number {
   
   // If it's a string, handle range format "1.99-5.99"
   if (typeof value === 'string') {
-    const cleaned = value.split('-')[0].replace(/[^0-9.]/g, '');
+    const parts = value.split('-');
+    // Take the MAX price (second value) for AliExpress ranges
+    const priceStr = takeMax && parts.length > 1 ? parts[parts.length - 1] : parts[0];
+    const cleaned = priceStr.replace(/[^0-9.]/g, '');
     return parseFloat(cleaned) || 0;
   }
   
   // If it's an object with min/max or amount
   if (typeof value === 'object') {
     const obj = value as Record<string, unknown>;
-    if ('min' in obj) return extractPrice(obj.min);
-    if ('amount' in obj) return extractPrice(obj.amount);
-    if ('value' in obj) return extractPrice(obj.value);
+    // Prefer max for range objects
+    if (takeMax && 'max' in obj) return extractPrice(obj.max, false);
+    if ('min' in obj) return extractPrice(obj.min, false);
+    if ('amount' in obj) return extractPrice(obj.amount, false);
+    if ('value' in obj) return extractPrice(obj.value, false);
   }
   
   return 0;

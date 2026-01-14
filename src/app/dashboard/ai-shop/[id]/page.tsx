@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 // DashboardHeader removed - using custom header for AI store editor
@@ -278,6 +278,7 @@ export default function AIShopEditorPage() {
   // Preview panel state
   const [showPreview, setShowPreview] = useState(true);
   const [isPreviewLoading, setIsPreviewLoading] = useState(true); // Start with loading state since iframe has no initial src
+  const [showAnnouncementBanner, setShowAnnouncementBanner] = useState(true); // Yellow info banner
   const [previewExpanded, setPreviewExpanded] = useState(false);
   const [regeneratingField, setRegeneratingField] = useState<string | null>(null);
   const [previewDevice, setPreviewDevice] = useState<'mobile' | 'desktop'>('mobile');
@@ -433,14 +434,30 @@ export default function AIShopEditorPage() {
       // Get store name from aiContent or product title - ensure it's always set
       const storeNameValue = aiContent.store_name || data.product.title || 'YOUR BRAND';
       
-      const defaultContent = {
-        primary_color_picker: '#6f6254',
-        tertiary_color_picker: '#e6e1dc',
+      // Check if AI suggested colors are available (from color palette analysis)
+      const suggestedColors = aiContent.suggestedColors || aiContent.colorPalette;
+      const defaultPrimaryColor = suggestedColors?.primary || '#6f6254';
+      const defaultAccentColor = suggestedColors?.accent || suggestedColors?.secondary || '#e6e1dc';
+      
+      // Log if AI colors are being used
+      if (suggestedColors) {
+        console.log('[AI Store] 🎨 Using AI-suggested color palette:', suggestedColors.name || 'Custom');
+      }
+      
+      // Build default content with AI colors prioritized
+      const baseContent = {
         font_family_input: 'Inter',
         ...defaultSectionImages,
         ...aiContent,
-        // Ensure store_name is always set (overwrites aiContent if it was undefined)
+        // Ensure store_name is always set
         store_name: storeNameValue,
+      };
+      
+      // Apply AI-suggested colors (override defaults or aiContent if they weren't set)
+      const defaultContent = {
+        ...baseContent,
+        primary_color_picker: (baseContent as Record<string, unknown>).primary_color_picker || defaultPrimaryColor,
+        tertiary_color_picker: (baseContent as Record<string, unknown>).tertiary_color_picker || defaultAccentColor,
       };
       // Ensure RGB values are calculated
       if (!defaultContent.primary_rgbcolor_picker && defaultContent.primary_color_picker) {
@@ -907,6 +924,8 @@ export default function AIShopEditorPage() {
   // Navigate to step 4
   const goToStep4 = useCallback(() => {
     setCurrentStep(4);
+    // Refresh preview after going to step 4
+    setTimeout(() => refreshPreviewRef.current(), 300);
   }, []);
 
   // Save changes
@@ -947,9 +966,42 @@ export default function AIShopEditorPage() {
   const [openStyleAccordion, setOpenStyleAccordion] = useState<string | null>('colorPalette');
   
   // Color palette state
-  const [selectedPaletteIndex, setSelectedPaletteIndex] = useState<number | null>(0); // Default first palette selected
+  const [selectedPaletteIndex, setSelectedPaletteIndex] = useState<number | null>(null); // null = AI palette, 0+ = preset palettes
   const [generatedPalettes, setGeneratedPalettes] = useState<Array<{ primary: string; tertiary: string }>>([]);
   const [isGeneratingColors, setIsGeneratingColors] = useState(false);
+  
+  // Function to lighten a hex color (same as Laravel) - moved up for useMemo
+  const lightenColorFn = (hex: string): string => {
+    let r = parseInt(hex.slice(1, 3), 16);
+    let g = parseInt(hex.slice(3, 5), 16);
+    let b = parseInt(hex.slice(5, 7), 16);
+    r = Math.min(255, Math.floor(r + (255 - r) * 0.7));
+    g = Math.min(255, Math.floor(g + (255 - g) * 0.7));
+    b = Math.min(255, Math.floor(b + (255 - b) * 0.7));
+    return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+  };
+  
+  // AI-suggested color palette from product analysis (if available)
+  const aiColorPalette = useMemo(() => {
+    const content = editedContent as Record<string, unknown>;
+    const suggestedColors = (content?.suggestedColors || content?.colorPalette) as { 
+      primary?: string; 
+      accent?: string; 
+      secondary?: string; 
+      name?: string; 
+      description?: string; 
+    } | undefined;
+    
+    if (suggestedColors?.primary) {
+      return {
+        primary: suggestedColors.primary,
+        tertiary: suggestedColors.accent || suggestedColors.secondary || lightenColorFn(suggestedColors.primary),
+        name: suggestedColors.name || 'Palette IA',
+        description: suggestedColors.description || 'Palette générée par IA basée sur le produit'
+      };
+    }
+    return null;
+  }, [editedContent]);
   
   // Preset color palettes (same as Laravel)
   const presetPalettes = [
@@ -1847,13 +1899,13 @@ export default function AIShopEditorPage() {
                   Retour
                 </button>
                 <button 
-                  className="btn"
+                  className="btn btn-primary"
                   style={{ 
-                    backgroundColor: '#335cff', 
+                    backgroundColor: '#0d6efd', 
+                    borderColor: '#0d6efd',
                     color: '#fff',
                     borderRadius: '8px', 
                     padding: '8px 24px',
-                    border: 'none'
                   }}
                   onClick={goToStep3}
                   disabled={selectedImages.length === 0}
@@ -2151,24 +2203,62 @@ export default function AIShopEditorPage() {
                           </h2>
                           {openStyleAccordion === 'colorPalette' && (
                             <div className="accordion-body">
-                              {/* Preset Color Palettes */}
-                              <div className="d-flex gap-3 flex-wrap mb-3">
+                              {/* AI Color Palette Section (if available) */}
+                              {aiColorPalette && (
+                                <div className="mb-3">
+                                  <p className="small text-muted mb-2 d-flex align-items-center gap-2">
+                                    <span className="badge bg-primary" style={{ fontSize: '10px', padding: '3px 6px' }}>IA</span>
+                                    Palette suggérée par l&apos;IA pour ce produit
+                                  </p>
+                                  <div className="d-flex flex-column" style={{ width: 'fit-content' }}>
+                                    <button 
+                                      type="button"
+                                      className="btn p-0 d-flex"
+                                      style={{
+                                        outline: selectedPaletteIndex === null ? '2px solid #0d6efd' : 'none',
+                                        outlineOffset: '2px',
+                                        borderRadius: '0.375rem',
+                                        padding: 0,
+                                        background: 'transparent',
+                                        transition: 'all 0.15s ease',
+                                        border: 'none'
+                                      }}
+                                      onClick={() => {
+                                        setSelectedPaletteIndex(null);
+                                        updateField('primary_color_picker', aiColorPalette.primary);
+                                        updateField('tertiary_color_picker', aiColorPalette.tertiary);
+                                      }}
+                                      title={aiColorPalette.description}
+                                    >
+                                      <span className="d-inline-block" style={{ width: 22, height: 22, backgroundColor: aiColorPalette.primary, borderRadius: '0.375rem 0 0 0.375rem' }}></span>
+                                      <span className="d-inline-block" style={{ width: 22, height: 22, backgroundColor: aiColorPalette.tertiary, borderRadius: '0 0.375rem 0.375rem 0' }}></span>
+                                    </button>
+                                    <span className="text-primary mt-1" style={{ fontSize: '11px' }}>Palette IA</span>
+                                  </div>
+                                </div>
+                              )}
+                              
+                              {/* Preset Palettes */}
+                              <p className="small text-muted mb-2">Palettes prédéfinies</p>
+                              <div className="d-flex gap-2 flex-wrap mb-3">
                                 {presetPalettes.map((palette, i) => (
                                   <button 
                                     key={i}
                                     type="button"
-                                    className="btn preset-color-btn p-0"
+                                    className="btn p-0 d-flex"
                                     style={{
-                                      border: selectedPaletteIndex === i ? '2px solid #0d6efd' : '1px solid #e1e4ea',
-                                      borderRadius: 8,
-                                      padding: 4,
-                                      background: '#fff',
-                                      transition: 'all 0.15s ease'
+                                      outline: selectedPaletteIndex === i ? '2px solid #0d6efd' : 'none',
+                                      outlineOffset: '2px',
+                                      borderRadius: '0.375rem',
+                                      padding: 0,
+                                      background: 'transparent',
+                                      transition: 'all 0.15s ease',
+                                      border: 'none'
                                     }}
                                     onClick={() => handlePaletteSelect(palette, i)}
                                   >
-                                    <span className="color-pill d-inline-block rounded-circle" style={{ width: 22, height: 22, backgroundColor: palette.primary }}></span>
-                                    <span className="color-pill d-inline-block rounded-circle" style={{ width: 22, height: 22, backgroundColor: palette.tertiary }}></span>
+                                    <span className="d-inline-block" style={{ width: 22, height: 22, backgroundColor: palette.primary, borderRadius: '0.375rem 0 0 0.375rem' }}></span>
+                                    <span className="d-inline-block" style={{ width: 22, height: 22, backgroundColor: palette.tertiary, borderRadius: '0 0.375rem 0.375rem 0' }}></span>
                                   </button>
                                 ))}
                               </div>
@@ -2204,23 +2294,25 @@ export default function AIShopEditorPage() {
                               {generatedPalettes.length > 0 && (
                                 <div className="mt-3 mb-3">
                                   <p className="small text-muted mb-2">Palettes de couleurs générées</p>
-                                  <div className="d-flex gap-3 flex-wrap">
+                                  <div className="d-flex gap-2 flex-wrap">
                                     {generatedPalettes.map((palette, i) => (
                                       <button 
                                         key={`gen-${i}`}
                                         type="button"
-                                        className="btn preset-color-btn p-0"
+                                        className="btn p-0 d-flex"
                                         style={{
-                                          border: selectedPaletteIndex === (presetPalettes.length + i) ? '2px solid #0d6efd' : '1px solid #e1e4ea',
-                                          borderRadius: 8,
-                                          padding: 4,
-                                          background: '#fff',
-                                          transition: 'all 0.15s ease'
+                                          outline: selectedPaletteIndex === (presetPalettes.length + i) ? '2px solid #0d6efd' : 'none',
+                                          outlineOffset: '2px',
+                                          borderRadius: '0.375rem',
+                                          padding: 0,
+                                          background: 'transparent',
+                                          transition: 'all 0.15s ease',
+                                          border: 'none'
                                         }}
                                         onClick={() => handlePaletteSelect(palette, i, true)}
                                       >
-                                        <span className="color-pill d-inline-block rounded-circle" style={{ width: 22, height: 22, backgroundColor: palette.primary }}></span>
-                                        <span className="color-pill d-inline-block rounded-circle" style={{ width: 22, height: 22, backgroundColor: palette.tertiary }}></span>
+                                        <span className="d-inline-block" style={{ width: 22, height: 22, backgroundColor: palette.primary, borderRadius: '0.375rem 0 0 0.375rem' }}></span>
+                                        <span className="d-inline-block" style={{ width: 22, height: 22, backgroundColor: palette.tertiary, borderRadius: '0 0.375rem 0.375rem 0' }}></span>
                                       </button>
                                     ))}
                                   </div>
@@ -2313,15 +2405,6 @@ export default function AIShopEditorPage() {
                         </div>
                       </div>
 
-                      {/* Navigation buttons */}
-                      <div className="d-flex justify-content-end gap-2 mt-3 pt-3 border-top">
-                        <button className="btn btn-secondary btn-sm" onClick={() => setEditorTab('content')}>
-                          Retour
-                        </button>
-                        <button className="btn btn-primary btn-sm">
-                          Suivant
-                        </button>
-                      </div>
                     </div>
                   )}
 
@@ -2666,15 +2749,31 @@ export default function AIShopEditorPage() {
                   borderColor: '#d1d5db',
                   color: '#374151',
                 }}
-                onClick={goToStep2}
+                onClick={() => {
+                  // If in Styles tab → go to Content tab
+                  // If in Content tab → go to Step 2
+                  if (editorTab === 'styles') {
+                    setEditorTab('content');
+                  } else {
+                    goToStep2();
+                  }
+                }}
               >
                 Retour
               </button>
               <button 
                 className="btn btn-primary" 
                 type="button" 
-                style={{ backgroundColor: '#0c6cfb', borderColor: '#0c6cfb' }}
-                onClick={goToStep4}
+                style={{ backgroundColor: '#0d6efd', borderColor: '#0d6efd' }}
+                onClick={() => {
+                  // If in Content tab → go to Styles tab
+                  // If in Styles tab → go to Step 4
+                  if (editorTab === 'content') {
+                    setEditorTab('styles');
+                  } else {
+                    goToStep4();
+                  }
+                }}
               >
                 Suivant
               </button>
@@ -2949,6 +3048,286 @@ export default function AIShopEditorPage() {
           </div>
         )}
         {/* End of Step 3 conditional */}
+
+        {/* ==================== STEP 4: METTRE À JOUR LE THÈME ==================== */}
+        {currentStep === 4 && (
+          <div className="d-flex flex-column" style={{ height: '100%', overflow: 'hidden' }}>
+            {/* Preview Header - same as step 3 */}
+            <div className="preview-btn-wrapper border-bottom d-flex align-items-center justify-content-between px-3" style={{ height: '46px', backgroundColor: '#f5f7fa', flexShrink: 0 }}>
+              {/* Left: Page Type Selector */}
+              <div className="d-flex align-items-center gap-2">
+                <select
+                  className="form-select page-toggle"
+                  value={pageType}
+                  onChange={(e) => {
+                    setPageType(e.target.value as 'product' | 'home');
+                    setTimeout(() => refreshPreviewRef.current(), 200);
+                  }}
+                >
+                  <option value="product">Page de produit</option>
+                  <option value="home">Page d&apos;accueil</option>
+                </select>
+              </div>
+
+              {/* Center: Device Toggle */}
+              <div className="preview-device-toggle d-flex">
+                <button
+                  type="button"
+                  className={`preview-device-btn ${previewDevice === 'mobile' ? 'active' : ''}`}
+                  onClick={() => setPreviewDevice('mobile')}
+                >
+                  Mobile
+                </button>
+                <button
+                  type="button"
+                  className={`preview-device-btn ${previewDevice === 'desktop' ? 'active' : ''}`}
+                  onClick={() => setPreviewDevice('desktop')}
+                >
+                  Desktop
+                </button>
+              </div>
+
+              {/* Right: View Store Link */}
+              <a
+                href={`/api/ai/liquid-preview?product_id=${productId}&page_type=${pageType}&theme=${themeKey}&t=${Date.now()}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn btn-secondary fw-normal d-flex align-items-center gap-2"
+                style={{ fontSize: '13px', padding: '6px 12px', color: '#525866', backgroundColor: '#fff', border: '1px solid #e1e4ea' }}
+              >
+                <i className="ri-external-link-line" style={{ fontSize: '14px' }}></i>
+                <span>Voir la boutique</span>
+              </a>
+            </div>
+
+            {/* Preview Content Area - Full width */}
+            <div className="flex-grow-1 d-flex flex-column position-relative" style={{ backgroundColor: '#f5f7fa', overflow: 'hidden' }}>
+              {/* Yellow Announcement Banner - Inside preview area like margin-top */}
+              {showAnnouncementBanner && (
+                <div className="d-flex justify-content-center" style={{ marginTop: '16px', flexShrink: 0 }}>
+                  <div 
+                    style={{ 
+                      backgroundColor: '#fff3cd',
+                      border: '1px solid #ffecb5',
+                      borderRadius: '8px',
+                      fontSize: '13px',
+                      padding: '10px 16px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      color: '#664d03'
+                    }}
+                  >
+                    <i className="ri-alert-line" style={{ fontSize: '16px', marginRight: '8px' }}></i>
+                    <span>Remarque: Une fois votre thème mis à jour sur Shopify, vous pouvez le personnaliser et l&apos;optimiser pour qu&apos;il corresponde parfaitement à votre marque.</span>
+                    <span 
+                      style={{ marginLeft: '12px', cursor: 'pointer', fontSize: '18px', lineHeight: 1 }}
+                      onClick={() => setShowAnnouncementBanner(false)}
+                    >×</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Preview iframe container */}
+              <div className="flex-grow-1 d-flex justify-content-center" style={{ padding: '16px' }}>
+                <div 
+                  className={`preview-iframe-wrapper ${previewDevice === 'mobile' ? 'preview-mobile' : 'preview-desktop'}`}
+                  style={{
+                    width: previewDevice === 'mobile' ? '470px' : '100%',
+                    maxWidth: '1400px',
+                    height: '100%',
+                    transition: 'width 0.3s ease',
+                    backgroundColor: '#fff',
+                    boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+                    borderRadius: '20px',
+                    overflow: 'hidden',
+                    position: 'relative',
+                  }}
+                >
+                  {/* Skeleton Loading - same as step 3 */}
+                  {isPreviewLoading && (() => {
+                    const primaryColor = (editedContent.primary_color_picker as string) || '#6f6254';
+                    return (
+                      <div 
+                        className="preview-skeleton-overlay"
+                        style={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          backgroundColor: '#fafafa',
+                          zIndex: 10,
+                          display: 'flex',
+                          flexDirection: 'column',
+                          overflow: 'auto',
+                          borderRadius: 'inherit',
+                        }}
+                      >
+                        {/* Skeleton Announcement Bar */}
+                        <div style={{ 
+                          width: '100%', 
+                          height: '32px', 
+                          backgroundColor: primaryColor,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          flexShrink: 0,
+                        }}>
+                          <div style={{ width: '60%', height: '10px', backgroundColor: 'rgba(255,255,255,0.3)', borderRadius: '4px' }}></div>
+                        </div>
+                        
+                        {/* Skeleton Header */}
+                        <div style={{ 
+                          padding: '12px 16px', 
+                          display: 'flex', 
+                          justifyContent: 'space-between', 
+                          alignItems: 'center',
+                          borderBottom: '1px solid #e5e5e5',
+                          backgroundColor: '#ffffff',
+                          flexShrink: 0,
+                        }}>
+                          <div style={{ width: '80px', height: '20px', backgroundColor: '#e5e5e5', borderRadius: '4px', animation: 'skeleton-pulse 1.5s infinite' }}></div>
+                          <div style={{ display: 'flex', gap: '16px' }}>
+                            <div style={{ width: '20px', height: '20px', backgroundColor: '#e5e5e5', borderRadius: '4px', animation: 'skeleton-pulse 1.5s infinite' }}></div>
+                            <div style={{ width: '20px', height: '20px', backgroundColor: '#e5e5e5', borderRadius: '4px', animation: 'skeleton-pulse 1.5s infinite' }}></div>
+                          </div>
+                        </div>
+                        
+                        {/* Skeleton Main Content */}
+                        <div style={{ flex: 1, padding: '16px', overflow: 'auto', backgroundColor: '#ffffff' }}>
+                          <div style={{ 
+                            width: '100%', 
+                            aspectRatio: '1', 
+                            borderRadius: '12px', 
+                            marginBottom: '12px',
+                            background: 'linear-gradient(90deg, #f0f0f0 0%, #e5e5e5 50%, #f0f0f0 100%)',
+                            backgroundSize: '200% 100%',
+                            animation: 'skeleton-shimmer 1.5s infinite',
+                          }}></div>
+                          
+                          <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+                            {[1,2,3,4].map(i => (
+                              <div key={i} style={{ 
+                                width: '56px', 
+                                height: '56px', 
+                                backgroundColor: '#ebebeb', 
+                                borderRadius: '8px', 
+                                animation: 'skeleton-pulse 1.5s infinite',
+                              }}></div>
+                            ))}
+                          </div>
+                          
+                          <div style={{ width: '75%', height: '20px', backgroundColor: '#e5e5e5', borderRadius: '4px', marginBottom: '10px', animation: 'skeleton-pulse 1.5s infinite' }}></div>
+                          
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+                            <div style={{ width: '60px', height: '24px', backgroundColor: '#e0e0e0', borderRadius: '4px', animation: 'skeleton-pulse 1.5s infinite' }}></div>
+                            <div style={{ width: '50px', height: '16px', backgroundColor: '#ebebeb', borderRadius: '4px', animation: 'skeleton-pulse 1.5s infinite' }}></div>
+                          </div>
+                          
+                          <div style={{ 
+                            width: '100%', 
+                            height: '48px', 
+                            background: `linear-gradient(90deg, ${primaryColor}90 0%, ${primaryColor} 50%, ${primaryColor}90 100%)`,
+                            backgroundSize: '200% 100%',
+                            borderRadius: '24px', 
+                            animation: 'skeleton-shimmer 1.5s infinite',
+                          }}></div>
+                        </div>
+                        
+                        {/* Loading indicator */}
+                        <div style={{ 
+                          position: 'absolute', 
+                          bottom: '20px', 
+                          left: '50%', 
+                          transform: 'translateX(-50%)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          backgroundColor: 'rgba(255,255,255,0.95)',
+                          padding: '8px 16px',
+                          borderRadius: '20px',
+                          boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+                        }}>
+                          <div className="spinner-border spinner-border-sm" role="status" style={{ width: '14px', height: '14px', color: '#666666' }}>
+                            <span className="visually-hidden">Chargement...</span>
+                          </div>
+                          <span style={{ fontSize: '12px', color: '#555555' }}>Chargement de l&apos;aperçu...</span>
+                        </div>
+                      </div>
+                    );
+                  })()}
+                  <iframe
+                    ref={previewIframeRef}
+                    className="preview-iframe"
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      border: 'none',
+                      backgroundColor: '#fff',
+                      opacity: isPreviewLoading ? 0 : 1,
+                      transition: 'opacity 0.3s ease',
+                    }}
+                    onLoad={() => setIsPreviewLoading(false)}
+                    title="Aperçu de la boutique"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Bottom Buttons - Retour and Connectez votre Shopify */}
+            <div 
+              className="d-flex justify-content-end align-items-center gap-3 px-4" 
+              style={{ 
+                height: '80px', 
+                backgroundColor: '#fff', 
+                borderTop: '1px solid #e4e4e7',
+                flexShrink: 0
+              }}
+            >
+              <button 
+                className="btn btn-secondary" 
+                type="button" 
+                style={{ 
+                  backgroundColor: '#fff',
+                  borderColor: '#d1d5db',
+                  color: '#374151',
+                  padding: '10px 24px',
+                  fontSize: '14px',
+                  height: '44px'
+                }}
+                onClick={() => {
+                  setEditorTab('styles');
+                  setCurrentStep(3);
+                  // Refresh preview after returning to step 3
+                  setTimeout(() => refreshPreviewRef.current(), 300);
+                }}
+              >
+                Retour
+              </button>
+              <button 
+                className="btn btn-primary d-flex align-items-center justify-content-center gap-2" 
+                type="button" 
+                style={{ 
+                  backgroundColor: '#0d6efd', 
+                  borderColor: '#0d6efd',
+                  color: '#fff',
+                  padding: '10px 24px',
+                  fontSize: '14px',
+                  fontWeight: 500,
+                  height: '44px'
+                }}
+                onClick={() => {
+                  // TODO: Implement Shopify connection
+                  alert('Connexion à Shopify - Fonctionnalité à venir');
+                }}
+              >
+                <img src="/img/shopify-logo-min.png" width="18" height="18" alt="Shopify" />
+                <span>Connectez votre Shopify</span>
+              </button>
+            </div>
+          </div>
+        )}
+        {/* End of Step 4 conditional */}
         </div>
 
       {/* Add Section Popup - rendered outside overflow containers */}

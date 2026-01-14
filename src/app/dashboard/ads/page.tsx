@@ -32,6 +32,7 @@ import {
 import NicheDropdown from "@/components/NicheDropdown";
 import FilterDropdown, { FilterApplyButton } from "@/components/filters/FilterDropdown";
 import { useAds, AdsFilters } from "@/lib/hooks/use-ads";
+import TutorialModal, { TUTORIAL_CONFIGS } from "@/components/TutorialModal";
 
 // Interface for user stats
 interface UserStats {
@@ -478,6 +479,7 @@ export default function AdsPage() {
   const [savedAds, setSavedAds] = useState<any[]>([]);
   const [loadingSavedAds, setLoadingSavedAds] = useState(false);
   const [userStats, setUserStats] = useState<UserStats | null>(null);
+  const [showTutorialModal, setShowTutorialModal] = useState(false);
   
   // Filter states
   const [selectedCountries, setSelectedCountries] = useState<string[]>([]);
@@ -877,7 +879,7 @@ export default function AdsPage() {
         title="Top Publicités"
         subtitle="Découvrez les meilleures publicités identifiées par notre IA"
         showTutorialButton={true}
-        onTutorialClick={() => console.log("Tutoriel clicked")}
+        onTutorialClick={() => setShowTutorialModal(true)}
         icon="ri-advertisement-line"
         iconType="icon"
         showStats={false}
@@ -892,6 +894,13 @@ export default function AdsPage() {
           Publicités enregistrées
         </button>
       </DashboardHeader>
+
+      {/* Tutorial Modal */}
+      <TutorialModal
+        isOpen={showTutorialModal}
+        onClose={() => setShowTutorialModal(false)}
+        config={TUTORIAL_CONFIGS.ads}
+      />
 
       <div className="bg-white home-content-wrapper">
         <div className="p-3 w-max-width-xl mx-auto">

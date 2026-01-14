@@ -1204,8 +1204,16 @@ function buildGlobalContext(
   // Use aiContent.title (from "Informations sur le produit") as primary source for product title
   const productTitle = (aiContent.title as string) || (productData.title as string) || (aiContent.product_title as string) || 'Product'
   const productDescription = (aiContent.product_description as string) || (productData.description as string) || ''
-  const price = parseFloat(String(productData.price || aiContent.price || '29.99'))
-  const comparePrice = parseFloat(String(productData.compare_at_price || aiContent.compare_price || price * 1.5))
+  // Price priority: aiContent.price (edited) > productData.price (original)
+  const price = parseFloat(String(aiContent.price || productData.price || '29.99'))
+  // Compare price: check all possible field names (compareAtPrice, compare_at_price, compare_price)
+  const comparePrice = parseFloat(String(
+    aiContent.compareAtPrice || 
+    aiContent.compare_at_price || 
+    aiContent.compare_price || 
+    productData.compare_at_price || 
+    price * 2.5
+  ))
   
   const featuredImage = images[0] || 'https://placehold.co/600x600/png?text=Product'
 

@@ -20,6 +20,7 @@ import {
   DialogContent,
   DialogTitle,
 } from "@/components/ui/dialog";
+import TutorialModal, { TUTORIAL_CONFIGS } from "@/components/TutorialModal";
 import NicheDropdown from "@/components/NicheDropdown";
 import ProductTableSkeleton from "@/components/ProductTableSkeleton";
 import {
@@ -234,6 +235,7 @@ function ProductsContent() {
   const [imageModal, setImageModal] = useState<{ open: boolean; src: string; title: string }>({ open: false, src: '', title: '' });
   const [toastAlerts, setToastAlerts] = useState<ToastAlert[]>([]);
   const [userStats, setUserStats] = useState<UserStats | null>(null);
+  const [showTutorialModal, setShowTutorialModal] = useState(false);
   
   // Filter states - matching shops page structure with number types
   const [minPrice, setMinPrice] = useState<number | undefined>();
@@ -885,11 +887,18 @@ function ProductsContent() {
         title="Top Produits"
         subtitle="Découvrez les produits gagnants identifiés par notre IA"
         showTutorialButton={true}
-        onTutorialClick={() => console.log("Tutoriel clicked")}
+        onTutorialClick={() => setShowTutorialModal(true)}
         icon="ri-price-tag-3-line"
         iconType="icon"
         showStats={false}
         showLimitedStats={true}
+      />
+
+      {/* Tutorial Modal */}
+      <TutorialModal
+        isOpen={showTutorialModal}
+        onClose={() => setShowTutorialModal(false)}
+        config={TUTORIAL_CONFIGS.products}
       />
 
       <div className="bg-white home-content-wrapper">
