@@ -1,5 +1,11 @@
 import { PrismaClient } from '@prisma/client'
 
+// Disable Prisma debug logs (prisma:query spam in console)
+// This removes prisma from DEBUG env var to stop verbose query logging
+if (typeof process !== 'undefined' && process.env?.DEBUG) {
+  delete process.env.DEBUG;
+}
+
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined
 }
@@ -18,9 +24,9 @@ function getPrismaClient(): PrismaClient | null {
     return globalForPrisma.prisma
   }
 
-  // Create new instance
+  // Create new instance - only log errors (no queries, no warnings spam)
   const client = new PrismaClient({
-    log: ['error', 'warn'],
+    log: process.env.NODE_ENV === 'development' ? ['error'] : ['error'],
   })
 
   // Store in global scope to prevent multiple instances

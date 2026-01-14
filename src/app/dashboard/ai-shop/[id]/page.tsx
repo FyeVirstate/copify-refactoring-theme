@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 // DashboardHeader removed - using custom header for AI store editor
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Sparkles, RefreshCw, Eye, EyeOff, Maximize2, Minimize2, ArrowLeft, Save, Trash2, ExternalLink } from "lucide-react";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { useToast } from "@/components/ui/toast";
 
 // Import extracted styles (copy the <style jsx global> content to this file)
 import "@/styles/ai-shop-editor.css";
@@ -248,7 +249,9 @@ interface GeneratedProduct {
 export default function AIShopEditorPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { data: session } = useSession();
+  const { success: toastSuccess, error: toastError, info: toastInfo } = useToast();
   const productId = params?.id as string;
 
   const [product, setProduct] = useState<GeneratedProduct | null>(null);
@@ -274,6 +277,10 @@ export default function AIShopEditorPage() {
   const [isAIEditorOpen, setIsAIEditorOpen] = useState(false);
   const [aiEditorSelectedImage, setAiEditorSelectedImage] = useState<string | null>(null);
   const [aiEditorIsUploadMode, setAiEditorIsUploadMode] = useState(false);
+  
+  // AI Credits state
+  const [aiCredits, setAiCredits] = useState<{ remaining: number; limit: number }>({ remaining: 0, limit: 0 });
+  const [isBuyingCredits, setIsBuyingCredits] = useState(false);
   
   // Preview panel state
   const [showPreview, setShowPreview] = useState(true);
@@ -514,8 +521,12 @@ export default function AIShopEditorPage() {
       if (aiImagesArray.length > 0) {
         console.log('[AI Shop Editor] Loading AI generated images for sections:', aiImagesArray.length);
         
-        // REVERSE the AI images array (like Laravel does)
-        const reversedAiImages = [...aiImagesArray].reverse();
+        // REVERSE the AI images array (like Laravel does) and ensure all fields are populated
+        const reversedAiImages = [...aiImagesArray].reverse().map((img, idx) => ({
+          image_url: img.image_url,
+          prompt: img.prompt || 'AI Generated',
+          index: img.index ?? idx
+        }));
         setAiGeneratedImages(reversedAiImages);
         
         // Map AI images to section-specific fields based on Laravel order (REVERSED):
@@ -597,6 +608,87 @@ export default function AIShopEditorPage() {
   useEffect(() => {
     loadProduct();
   }, [loadProduct]);
+  
+  // Fetch AI credits
+  const fetchAiCredits = useCallback(async () => {
+    try {
+      const response = await fetch('/api/ai/credits');
+      const data = await response.json();
+      if (data.success && data.data?.credits) {
+        const remaining = data.data.credits.imageGeneration || 0;
+        const limit = data.data.limits?.imageGeneration || remaining;
+        setAiCredits({ remaining, limit: Math.max(remaining, limit) });
+      }
+    } catch (error) {
+      console.error('Failed to fetch AI credits:', error);
+    }
+  }, []);
+  
+  useEffect(() => {
+    fetchAiCredits();
+  }, [fetchAiCredits]);
+  
+  // Handle credits success/error from URL params (after Stripe redirect)
+  useEffect(() => {
+    const creditsSuccess = searchParams.get('credits_success');
+    const creditsAdded = searchParams.get('credits_added');
+    const creditsError = searchParams.get('credits_error');
+    const creditsCanceled = searchParams.get('credits_canceled');
+    const messageParam = searchParams.get('message');
+    
+    if (creditsSuccess === 'true' && creditsAdded) {
+      // Show success toast
+      toastSuccess(`🎉 ${creditsAdded} crédits IA ajoutés avec succès !`, 6000);
+      // Refresh credits
+      fetchAiCredits();
+      // Remove query params from URL
+      window.history.replaceState({}, '', window.location.pathname);
+    } else if (creditsCanceled === 'true') {
+      // Show info toast for canceled payment
+      toastInfo("Paiement annulé.", 4000);
+      // Remove query params from URL
+      window.history.replaceState({}, '', window.location.pathname);
+    } else if (creditsError) {
+      // Detailed error messages
+      const errorMessages: Record<string, string> = {
+        missing_session: "Session de paiement manquante.",
+        database_error: "Erreur de base de données.",
+        stripe_not_configured: "Stripe n'est pas configuré.",
+        invalid_type: "Type de paiement invalide.",
+        payment_pending: "Paiement en attente.",
+        payment_failed: "Paiement échoué.",
+        processing_error: messageParam ? `Erreur: ${messageParam}` : "Erreur lors du traitement du paiement.",
+      };
+      const errorMsg = errorMessages[creditsError] || `Erreur: ${creditsError}`;
+      toastError(errorMsg, 6000);
+      // Remove query params from URL
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }, [searchParams, fetchAiCredits, toastSuccess, toastError, toastInfo]);
+  
+  // Buy AI credits - redirect to Stripe
+  const handleBuyAiCredits = async () => {
+    setIsBuyingCredits(true);
+    try {
+      const currentPath = window.location.pathname;
+      const response = await fetch('/api/ai/credits/buy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ returnUrl: currentPath }),
+      });
+      const data = await response.json();
+      if (data.success && data.url) {
+        window.location.href = data.url;
+      } else {
+        alert('Erreur lors de la création du paiement');
+        setIsBuyingCredits(false);
+      }
+    } catch (error) {
+      console.error('Failed to buy credits:', error);
+      alert('Erreur lors de la création du paiement');
+      setIsBuyingCredits(false);
+    }
+  };
 
   // Refresh preview when content changes - uses debouncing for real-time updates
   const refreshPreview = useCallback(async () => {
@@ -1509,36 +1601,60 @@ export default function AIShopEditorPage() {
           </ul>
         </div>
 
-        {/* Right: AI Credits Indicator - same pattern as export page */}
-        <div className="ai-balance-wrapper d-flex align-items-center gap-2 p-1">
-          <svg width="40" height="40" viewBox="0 0 40 40" style={{ transform: 'rotate(-90deg)' }}>
-            {/* Background circle */}
-            <circle
-              cx="20"
-              cy="20"
-              r="16"
-              fill="none"
-              stroke="#E5E7EB"
-              strokeWidth="3"
-            />
-            {/* Progress circle */}
-            <circle
-              cx="20"
-              cy="20"
-              r="16"
-              fill="none"
-              stroke="#335CFF"
-              strokeWidth="3"
-              strokeLinecap="round"
-              strokeDasharray={`${2 * Math.PI * 16}`}
-              strokeDashoffset={2 * Math.PI * 16}
-              style={{ transition: 'stroke-dashoffset 0.3s ease' }}
-            />
-          </svg>
-          <div className="d-flex flex-column" style={{ lineHeight: 1.2 }}>
-            <span className="fw-600" style={{ fontSize: '14px', color: '#0E121B' }}>0/0</span>
-            <span style={{ fontSize: '12px', color: '#6B7280', whiteSpace: 'nowrap' }}>Crédits IA utilisés</span>
+        {/* Right: AI Credits Indicator + Buy Button */}
+        <div className="d-flex align-items-center gap-3">
+          <div className="ai-balance-wrapper d-flex align-items-center gap-2 p-1">
+            <svg width="40" height="40" viewBox="0 0 40 40" style={{ transform: 'rotate(-90deg)' }}>
+              {/* Background circle */}
+              <circle
+                cx="20"
+                cy="20"
+                r="16"
+                fill="none"
+                stroke="#E5E7EB"
+                strokeWidth="3"
+              />
+              {/* Progress circle */}
+              <circle
+                cx="20"
+                cy="20"
+                r="16"
+                fill="none"
+                stroke={aiCredits.remaining > 0 ? '#335CFF' : '#dc3545'}
+                strokeWidth="3"
+                strokeLinecap="round"
+                strokeDasharray={`${2 * Math.PI * 16}`}
+                strokeDashoffset={aiCredits.remaining > 0 ? 2 * Math.PI * 16 * (1 - Math.min(1, aiCredits.remaining / Math.max(15, aiCredits.limit))) : 2 * Math.PI * 16}
+                style={{ transition: 'stroke-dashoffset 0.3s ease' }}
+              />
+            </svg>
+            <div className="d-flex flex-column" style={{ lineHeight: 1.2 }}>
+              <span className="fw-600" style={{ fontSize: '14px', color: aiCredits.remaining > 0 ? '#0E121B' : '#dc3545' }}>{aiCredits.remaining}</span>
+              <span style={{ fontSize: '12px', color: '#6B7280', whiteSpace: 'nowrap' }}>Crédits IA</span>
+            </div>
           </div>
+          
+          {/* Buy Credits Button */}
+          <button
+            onClick={handleBuyAiCredits}
+            disabled={isBuyingCredits}
+            className="btn btn-primary btn-sm d-flex align-items-center gap-2"
+            style={{ 
+              padding: '6px 14px', 
+              borderRadius: '20px', 
+              fontSize: '13px', 
+              fontWeight: 500,
+              opacity: isBuyingCredits ? 0.7 : 1,
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {isBuyingCredits ? (
+              <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+            ) : (
+              <i className="ri-shopping-cart-line"></i>
+            )}
+            <span>Acheter des crédits IA</span>
+          </button>
         </div>
       </div>
 
@@ -1691,7 +1807,7 @@ export default function AIShopEditorPage() {
                                 }
                               }}
                             >
-                              <label className="radio-container" style={{ width: '100%', height: '100%', margin: 0, display: 'block' }}>
+                              <div className="radio-container" style={{ width: '100%', height: '100%', margin: 0, display: 'block' }}>
                                 <div 
                                   className="custom-image-radio"
                                   style={{
@@ -1699,7 +1815,7 @@ export default function AIShopEditorPage() {
                                     width: '100%',
                                     height: '100%',
                                     backgroundColor: '#fff',
-                                    border: '1px solid #e1e4ea',
+                                    border: isSelected ? '2px solid #335cff' : '1px solid #e1e4ea',
                                     display: 'flex',
                                     alignItems: 'center',
                                     justifyContent: 'center',
@@ -1793,11 +1909,14 @@ export default function AIShopEditorPage() {
                                         pointerEvents: 'auto',
                                         whiteSpace: 'nowrap'
                                       }}
+                                      onMouseDown={(e) => { 
+                                        e.stopPropagation(); 
+                                      }}
                                       onClick={(e) => { 
                                         e.stopPropagation(); 
                                         e.preventDefault();
                                         // Open AI Editor Modal with this image selected
-                                        setAiEditorSelectedImage(img);
+                                        setAiEditorSelectedImage(image);
                                         setAiEditorIsUploadMode(false);
                                         setIsAIEditorOpen(true);
                                       }}
@@ -1838,7 +1957,7 @@ export default function AIShopEditorPage() {
                                     </div>
                                   )}
                                 </div>
-                              </label>
+                              </div>
                             </div>
                           );
                         })}

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
+import { prisma } from '@/lib/prisma';
 
 export const maxDuration = 120; // 2 minutes timeout for image generation
 
@@ -62,14 +63,28 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // TODO: Check user balance for image generation
-    // const user = await prisma.user.findUnique({...});
-    // if (user.balance_image_generation <= 0) {
-    //   return NextResponse.json({
-    //     success: false,
-    //     message: 'Crédits IA insuffisants'
-    //   }, { status: 403 });
-    // }
+    // Check user balance for image generation
+    if (!prisma) {
+      return NextResponse.json(
+        { success: false, message: 'Database not configured' },
+        { status: 503 }
+      );
+    }
+
+    const userId = BigInt(session.user.id);
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { balanceImageGeneration: true }
+    });
+
+    if (!user || user.balanceImageGeneration <= 0) {
+      return NextResponse.json({
+        success: false,
+        message: 'Crédits IA insuffisants. Achetez des crédits pour continuer.',
+        code: 'INSUFFICIENT_CREDITS',
+        remainingCredits: user?.balanceImageGeneration || 0
+      }, { status: 403 });
+    }
 
     // Prepare payload for external API
     const payload = {
@@ -125,15 +140,24 @@ export async function POST(request: NextRequest) {
         imagesGenerated: responseData.images.length,
       });
 
-      // TODO: Deduct user balance
-      // await prisma.user.update({
-      //   where: { id: BigInt(session.user.id) },
-      //   data: { balance_image_generation: { decrement: 1 } }
-      // });
+      // Deduct 1 credit from user balance (only on success)
+      await prisma.user.update({
+        where: { id: userId },
+        data: { balanceImageGeneration: { decrement: 1 } }
+      });
+
+      // Get updated balance
+      const updatedUser = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { balanceImageGeneration: true }
+      });
+
+      console.log('[AI Edit Image] Credit deducted, remaining:', updatedUser?.balanceImageGeneration);
 
       return NextResponse.json({
         success: true,
         images: responseData.images,
+        remainingCredits: updatedUser?.balanceImageGeneration || 0
       });
     } else {
       console.warn('[AI Edit Image] No images returned', responseData);

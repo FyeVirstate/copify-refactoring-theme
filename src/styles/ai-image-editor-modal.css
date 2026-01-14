@@ -123,6 +123,7 @@
 
 .ai-editor-thumbnails {
   display: flex;
+  align-items: center;
   gap: 12px;
   overflow-x: auto;
   overflow-y: hidden;
@@ -130,6 +131,7 @@
   -ms-overflow-style: none;
   flex: 1;
   padding: 8px 0;
+  min-height: 68px;
 }
 
 .ai-editor-thumbnails::-webkit-scrollbar {
@@ -281,6 +283,10 @@
 .ai-editor-toolbar-wrapper {
   position: relative;
   width: 100%;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
 }
 
 .ai-editor-toolbar {
@@ -290,21 +296,33 @@
   overflow-y: hidden;
   scrollbar-width: none;
   -ms-overflow-style: none;
-  padding-bottom: 4px;
+  padding: 4px 0;
+  flex: 1;
+  scroll-behavior: smooth;
 }
 
 .ai-editor-toolbar::-webkit-scrollbar {
   display: none;
 }
 
-.ai-editor-toolbar-gradient {
-  position: absolute;
-  right: 0;
-  top: 0;
-  bottom: 0;
-  width: 80px;
-  background: linear-gradient(to right, transparent, rgba(2, 13, 23, 0.85));
-  pointer-events: none;
+.toolbar-nav-btn {
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  background: rgba(14, 18, 27, 0.5);
+  border-radius: 50%;
+  border: none;
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+}
+
+.toolbar-nav-btn:hover {
+  background: rgba(14, 18, 27, 0.7);
 }
 
 .toolbar-btn {
@@ -338,16 +356,19 @@
 .ai-editor-prompt-section {
   display: flex;
   gap: 12px;
-  align-items: flex-end;
+  align-items: stretch;
 }
 
 .prompt-input-container {
   flex: 1;
   position: relative;
+  display: flex;
+  flex-direction: column;
 }
 
 .prompt-input {
   width: 100%;
+  flex: 1;
   background: rgba(14, 18, 27, 0.24);
   padding: 16px;
   padding-bottom: 54px;
@@ -356,8 +377,9 @@
   border: none;
   color: #fff;
   resize: none;
-  height: 120px;
+  min-height: 120px;
   font-family: inherit;
+  box-sizing: border-box;
 }
 
 .prompt-input:focus {
@@ -436,7 +458,7 @@
   justify-content: center;
   gap: 8px;
   padding: 16px 24px;
-  background: #335cff;
+  background: #0d6efd;
   border: none;
   border-radius: 12px;
   color: #fff;
@@ -445,12 +467,13 @@
   cursor: pointer;
   white-space: nowrap;
   min-width: 200px;
-  height: 120px;
+  align-self: stretch;
+  box-sizing: border-box;
   transition: all 0.2s ease;
 }
 
 .edit-image-btn:hover:not(:disabled) {
-  background: #2a4fd9;
+  background: #0b5ed7;
 }
 
 .edit-image-btn:disabled {

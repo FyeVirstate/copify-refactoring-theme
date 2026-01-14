@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { X, Plus, ChevronLeft, ChevronRight, ImagePlus, Sparkles, Loader2 } from 'lucide-react';
+import { X, Plus, ChevronLeft, ChevronRight, ImagePlus, Sparkles, Loader2, ShoppingCart } from 'lucide-react';
+import { useToast } from '@/components/ui/toast';
 
 // AI prompt presets (same as Laravel)
 const AI_PROMPTS = {
@@ -41,17 +42,66 @@ export function AIImageEditorModal({
   productId,
   isUploadMode = false,
 }: AIImageEditorModalProps) {
+  const { success: toastSuccess, error: toastError, warning: toastWarning } = useToast();
+  
   const [currentImageUrl, setCurrentImageUrl] = useState<string | null>(null);
   const [prompt, setPrompt] = useState('');
   const [activeToolbar, setActiveToolbar] = useState<string | null>(null);
   const [referenceImageUrl, setReferenceImageUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isReferenceLoading, setIsReferenceLoading] = useState(false);
+  const [loadingType, setLoadingType] = useState<'upload' | 'edit' | 'generate'>('edit');
   const [showPlaceholder, setShowPlaceholder] = useState(false);
   const [thumbnailIndex, setThumbnailIndex] = useState(0);
+  const [isTextToImageMode, setIsTextToImageMode] = useState(false);
+  const [textToImagePrompt, setTextToImagePrompt] = useState('');
+  const [credits, setCredits] = useState<{ used: number; limit: number }>({ used: 0, limit: 0 });
+  const [isBuyingCredits, setIsBuyingCredits] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const referenceInputRef = useRef<HTMLInputElement>(null);
   const thumbnailContainerRef = useRef<HTMLDivElement>(null);
+  const toolbarContainerRef = useRef<HTMLDivElement>(null);
+
+  // Fetch credits on mount and when modal opens
+  const fetchCredits = useCallback(async () => {
+    try {
+      const response = await fetch('/api/ai/credits');
+      const data = await response.json();
+      if (data.success && data.data?.credits) {
+        const remaining = data.data.credits.imageGeneration || 0;
+        const limit = data.data.limits?.imageGeneration || 0;
+        const used = limit - remaining;
+        setCredits({ used: Math.max(0, used), limit: Math.max(remaining, limit) });
+      }
+    } catch (error) {
+      console.error('Failed to fetch credits:', error);
+    }
+  }, []);
+
+  // Buy credits - redirect to Stripe
+  const handleBuyCredits = async () => {
+    setIsBuyingCredits(true);
+    try {
+      const currentPath = window.location.pathname;
+      const response = await fetch('/api/ai/credits/buy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ returnUrl: currentPath }),
+      });
+      const data = await response.json();
+      if (data.success && data.url) {
+        window.location.href = data.url;
+      } else {
+        toastError('Erreur lors de la création du paiement');
+        setIsBuyingCredits(false);
+      }
+    } catch (error) {
+      console.error('Failed to buy credits:', error);
+      toastError('Erreur lors de la création du paiement');
+      setIsBuyingCredits(false);
+    }
+  };
 
   // Initialize modal state when opened
   useEffect(() => {
@@ -66,8 +116,64 @@ export function AIImageEditorModal({
       setPrompt('');
       setActiveToolbar(null);
       setReferenceImageUrl(null);
+      setIsTextToImageMode(false);
+      setTextToImagePrompt('');
+      // Fetch credits when modal opens
+      fetchCredits();
     }
-  }, [isOpen, selectedImageUrl, isUploadMode]);
+  }, [isOpen, selectedImageUrl, isUploadMode, fetchCredits]);
+
+  // Handle text-to-image generation
+  const handleTextToImage = async () => {
+    if (!textToImagePrompt.trim()) {
+      toastWarning('Veuillez entrer une description pour générer une image');
+      return;
+    }
+
+    setLoadingType('generate');
+    setIsLoading(true);
+
+    try {
+      const response = await fetch('/api/ai/text-to-image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: textToImagePrompt,
+          aspect_ratio: '1:1',
+          num_images: 1,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success && data.images?.length > 0) {
+        const newImageUrl = data.images[0].url;
+        setCurrentImageUrl(newImageUrl);
+        setShowPlaceholder(false);
+        setIsTextToImageMode(false);
+        
+        // Update credits after successful generation
+        if (typeof data.remainingCredits === 'number') {
+          setCredits(prev => ({ ...prev, limit: data.remainingCredits }));
+        } else {
+          fetchCredits();
+        }
+        
+        // Callback to parent
+        onImageGenerated?.(newImageUrl);
+      } else if (data.code === 'INSUFFICIENT_CREDITS') {
+        // Show warning toast with buy prompt
+        toastWarning("Crédits IA insuffisants. Cliquez sur 'Acheter des crédits IA' pour en obtenir plus.", 6000);
+      } else {
+        toastError(data.message || "Erreur lors de la génération de l'image");
+      }
+    } catch (error) {
+      console.error('Error generating image:', error);
+      toastError("Erreur lors de la génération de l'image");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   // Handle thumbnail click
   const handleThumbnailClick = (imageUrl: string) => {
@@ -86,31 +192,65 @@ export function AIImageEditorModal({
     fileInputRef.current?.click();
   };
 
+  // Upload image to FAL storage and get public URL
+  const uploadToFalStorage = async (file: File): Promise<string | null> => {
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+      
+      const response = await fetch('/api/ai/upload-image', {
+        method: 'POST',
+        body: formData,
+      });
+      
+      const data = await response.json();
+      if (data.success && data.url) {
+        return data.url;
+      }
+      console.error('Upload failed:', data.message);
+      return null;
+    } catch (error) {
+      console.error('Upload error:', error);
+      return null;
+    }
+  };
+
   // Handle file upload for main image
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // For now, use local URL - in production, upload to server
+    setLoadingType('upload');
+    setIsLoading(true);
+    setShowPlaceholder(false);
+    
+    // Show local preview while uploading
     const localUrl = URL.createObjectURL(file);
     setCurrentImageUrl(localUrl);
-    setShowPlaceholder(false);
 
-    // TODO: Upload to server and get permanent URL
-    // const formData = new FormData();
-    // formData.append('image', file);
-    // const response = await fetch('/api/upload', { method: 'POST', body: formData });
-    // const { url } = await response.json();
-    // setCurrentImageUrl(url);
+    // Upload to FAL storage for public URL
+    const publicUrl = await uploadToFalStorage(file);
+    if (publicUrl) {
+      setCurrentImageUrl(publicUrl);
+    }
+    
+    setIsLoading(false);
   };
 
-  // Handle reference image upload
+  // Handle reference image upload (separate loading state - doesn't affect main image)
   const handleReferenceUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const localUrl = URL.createObjectURL(file);
-    setReferenceImageUrl(localUrl);
+    setIsReferenceLoading(true);
+    
+    // Upload to FAL storage for public URL
+    const publicUrl = await uploadToFalStorage(file);
+    if (publicUrl) {
+      setReferenceImageUrl(publicUrl);
+    }
+    
+    setIsReferenceLoading(false);
   };
 
   // Handle toolbar button click
@@ -119,28 +259,87 @@ export function AIImageEditorModal({
     setPrompt(toolbarPrompt);
   };
 
+  // Convert blob URL to base64 for upload
+  const blobUrlToBase64 = async (blobUrl: string): Promise<string | null> => {
+    try {
+      const response = await fetch(blobUrl);
+      const blob = await response.blob();
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.onerror = () => resolve(null);
+        reader.readAsDataURL(blob);
+      });
+    } catch {
+      return null;
+    }
+  };
+
+  // Upload blob URL to FAL storage
+  const uploadBlobToFal = async (blobUrl: string): Promise<string | null> => {
+    try {
+      const base64 = await blobUrlToBase64(blobUrl);
+      if (!base64) return null;
+
+      const response = await fetch('/api/ai/upload-image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ base64 }),
+      });
+
+      const data = await response.json();
+      return data.success ? data.url : null;
+    } catch {
+      return null;
+    }
+  };
+
   // Handle edit image
   const handleEditImage = async () => {
     if (!currentImageUrl) {
-      alert('Veuillez sélectionner une image');
+      toastWarning('Veuillez sélectionner une image');
       return;
     }
 
     if (!prompt.trim()) {
-      alert('Veuillez entrer une instruction');
+      toastWarning('Veuillez entrer une instruction');
       return;
     }
 
+    setLoadingType('edit');
     setIsLoading(true);
 
     try {
+      // If source image is a blob URL, upload it first
+      let sourceUrl = currentImageUrl;
+      if (currentImageUrl.startsWith('blob:')) {
+        const uploadedUrl = await uploadBlobToFal(currentImageUrl);
+        if (!uploadedUrl) {
+          toastError("Erreur lors du téléchargement de l'image");
+          setIsLoading(false);
+          return;
+        }
+        sourceUrl = uploadedUrl;
+        setCurrentImageUrl(sourceUrl);
+      }
+
+      // If reference image is a blob URL, upload it first
+      let refUrl = referenceImageUrl;
+      if (referenceImageUrl?.startsWith('blob:')) {
+        const uploadedRef = await uploadBlobToFal(referenceImageUrl);
+        if (uploadedRef) {
+          refUrl = uploadedRef;
+          setReferenceImageUrl(refUrl);
+        }
+      }
+
       const response = await fetch('/api/ai/edit-image', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          source_image: currentImageUrl,
+          source_image: sourceUrl,
           prompt: prompt,
-          input_images: referenceImageUrl ? [referenceImageUrl] : [],
+          input_images: refUrl ? [refUrl] : [],
           num_images: 1,
           aspect_ratio: 'auto',
           output_format: 'png',
@@ -153,14 +352,24 @@ export function AIImageEditorModal({
         const newImageUrl = data.images[0].url;
         setCurrentImageUrl(newImageUrl);
         
+        // Update credits after successful edit
+        if (typeof data.remainingCredits === 'number') {
+          setCredits(prev => ({ ...prev, limit: data.remainingCredits }));
+        } else {
+          fetchCredits();
+        }
+        
         // Callback to parent
         onImageGenerated?.(newImageUrl, selectedImageUrl || undefined);
+      } else if (data.code === 'INSUFFICIENT_CREDITS') {
+        // Show warning toast with buy prompt
+        toastWarning("Crédits IA insuffisants. Cliquez sur 'Acheter des crédits IA' pour en obtenir plus.", 6000);
       } else {
-        alert(data.message || "Erreur lors de la modification de l'image");
+        toastError(data.message || "Erreur lors de la modification de l'image");
       }
     } catch (error) {
       console.error('Error editing image:', error);
-      alert("Erreur lors de la modification de l'image");
+      toastError("Erreur lors de la modification de l'image");
     } finally {
       setIsLoading(false);
     }
@@ -177,6 +386,17 @@ export function AIImageEditorModal({
     }
   };
 
+  // Scroll toolbar
+  const scrollToolbar = (direction: 'left' | 'right') => {
+    if (toolbarContainerRef.current) {
+      const scrollAmount = 200;
+      toolbarContainerRef.current.scrollBy({
+        left: direction === 'left' ? -scrollAmount : scrollAmount,
+        behavior: 'smooth',
+      });
+    }
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -187,12 +407,67 @@ export function AIImageEditorModal({
           <X size={24} />
         </button>
 
-        {/* Top Bar with Credits */}
-        <div className="ai-editor-top-bar">
-          <div className="ai-editor-credits">
-            <span className="credits-label">Crédits IA</span>
-            <span className="credits-value">0/0</span>
+        {/* Top Bar with Credits - Same design as step 2 */}
+        <div className="ai-editor-top-bar" style={{ display: 'flex', alignItems: 'center', gap: '12px', justifyContent: 'flex-end', paddingRight: '60px' }}>
+          {/* Credits Display */}
+          <div className="ai-editor-credits" style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(255, 255, 255, 0.1)', padding: '8px 16px', borderRadius: '47px' }}>
+            <svg width="32" height="32" viewBox="0 0 40 40" style={{ transform: 'rotate(-90deg)' }}>
+              {/* Background circle */}
+              <circle
+                cx="20"
+                cy="20"
+                r="16"
+                fill="none"
+                stroke="rgba(255, 255, 255, 0.2)"
+                strokeWidth="3"
+              />
+              {/* Progress circle */}
+              <circle
+                cx="20"
+                cy="20"
+                r="16"
+                fill="none"
+                stroke={credits.limit > 0 ? '#335CFF' : '#dc3545'}
+                strokeWidth="3"
+                strokeLinecap="round"
+                strokeDasharray={`${2 * Math.PI * 16}`}
+                strokeDashoffset={credits.limit > 0 ? 2 * Math.PI * 16 * (1 - Math.min(1, credits.limit / Math.max(15, credits.limit + credits.used))) : 2 * Math.PI * 16}
+                style={{ transition: 'stroke-dashoffset 0.3s ease' }}
+              />
+            </svg>
+            <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.2 }}>
+              <span style={{ fontSize: '14px', color: credits.limit > 0 ? '#fff' : '#dc3545', fontWeight: 600 }}>{credits.limit}</span>
+              <span style={{ fontSize: '11px', color: 'rgba(255, 255, 255, 0.6)', whiteSpace: 'nowrap' }}>Crédits IA</span>
+            </div>
           </div>
+          
+          {/* Buy Credits Button */}
+          <button
+            onClick={handleBuyCredits}
+            disabled={isBuyingCredits}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '8px 16px',
+              background: '#0d6efd',
+              border: 'none',
+              borderRadius: '47px',
+              color: '#fff',
+              fontSize: '13px',
+              fontWeight: 500,
+              cursor: isBuyingCredits ? 'not-allowed' : 'pointer',
+              opacity: isBuyingCredits ? 0.7 : 1,
+              transition: 'all 0.2s ease',
+            }}
+          >
+            {isBuyingCredits ? (
+              <Loader2 size={14} className="animate-spin" />
+            ) : (
+              <ShoppingCart size={14} />
+            )}
+            <span>Acheter des crédits IA</span>
+          </button>
         </div>
 
         {/* Main Content */}
@@ -234,13 +509,88 @@ export function AIImageEditorModal({
           {/* Main Image Display */}
           <div className="ai-editor-main-image">
             {showPlaceholder ? (
-              <div className="ai-editor-placeholder" onClick={handlePlaceholderClick}>
-                <div className="placeholder-content">
-                  <div className="placeholder-text">Télécharger</div>
-                  <div className="placeholder-text text-sub">ou</div>
-                  <div className="placeholder-text">Générer nouveau avec IA</div>
+              isTextToImageMode ? (
+                /* Text-to-Image Mode */
+                <div className="ai-editor-text-to-image" style={{ 
+                  position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                  padding: '24px', background: 'rgba(14, 18, 27, 0.24)', borderRadius: '16px'
+                }}>
+                  <Sparkles size={48} style={{ opacity: 0.5, marginBottom: '12px', color: 'rgba(255,255,255,0.8)' }} />
+                  <div style={{ fontSize: '14px', color: 'rgba(255,255,255,0.8)', marginBottom: '16px', textAlign: 'center' }}>
+                    Décrivez l&apos;image que vous souhaitez générer
+                  </div>
+                  <textarea
+                    value={textToImagePrompt}
+                    onChange={(e) => setTextToImagePrompt(e.target.value)}
+                    disabled={isLoading}
+                    placeholder="Ex: Un jogging sportif noir sur fond blanc, style professionnel..."
+                    style={{
+                      width: '100%', maxWidth: '400px', height: '100px',
+                      background: 'rgba(14, 18, 27, 0.4)', border: '1px solid rgba(255,255,255,0.2)',
+                      borderRadius: '12px', padding: '12px', color: '#fff', fontSize: '14px',
+                      resize: 'none', marginBottom: '16px',
+                      opacity: isLoading ? 0.5 : 1, cursor: isLoading ? 'not-allowed' : 'text'
+                    }}
+                  />
+                  <div style={{ display: 'flex', gap: '12px' }}>
+                    <button
+                      onClick={() => setIsTextToImageMode(false)}
+                      style={{
+                        padding: '10px 20px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.3)',
+                        background: 'transparent', color: '#fff', cursor: 'pointer', fontSize: '13px'
+                      }}
+                    >
+                      Retour
+                    </button>
+                    <button
+                      onClick={handleTextToImage}
+                      disabled={isLoading || !textToImagePrompt.trim()}
+                      style={{
+                        padding: '10px 20px', borderRadius: '8px', border: 'none',
+                        background: '#0d6efd', color: '#fff', cursor: 'pointer', fontSize: '13px',
+                        display: 'flex', alignItems: 'center', gap: '8px',
+                        opacity: isLoading || !textToImagePrompt.trim() ? 0.5 : 1
+                      }}
+                    >
+                      {isLoading ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
+                      Générer
+                    </button>
+                  </div>
                 </div>
-              </div>
+              ) : (
+                /* Upload or Generate Mode */
+                <div className="ai-editor-placeholder" style={{ 
+                  position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                  background: 'rgba(14, 18, 27, 0.24)', border: '1px solid rgba(255, 255, 255, 0.1)',
+                  borderRadius: '16px', gap: '16px'
+                }}>
+                  <button
+                    onClick={handlePlaceholderClick}
+                    style={{
+                      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px',
+                      padding: '24px 48px', background: 'rgba(255,255,255,0.05)', border: '1px dashed rgba(255,255,255,0.3)',
+                      borderRadius: '12px', cursor: 'pointer', color: 'rgba(255,255,255,0.8)'
+                    }}
+                  >
+                    <ImagePlus size={36} style={{ opacity: 0.7 }} />
+                    <span style={{ fontSize: '14px' }}>Télécharger une image</span>
+                  </button>
+                  <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '12px' }}>ou</div>
+                  <button
+                    onClick={() => setIsTextToImageMode(true)}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: '8px',
+                      padding: '12px 24px', background: '#0d6efd', border: 'none',
+                      borderRadius: '8px', cursor: 'pointer', color: '#fff', fontSize: '14px'
+                    }}
+                  >
+                    <Sparkles size={18} />
+                    Générer avec IA (texte → image)
+                  </button>
+                </div>
+              )
             ) : currentImageUrl ? (
               <>
                 <img 
@@ -251,7 +601,11 @@ export function AIImageEditorModal({
                 {isLoading && (
                   <div className="ai-editing-loader">
                     <Sparkles size={16} />
-                    <span>Modification en cours...</span>
+                    <span>
+                      {loadingType === 'upload' ? "Upload de l'image en cours..." : 
+                       loadingType === 'generate' ? "Génération en cours..." : 
+                       "Modification en cours..."}
+                    </span>
                   </div>
                 )}
               </>
@@ -266,86 +620,115 @@ export function AIImageEditorModal({
             />
           </div>
 
-          {/* Actions Section */}
-          <div className="ai-editor-actions">
-            {/* Toolbar */}
-            <div className="ai-editor-toolbar-wrapper">
-              <div className="ai-editor-toolbar">
-                {TOOLBAR_BUTTONS.map((btn) => (
-                  <button
-                    key={btn.id}
-                    className={`toolbar-btn ${activeToolbar === btn.id ? 'active' : ''}`}
-                    onClick={() => handleToolbarClick(btn.id, btn.prompt)}
-                  >
-                    <span>{btn.icon}</span>
-                    <span>{btn.label}</span>
-                  </button>
-                ))}
-              </div>
-              <div className="ai-editor-toolbar-gradient" />
-            </div>
-
-            {/* Prompt Input */}
-            <div className="ai-editor-prompt-section">
-              <div className="prompt-input-container">
-                <textarea
-                  className="prompt-input"
-                  placeholder="Entrez une instruction pour modifier..."
-                  value={prompt}
-                  onChange={(e) => setPrompt(e.target.value)}
-                />
+          {/* Actions Section - Hide when in text-to-image mode or showing placeholder */}
+          {!isTextToImageMode && !showPlaceholder && (
+            <div className="ai-editor-actions">
+              {/* Toolbar with scroll arrows */}
+              <div className="ai-editor-toolbar-wrapper">
+                <button 
+                  className="toolbar-nav-btn toolbar-nav-left"
+                  onClick={() => scrollToolbar('left')}
+                  type="button"
+                >
+                  <ChevronLeft size={16} />
+                </button>
                 
-                <div className="prompt-input-footer">
-                  {referenceImageUrl && (
-                    <div className="reference-thumbnail-container">
-                      <img src={referenceImageUrl} alt="Reference" className="reference-thumbnail" />
-                      <button 
-                        className="remove-reference-btn"
-                        onClick={() => setReferenceImageUrl(null)}
-                      >
-                        <X size={12} />
-                      </button>
-                    </div>
-                  )}
-                  
-                  <button 
-                    className="upload-reference-btn"
-                    onClick={() => referenceInputRef.current?.click()}
-                  >
-                    <ImagePlus size={14} />
-                    {!referenceImageUrl && <span>Ajouter une image de référence</span>}
-                  </button>
-                  
-                  <input 
-                    ref={referenceInputRef}
-                    type="file" 
-                    accept="image/*" 
-                    onChange={handleReferenceUpload}
-                    style={{ display: 'none' }}
-                  />
+                <div className="ai-editor-toolbar" ref={toolbarContainerRef}>
+                  {TOOLBAR_BUTTONS.map((btn) => (
+                    <button
+                      key={btn.id}
+                      className={`toolbar-btn ${activeToolbar === btn.id ? 'active' : ''}`}
+                      onClick={() => handleToolbarClick(btn.id, btn.prompt)}
+                      type="button"
+                    >
+                      <i className={`ri-${btn.id === 'deleteLogo' ? 'image-edit' : btn.id === 'removeBackground' ? 'eraser' : btn.id === 'lifestyleImage' ? 'home-heart' : btn.id === 'packshot' ? 'camera' : btn.id === 'productView' ? 'eye' : 'arrow-left-right'}-line`} style={{ fontSize: '14px' }}></i>
+                      <span>{btn.label}</span>
+                    </button>
+                  ))}
                 </div>
+                
+                <button 
+                  className="toolbar-nav-btn toolbar-nav-right"
+                  onClick={() => scrollToolbar('right')}
+                  type="button"
+                >
+                  <ChevronRight size={16} />
+                </button>
               </div>
 
-              {/* Edit Button */}
-              <button 
-                className="edit-image-btn"
-                onClick={handleEditImage}
-                disabled={isLoading || !currentImageUrl}
-              >
-                {isLoading ? (
-                  <>
-                    <Loader2 size={16} className="animate-spin" />
-                    <span>Modification...</span>
-                  </>
-                ) : (
-                  <>
-                    <Sparkles size={16} />
-                    <span>Modifier l&apos;image actuelle</span>
-                  </>
-                )}
-              </button>
+              {/* Prompt Input */}
+              <div className="ai-editor-prompt-section">
+                <div className="prompt-input-container">
+                  <textarea
+                    className="prompt-input"
+                    placeholder="Entrez une instruction pour modifier..."
+                    value={prompt}
+                    onChange={(e) => setPrompt(e.target.value)}
+                  />
+                  
+                  <div className="prompt-input-footer">
+                    {referenceImageUrl && (
+                      <div className="reference-thumbnail-container">
+                        <img src={referenceImageUrl} alt="Reference" className="reference-thumbnail" />
+                        <button 
+                          className="remove-reference-btn"
+                          onClick={() => setReferenceImageUrl(null)}
+                        >
+                          <X size={12} />
+                        </button>
+                      </div>
+                    )}
+                    
+                    <button 
+                      className="upload-reference-btn"
+                      onClick={() => referenceInputRef.current?.click()}
+                      disabled={isReferenceLoading}
+                      style={{ opacity: isReferenceLoading ? 0.7 : 1 }}
+                    >
+                      {isReferenceLoading ? (
+                        <>
+                          <Loader2 size={14} className="animate-spin" />
+                          <span>Upload en cours...</span>
+                        </>
+                      ) : (
+                        <>
+                          <ImagePlus size={14} />
+                          {!referenceImageUrl && <span>Ajouter une image de référence</span>}
+                        </>
+                      )}
+                    </button>
+                    
+                    <input 
+                      ref={referenceInputRef}
+                      type="file" 
+                      accept="image/*" 
+                      onChange={handleReferenceUpload}
+                      style={{ display: 'none' }}
+                    />
+                  </div>
+                </div>
+
+                {/* Edit Button */}
+                <button 
+                  className="edit-image-btn"
+                  onClick={handleEditImage}
+                  disabled={isLoading || !currentImageUrl}
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 size={16} className="animate-spin" />
+                      <span>Modification...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles size={16} />
+                      <span>Modifier l&apos;image actuelle</span>
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
     </div>

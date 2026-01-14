@@ -96,14 +96,15 @@ function ToastContainer({
     <div
       style={{
         position: "fixed",
-        top: "20px",
-        right: "20px",
+        bottom: "30px",
+        left: "50%",
+        transform: "translateX(-50%)",
         zIndex: 99999,
         display: "flex",
         flexDirection: "column",
         gap: "12px",
-        maxWidth: "400px",
-        width: "100%",
+        maxWidth: "450px",
+        width: "calc(100% - 40px)",
         pointerEvents: "none",
       }}
     >
@@ -128,13 +129,13 @@ function ToastItem({ toast, onClose }: { toast: Toast; onClose: () => void }) {
       display: "flex",
       alignItems: "flex-start",
       gap: "12px",
-      padding: "16px",
+      padding: "16px 20px",
       borderRadius: "12px",
-      boxShadow: "0 10px 40px rgba(0, 0, 0, 0.15)",
+      boxShadow: "0 10px 40px rgba(0, 0, 0, 0.25)",
       pointerEvents: "auto",
       opacity: isExiting ? 0 : 1,
-      transform: isExiting ? "translateX(100%)" : "translateX(0)",
-      transition: "all 0.2s ease-out",
+      transform: isExiting ? "translateY(20px)" : "translateY(0)",
+      transition: "all 0.25s ease-out",
     };
 
     switch (toast.type) {
