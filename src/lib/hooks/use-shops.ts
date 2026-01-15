@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useCallback, useRef } from 'react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useCallback } from 'react'
 
 export interface Shop {
   id: number
@@ -44,6 +45,7 @@ export interface Shop {
 export interface ShopsFilters {
   search?: string
   sortBy?: string
+  sortOrder?: 'asc' | 'desc'
   minRevenue?: number
   maxRevenue?: number
   minTraffic?: number
@@ -64,158 +66,174 @@ export interface ShopsFilters {
   country?: string
   category?: string
   pixels?: string
-  // Note: origins uses 'country' column (shop country, not traffic market)
   origins?: string
-  // Note: languages maps to 'locale' column in database
   languages?: string
-  // Note: domains searches in 'url' column
   domains?: string
-  // Note: themes searches in 'theme' column
   themes?: string
-  // Note: applications searches in 'apps' column
   applications?: string
+  socialNetworks?: string
   shopCreationDate?: string
+  minTrustpilotRating?: number
+  maxTrustpilotRating?: number
+  minTrustpilotReviews?: number
+  maxTrustpilotReviews?: number
 }
 
-export function useShops() {
-  const [shops, setShops] = useState<Shop[]>([])
-  const [isLoading, setIsLoading] = useState(false)
-  const [isLoadingMore, setIsLoadingMore] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [hasMore, setHasMore] = useState(true)
-  const [pagination, setPagination] = useState({
-    page: 1,
-    perPage: 20,
-    total: 0,
-    totalPages: 0,
-  })
-  
-  // AbortController ref to cancel previous requests
-  const abortControllerRef = useRef<AbortController | null>(null)
-  // Request counter to track the latest request
-  const requestIdRef = useRef(0)
-
-  // Fetch shops with filters
-  const fetchShops = useCallback(async (
-    filters: ShopsFilters = {},
-    page = 1,
-    perPage = 20
-  ) => {
-    // Only cancel previous request if this is a fresh search (page 1)
-    if (page === 1) {
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort()
-      }
-    }
-    
-    // Create new AbortController for this request
-    const controller = new AbortController()
-    if (page === 1) {
-      abortControllerRef.current = controller
-    }
-    
-    // Increment request ID to track this request
-    const currentRequestId = ++requestIdRef.current
-    
-    if (page === 1) {
-      setIsLoading(true)
-    } else {
-      setIsLoadingMore(true)
-    }
-    setError(null)
-
-    try {
-      const params = new URLSearchParams()
-      params.set('page', page.toString())
-      params.set('perPage', perPage.toString())
-
-      // Add all filters
-      Object.entries(filters).forEach(([key, value]) => {
-        if (value !== undefined && value !== null && value !== '') {
-          params.set(key, value.toString())
-        }
-      })
-
-      const res = await fetch(`/api/shops?${params}`, {
-        signal: controller.signal
-      })
-      
-      // If this is not the latest request (page 1 only), ignore the response
-      if (page === 1 && currentRequestId !== requestIdRef.current) {
-        return null
-      }
-      
-      const data = await res.json()
-
-      if (data.success) {
-        if (page === 1) {
-          setShops(data.data)
-        } else {
-          setShops(prev => [...prev, ...data.data])
-        }
-        setPagination(data.pagination)
-        setHasMore(data.pagination.hasMore)
-        return data
-      } else {
-        throw new Error(data.error || 'Failed to fetch shops')
-      }
-    } catch (err) {
-      // Ignore abort errors
-      if (err instanceof Error && err.name === 'AbortError') {
-        return null
-      }
-      setError(err instanceof Error ? err.message : 'Failed to fetch shops')
-      throw err
-    } finally {
-      // Only set loading to false if this is still the latest request
-      if (currentRequestId === requestIdRef.current) {
-        setIsLoading(false)
-        setIsLoadingMore(false)
-      }
-    }
-  }, [])
-
-  // Fetch more shops (for infinite scroll)
-  const fetchMoreShops = useCallback(async (filters: ShopsFilters = {}) => {
-    if (isLoadingMore || !hasMore) return
-    
-    const nextPage = pagination.page + 1
-    return fetchShops(filters, nextPage, pagination.perPage)
-  }, [fetchShops, pagination, isLoadingMore, hasMore])
-
-  // Toggle shop tracking
-  const toggleTrack = async (shopId: number) => {
-    const res = await fetch('/api/track', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ shopId }),
-    })
-
-    const data = await res.json()
-
-    if (!data.success) {
-      throw new Error(data.error)
-    }
-
-    // Update local state
-    setShops(prev => prev.map(shop => 
-      shop.id === shopId 
-        ? { ...shop, isTracked: !shop.isTracked }
-        : shop
-    ))
-
-    return data
+interface ShopsResponse {
+  success: boolean
+  data: Shop[]
+  pagination: {
+    page: number
+    perPage: number
+    total: number
+    totalPages: number
+    hasMore: boolean
   }
+}
+
+// API fetcher function
+async function fetchShops(
+  filters: ShopsFilters,
+  page: number,
+  perPage: number,
+  signal?: AbortSignal
+): Promise<ShopsResponse> {
+  const params = new URLSearchParams()
+  params.set('page', page.toString())
+  params.set('perPage', perPage.toString())
+
+  Object.entries(filters).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== '') {
+      params.set(key, value.toString())
+    }
+  })
+
+  const res = await fetch(`/api/shops?${params}`, { signal })
+  
+  if (!res.ok) {
+    throw new Error('Failed to fetch shops')
+  }
+  
+  const data = await res.json()
+  
+  if (!data.success) {
+    throw new Error(data.error || 'Failed to fetch shops')
+  }
+  
+  return data
+}
+
+// Toggle track API
+async function toggleTrackApi(shopId: number): Promise<{ success: boolean; data: { isTracked: boolean } }> {
+  const res = await fetch('/api/track', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ shopId }),
+  })
+
+  const data = await res.json()
+
+  if (!data.success) {
+    throw new Error(data.error || 'Failed to toggle tracking')
+  }
+
+  return data
+}
+
+// Generate query key for caching
+function getShopsQueryKey(filters: ShopsFilters, page: number, perPage: number) {
+  return ['shops', { filters, page, perPage }] as const
+}
+
+export function useShops(
+  filters: ShopsFilters = {},
+  page: number = 1,
+  perPage: number = 25
+) {
+  const queryClient = useQueryClient()
+
+  // Main shops query with TanStack Query
+  const {
+    data,
+    isLoading,
+    isFetching,
+    error,
+    refetch,
+  } = useQuery({
+    queryKey: getShopsQueryKey(filters, page, perPage),
+    queryFn: ({ signal }) => fetchShops(filters, page, perPage, signal),
+    placeholderData: (previousData) => previousData,
+  })
+
+  // Track mutation
+  const trackMutation = useMutation({
+    mutationFn: toggleTrackApi,
+    onSuccess: (result, shopId) => {
+      // Update the cache
+      queryClient.setQueryData(
+        getShopsQueryKey(filters, page, perPage),
+        (old: ShopsResponse | undefined) => {
+          if (!old) return old
+          return {
+            ...old,
+            data: old.data.map(shop =>
+              shop.id === shopId
+                ? { ...shop, isTracked: result.data.isTracked }
+                : shop
+            ),
+          }
+        }
+      )
+    },
+  })
+
+  // Prefetch next page
+  const prefetchNextPage = useCallback(() => {
+    if (data && page < data.pagination.totalPages) {
+      queryClient.prefetchQuery({
+        queryKey: getShopsQueryKey(filters, page + 1, perPage),
+        queryFn: ({ signal }) => fetchShops(filters, page + 1, perPage, signal),
+      })
+    }
+  }, [queryClient, filters, page, perPage, data])
+
+  // Prefetch previous page
+  const prefetchPrevPage = useCallback(() => {
+    if (page > 1) {
+      queryClient.prefetchQuery({
+        queryKey: getShopsQueryKey(filters, page - 1, perPage),
+        queryFn: ({ signal }) => fetchShops(filters, page - 1, perPage, signal),
+      })
+    }
+  }, [queryClient, filters, page, perPage])
+
+  // Invalidate and refetch
+  const invalidateShops = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ['shops'] })
+  }, [queryClient])
 
   return {
-    shops,
-    pagination,
+    // Data
+    shops: data?.data ?? [],
+    pagination: data?.pagination ?? { page: 1, perPage: 25, total: 0, totalPages: 0, hasMore: false },
+    
+    // Loading states
     isLoading,
-    isLoadingMore,
-    hasMore,
-    error,
-    fetchShops,
-    fetchMoreShops,
-    toggleTrack,
+    isFetching,
+    
+    // Error
+    error: error instanceof Error ? error.message : null,
+    
+    // Actions
+    refetch,
+    toggleTrack: trackMutation.mutate,
+    isTogglingTrack: trackMutation.isPending,
+    
+    // Prefetch
+    prefetchNextPage,
+    prefetchPrevPage,
+    invalidateShops,
   }
 }
+
+export type { ShopsResponse }

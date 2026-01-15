@@ -98,7 +98,7 @@ export default function ProductHoverCard({ product, productUrl }: ProductHoverCa
         onMouseLeave={handleMouseLeave}
       >
         <img 
-          src={product.image} 
+          src={product.image || '/img_not_found.png'} 
           alt={product.name} 
           style={{ 
             width: '100%', 

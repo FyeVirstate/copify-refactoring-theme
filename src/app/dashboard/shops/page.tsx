@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import DashboardHeader from "@/components/DashboardHeader";
@@ -39,7 +39,26 @@ import {
 } from "@/components/filters";
 import { useShops, ShopsFilters } from "@/lib/hooks/use-shops";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import TutorialModal, { TUTORIAL_CONFIGS } from "@/components/TutorialModal";
+
+// Sort options for shops
+const SORT_OPTIONS = [
+  { value: "recommended", label: "Pertinence", icon: "ri-sparkling-line" },
+  { value: "estimated_monthly", label: "Chiffre d'affaires", icon: "ri-money-euro-circle-line" },
+  { value: "last_month_visits", label: "Trafic", icon: "ri-line-chart-line" },
+  { value: "growth_rate", label: "Croissance", icon: "ri-arrow-up-circle-line" },
+  { value: "active_ads", label: "Publicites actives", icon: "ri-advertisement-line" },
+  { value: "products_count", label: "Produits", icon: "ri-shopping-bag-line" },
+  { value: "created_at", label: "Date de creation", icon: "ri-calendar-line" },
+];
+
+const PER_PAGE_OPTIONS = [10, 25, 50, 100];
 
 // Interface for user stats
 interface UserStats {
@@ -144,51 +163,54 @@ function ToastAlerts({ alerts, onDismiss, onViewShop }: {
   );
 }
 
-// Skeleton component for loading
+// Skeleton component for loading - uses shimmer animation
+const SHOP_NAME_WIDTHS = [120, 140, 130, 110, 145, 125, 135, 115, 150, 128];
+const SHOP_URL_WIDTHS = [90, 100, 85, 95, 88, 92, 98, 105, 87, 93];
+
 function ShopTableSkeleton({ rows = 5 }: { rows?: number }) {
   return (
     <>
       {Array.from({ length: rows }).map((_, i) => (
-        <TableRow key={i} className="animate-pulse">
-          <TableCell className="py-4">
+        <TableRow key={i}>
+          <TableCell className="py-4" style={{ borderBottom: '1px solid #f0f0f0' }}>
             <div className="d-flex align-items-center gap-3">
-              <div className="bg-gray-200 rounded" style={{ width: '80px', height: '60px' }}></div>
+              <div className="skeleton-shimmer" style={{ width: '80px', height: '60px', borderRadius: '8px', flexShrink: 0 }}></div>
               <div>
-                <div className="bg-gray-200 rounded mb-2" style={{ width: '120px', height: '14px' }}></div>
-                <div className="bg-gray-200 rounded" style={{ width: '80px', height: '12px' }}></div>
+                <div className="skeleton-shimmer" style={{ width: `${SHOP_NAME_WIDTHS[i % 10]}px`, height: '14px', borderRadius: '4px', marginBottom: '8px' }}></div>
+                <div className="skeleton-shimmer" style={{ width: `${SHOP_URL_WIDTHS[i % 10]}px`, height: '12px', borderRadius: '4px' }}></div>
               </div>
             </div>
           </TableCell>
-          <TableCell className="py-4">
-            <div className="bg-gray-200 rounded" style={{ width: '45px', height: '60px' }}></div>
+          <TableCell className="py-4" style={{ borderBottom: '1px solid #f0f0f0' }}>
+            <div className="skeleton-shimmer" style={{ width: '45px', height: '60px', borderRadius: '8px' }}></div>
           </TableCell>
-          <TableCell className="py-4">
-            <div className="bg-gray-200 rounded mb-2" style={{ width: '80px', height: '14px' }}></div>
-            <div className="bg-gray-200 rounded" style={{ width: '100px', height: '30px' }}></div>
+          <TableCell className="py-4" style={{ borderBottom: '1px solid #f0f0f0' }}>
+            <div className="skeleton-shimmer" style={{ width: '80px', height: '14px', borderRadius: '4px', marginBottom: '8px' }}></div>
+            <div className="skeleton-shimmer" style={{ width: '100px', height: '30px', borderRadius: '4px' }}></div>
           </TableCell>
-          <TableCell className="py-4">
+          <TableCell className="py-4" style={{ borderBottom: '1px solid #f0f0f0' }}>
             <div className="d-flex gap-2">
-              <div className="bg-gray-200 rounded" style={{ width: '33px', height: '60px' }}></div>
-              <div className="bg-gray-200 rounded" style={{ width: '33px', height: '60px' }}></div>
+              <div className="skeleton-shimmer" style={{ width: '33px', height: '60px', borderRadius: '4px' }}></div>
+              <div className="skeleton-shimmer" style={{ width: '33px', height: '60px', borderRadius: '4px' }}></div>
             </div>
           </TableCell>
-          <TableCell className="py-4">
-            <div className="bg-gray-200 rounded mb-1" style={{ width: '80px', height: '12px' }}></div>
-            <div className="bg-gray-200 rounded mb-1" style={{ width: '70px', height: '12px' }}></div>
-            <div className="bg-gray-200 rounded" style={{ width: '60px', height: '12px' }}></div>
+          <TableCell className="py-4" style={{ borderBottom: '1px solid #f0f0f0' }}>
+            <div className="skeleton-shimmer" style={{ width: '80px', height: '12px', borderRadius: '4px', marginBottom: '4px' }}></div>
+            <div className="skeleton-shimmer" style={{ width: '70px', height: '12px', borderRadius: '4px', marginBottom: '4px' }}></div>
+            <div className="skeleton-shimmer" style={{ width: '60px', height: '12px', borderRadius: '4px' }}></div>
           </TableCell>
-          <TableCell className="py-4">
-            <div className="bg-gray-200 rounded mb-2" style={{ width: '80px', height: '14px' }}></div>
-            <div className="bg-gray-200 rounded" style={{ width: '100px', height: '30px' }}></div>
+          <TableCell className="py-4" style={{ borderBottom: '1px solid #f0f0f0' }}>
+            <div className="skeleton-shimmer" style={{ width: '80px', height: '14px', borderRadius: '4px', marginBottom: '8px' }}></div>
+            <div className="skeleton-shimmer" style={{ width: '100px', height: '30px', borderRadius: '4px' }}></div>
           </TableCell>
-          <TableCell className="py-4">
+          <TableCell className="py-4" style={{ borderBottom: '1px solid #f0f0f0' }}>
             <div className="d-flex gap-1">
-              <div className="bg-gray-200 rounded-circle" style={{ width: '16px', height: '16px' }}></div>
-              <div className="bg-gray-200 rounded-circle" style={{ width: '16px', height: '16px' }}></div>
+              <div className="skeleton-shimmer" style={{ width: '16px', height: '16px', borderRadius: '50%' }}></div>
+              <div className="skeleton-shimmer" style={{ width: '16px', height: '16px', borderRadius: '50%' }}></div>
             </div>
           </TableCell>
-          <TableCell className="py-4 text-end">
-            <div className="bg-gray-200 rounded ms-auto" style={{ width: '160px', height: '36px' }}></div>
+          <TableCell className="py-4 text-end" style={{ borderBottom: '1px solid #f0f0f0' }}>
+            <div className="skeleton-shimmer ms-auto" style={{ width: '160px', height: '36px', borderRadius: '4px' }}></div>
           </TableCell>
         </TableRow>
       ))}
@@ -209,17 +231,6 @@ export default function ShopsPage() {
   const [userStats, setUserStats] = useState<UserStats | null>(null);
   const [showTutorialModal, setShowTutorialModal] = useState(false);
   
-  const { 
-    shops, 
-    pagination, 
-    isLoading, 
-    isLoadingMore,
-    hasMore,
-    error, 
-    fetchShops, 
-    fetchMoreShops 
-  } = useShops();
-  
   // Filter states
   const [selectedCountries, setSelectedCountries] = useState<string[]>([]);
   const [selectedNiches, setSelectedNiches] = useState<string[]>([]);
@@ -233,7 +244,12 @@ export default function ShopsPage() {
   const [selectedSocialNetworks, setSelectedSocialNetworks] = useState<string[]>([]);
   const [shopCreationDate, setShopCreationDate] = useState<string>("");
   const [sortBy, setSortBy] = useState("recommended");
+  const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
   const [activePreset, setActivePreset] = useState("recommended");
+  
+  // Pagination state
+  const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState(25);
   
   // Range filters
   const [minRevenue, setMinRevenue] = useState<number | undefined>();
@@ -258,8 +274,59 @@ export default function ShopsPage() {
   const [minTrustpilotReviews, setMinTrustpilotReviews] = useState<number | undefined>();
   const [maxTrustpilotReviews, setMaxTrustpilotReviews] = useState<number | undefined>();
 
-  // Infinite scroll ref
-  const loadMoreRef = useRef<HTMLDivElement>(null);
+  // Build filters object - memoized for TanStack Query
+  const filters = useMemo((): ShopsFilters => {
+    const f: ShopsFilters = { sortBy, sortOrder };
+    
+    if (appliedSearchText) f.search = appliedSearchText;
+    if (selectedCountries.length) f.country = selectedCountries.join(',');
+    if (selectedNiches.length) f.category = selectedNiches.join(',');
+    if (selectedCurrencies.length) f.currency = selectedCurrencies.join(',');
+    if (selectedPixels.length) f.pixels = selectedPixels.join(',');
+    if (selectedOrigins.length) f.origins = selectedOrigins.join(',');
+    if (selectedLanguages.length) f.languages = selectedLanguages.join(',');
+    if (selectedDomains.length) f.domains = selectedDomains.join(',');
+    if (selectedThemes.length) f.themes = selectedThemes.join(',');
+    if (selectedApplications.length) f.applications = selectedApplications.join(',');
+    if (selectedSocialNetworks.length) f.socialNetworks = selectedSocialNetworks.join(',');
+    if (shopCreationDate) f.shopCreationDate = shopCreationDate;
+    if (minRevenue !== undefined) f.minRevenue = minRevenue;
+    if (maxRevenue !== undefined) f.maxRevenue = maxRevenue;
+    if (minTraffic !== undefined) f.minTraffic = minTraffic;
+    if (maxTraffic !== undefined) f.maxTraffic = maxTraffic;
+    if (minProducts !== undefined) f.minProducts = minProducts;
+    if (maxProducts !== undefined) f.maxProducts = maxProducts;
+    if (minActiveAds !== undefined) f.minActiveAds = minActiveAds;
+    if (maxActiveAds !== undefined) f.maxActiveAds = maxActiveAds;
+    if (minTrafficGrowth !== undefined) f.minTrafficGrowth = minTrafficGrowth;
+    if (maxTrafficGrowth !== undefined) f.maxTrafficGrowth = maxTrafficGrowth;
+    if (minOrders !== undefined) f.minOrders = minOrders;
+    if (maxOrders !== undefined) f.maxOrders = maxOrders;
+    if (minPrice !== undefined) f.minPrice = minPrice;
+    if (maxPrice !== undefined) f.maxPrice = maxPrice;
+    if (minCatalogSize !== undefined) f.minCatalogSize = minCatalogSize;
+    if (maxCatalogSize !== undefined) f.maxCatalogSize = maxCatalogSize;
+    
+    return f;
+  }, [
+    sortBy, sortOrder, appliedSearchText, selectedCountries, selectedNiches, selectedCurrencies,
+    selectedPixels, selectedOrigins, selectedLanguages, selectedDomains, selectedThemes,
+    selectedApplications, selectedSocialNetworks, shopCreationDate, minRevenue, maxRevenue,
+    minTraffic, maxTraffic, minProducts, maxProducts, minActiveAds, maxActiveAds,
+    minTrafficGrowth, maxTrafficGrowth, minOrders, maxOrders, minPrice, maxPrice,
+    minCatalogSize, maxCatalogSize
+  ]);
+
+  // Use shops hook with TanStack Query
+  const { 
+    shops, 
+    pagination, 
+    isFetching,
+    error, 
+    invalidateShops,
+    prefetchNextPage,
+    prefetchPrevPage,
+  } = useShops(filters, page, perPage);
 
   // Add toast alert
   const addToast = (type: ToastAlert['type'], message: string, shopUrl?: string, shopId?: number) => {
@@ -279,56 +346,27 @@ export default function ShopsPage() {
     setToastAlerts(prev => prev.filter(a => a.id !== id));
   };
 
-  // Build filters object
-  // Build filters without useCallback to always get fresh values
-  const buildFilters = (): ShopsFilters => {
-    const filters: ShopsFilters = { sortBy };
-    
-    if (appliedSearchText) filters.search = appliedSearchText;
-    if (selectedCountries.length) filters.country = selectedCountries.join(',');
-    if (selectedNiches.length) filters.category = selectedNiches.join(',');
-    if (selectedCurrencies.length) filters.currency = selectedCurrencies.join(',');
-    if (selectedPixels.length) filters.pixels = selectedPixels.join(',');
-    // Note: origins uses 'country' column (shop location)
-    if (selectedOrigins.length) filters.origins = selectedOrigins.join(',');
-    // Note: languages maps to 'locale' column in database
-    if (selectedLanguages.length) filters.languages = selectedLanguages.join(',');
-    // Note: domains searches in 'url' column
-    if (selectedDomains.length) filters.domains = selectedDomains.join(',');
-    // Note: themes searches in 'theme' column
-    if (selectedThemes.length) filters.themes = selectedThemes.join(',');
-    // Note: applications searches in 'apps' column
-    if (selectedApplications.length) filters.applications = selectedApplications.join(',');
-    if (shopCreationDate) filters.shopCreationDate = shopCreationDate;
-    if (minRevenue !== undefined) filters.minRevenue = minRevenue;
-    if (maxRevenue !== undefined) filters.maxRevenue = maxRevenue;
-    if (minTraffic !== undefined) filters.minTraffic = minTraffic;
-    if (maxTraffic !== undefined) filters.maxTraffic = maxTraffic;
-    if (minProducts !== undefined) filters.minProducts = minProducts;
-    if (maxProducts !== undefined) filters.maxProducts = maxProducts;
-    if (minActiveAds !== undefined) filters.minActiveAds = minActiveAds;
-    if (maxActiveAds !== undefined) filters.maxActiveAds = maxActiveAds;
-    if (minTrafficGrowth !== undefined) filters.minTrafficGrowth = minTrafficGrowth;
-    if (maxTrafficGrowth !== undefined) filters.maxTrafficGrowth = maxTrafficGrowth;
-    if (minOrders !== undefined) filters.minOrders = minOrders;
-    if (maxOrders !== undefined) filters.maxOrders = maxOrders;
-    if (minPrice !== undefined) filters.minPrice = minPrice;
-    if (maxPrice !== undefined) filters.maxPrice = maxPrice;
-    if (minCatalogSize !== undefined) filters.minCatalogSize = minCatalogSize;
-    if (maxCatalogSize !== undefined) filters.maxCatalogSize = maxCatalogSize;
-    // Note: Trustpilot filters are not yet supported by the API but we include them for future use
-    // if (minTrustpilotRating !== undefined) filters.minTrustpilotRating = minTrustpilotRating;
-    // if (maxTrustpilotRating !== undefined) filters.maxTrustpilotRating = maxTrustpilotRating;
-    // if (minTrustpilotReviews !== undefined) filters.minTrustpilotReviews = minTrustpilotReviews;
-    // if (maxTrustpilotReviews !== undefined) filters.maxTrustpilotReviews = maxTrustpilotReviews;
-    
-    return filters;
+  // Handle page change
+  const handlePageChange = (newPage: number) => {
+    setPage(newPage);
+    // Scroll to top of table
+    document.getElementById('shopsTable')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
-  // Fetch shops when component mounts
-  useEffect(() => {
-    fetchShops({ sortBy: 'recommended' }, 1, 20);
-  }, []);
+  // Handle per page change
+  const handlePerPageChange = (newPerPage: number) => {
+    setPerPage(newPerPage);
+    setPage(1);
+  };
+
+  // Handle apply filters - reset to page 1
+  const handleApplyFilters = () => {
+    if (page === 1) {
+      invalidateShops();
+    } else {
+      setPage(1);
+    }
+  };
 
   // Fetch tracked shops to know which are already being tracked
   useEffect(() => {
@@ -365,41 +403,14 @@ export default function ShopsPage() {
     fetchUserStats();
   }, []);
 
-  // Infinite scroll observer
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting && hasMore && !isLoading && !isLoadingMore) {
-          fetchMoreShops(buildFilters());
-        }
-      },
-      { threshold: 0.1 }
-    );
-
-    if (loadMoreRef.current) {
-      observer.observe(loadMoreRef.current);
-    }
-
-    return () => observer.disconnect();
-  }, [hasMore, isLoading, isLoadingMore, fetchMoreShops, buildFilters]);
-
   // Handle search
   const handleSearch = () => {
     setAppliedSearchText(searchText);
-    fetchShops({ ...buildFilters(), search: searchText }, 1, 20);
-  };
-
-  // Handle sort change
-  const handleSortChange = (newSortBy: string) => {
-    setSortBy(newSortBy);
-    setActivePreset('');
-    fetchShops({ ...buildFilters(), sortBy: newSortBy }, 1, 20);
-  };
-
-  // Handle filter apply - optionally accept override values for immediate updates
-  const handleApplyFilters = (overrideFilters?: Partial<ShopsFilters>) => {
-    const filters = { ...buildFilters(), ...overrideFilters };
-    fetchShops(filters, 1, 20);
+    if (page === 1) {
+      invalidateShops();
+    } else {
+      setPage(1);
+    }
   };
 
   // Reset filters
@@ -438,14 +449,19 @@ export default function ShopsPage() {
     setMinTrustpilotReviews(undefined);
     setMaxTrustpilotReviews(undefined);
     setSortBy("recommended");
+    setSortOrder("desc");
     setActivePreset("recommended");
-    fetchShops({ sortBy: 'recommended' }, 1, 20);
+    // Reset to page 1
+    if (page === 1) {
+      invalidateShops();
+    } else {
+      setPage(1);
+    }
   };
 
   // Smart preset handlers
   const applyPreset = (preset: string) => {
     setActivePreset(preset);
-    let filters: ShopsFilters = {};
     
     // Reset all filters first
     setSelectedCountries([]);
@@ -470,46 +486,46 @@ export default function ShopsPage() {
     setMinActiveAds(undefined);
     setMaxActiveAds(undefined);
     
+    let newSortBy = 'recommended';
+    
     switch (preset) {
       case 'us_market':
-        filters.country = 'US';
-        filters.sortBy = 'recommended';
         setSelectedCountries(['US']);
+        newSortBy = 'recommended';
         break;
       case 'eu_market':
-        filters.country = 'FR,DE,GB,IT,ES,NL,BE';
-        filters.sortBy = 'recommended';
         setSelectedCountries(['FR', 'DE', 'GB', 'IT', 'ES', 'NL', 'BE']);
+        newSortBy = 'recommended';
         break;
       case 'active_ads':
-        filters.minActiveAds = 10;
-        filters.sortBy = 'activeAds';
         setMinActiveAds(10);
+        newSortBy = 'active_ads';
         break;
       case 'new_shops':
-        filters.sortBy = 'newest';
+        newSortBy = 'created_at';
         break;
       case 'most_traffic':
-        filters.sortBy = 'traffic';
-        filters.minTraffic = 50000;
         setMinTraffic(50000);
+        newSortBy = 'last_month_visits';
         break;
       case 'dropshipping':
-        filters.minProducts = 1;
-        filters.maxProducts = 50;
-        filters.sortBy = 'recommended';
         setMinProducts(1);
         setMaxProducts(50);
+        newSortBy = 'recommended';
         break;
       case 'traffic_growth':
-        filters.sortBy = 'trafficGrowth';
-        filters.minTrafficGrowth = 50;
         setMinTrafficGrowth(50);
+        newSortBy = 'growth_rate';
         break;
     }
     
-    setSortBy(filters.sortBy || 'recommended');
-    fetchShops(filters, 1, 20);
+    setSortBy(newSortBy);
+    // Reset to page 1
+    if (page === 1) {
+      invalidateShops();
+    } else {
+      setPage(1);
+    }
   };
 
   // Handle analyze shop - NO REDIRECT, just toast - supports multiple parallel analyses
@@ -854,9 +870,9 @@ export default function ShopsPage() {
               className="btn btn-primary apply-filters-btn" 
               style={{ height: '40px', flexShrink: 0, whiteSpace: 'nowrap' }}
               onClick={handleSearch}
-              disabled={isLoading}
+              disabled={isFetching}
             >
-              {isLoading ? (
+              {isFetching ? (
                 <span className="spinner-border spinner-border-sm me-1" role="status"></span>
               ) : null}
               Rechercher
@@ -1217,36 +1233,90 @@ export default function ShopsPage() {
           </div>
 
           {/* Results Count and Sort */}
-          <div            className="d-flex align-items-center justify-content-between mb-4 mt-3 gap-3 flex-wrap"
-          >
+          <div className="d-flex align-items-center justify-content-between mb-4 mt-3 gap-3 flex-wrap">
+            {/* Left: Shop Count */}
             <div className="d-flex align-items-center gap-3">
               <h3 className="fs-small text-sub mb-0">
                 <span className="py-2 px-3 bg-weak-50 rounded" style={{ lineHeight: '36px' }}>
-                  {isLoading ? "..." : formatNumber(pagination.total)}
+                  {pagination.total.toLocaleString('fr-FR')}
                 </span>{' '}
                 <span>Boutiques disponibles</span>
               </h3>
             </div>
 
-            <div className="d-flex align-items-center sort-wrapper gap-2">
-              <label htmlFor="sortSelect" className="form-label mb-0 me-2 fw-500 text-sub fs-small" style={{ whiteSpace: 'nowrap' }}>
-                TRIER: 
-              </label>
-              <select 
-                id="sortSelect" 
-                className="form-select fs-small" 
-                value={sortBy}
-                onChange={(e) => handleSortChange(e.target.value)}
-                style={{ width: '350px', maxWidth: '100%' }}
-              >
-                <option value="recommended">🎯 Recommandé - Classement IA basé sur l'activité</option>
-                <option value="traffic">📈 Plus de trafic</option>
-                <option value="revenue">💰 Plus de revenus</option>
-                <option value="activeAds">📢 Plus de publicités actives</option>
-                <option value="trafficGrowth">🚀 Meilleure croissance</option>
-                <option value="newest">✨ Plus récentes</option>
-                <option value="productsCount">📦 Plus de produits</option>
-              </select>
+            {/* Right: Controls */}
+            <div className="d-flex align-items-center sort-wrapper gap-3 flex-wrap">
+              {/* Per Page Selector */}
+              <div className="d-flex align-items-center gap-2">
+                <span className="fw-500 text-sub fs-small" style={{ whiteSpace: 'nowrap' }}>
+                  AFFICHER:
+                </span>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button className="custom-select-btn" type="button">
+                      <span>{perPage}</span>
+                      <i className="ri-arrow-down-s-line"></i>
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="sort-dropdown-menu" style={{ minWidth: '90px' }}>
+                    {PER_PAGE_OPTIONS.map((option) => (
+                      <DropdownMenuItem
+                        key={option}
+                        onClick={() => handlePerPageChange(option)}
+                        className={`sort-dropdown-item ${perPage === option ? 'active' : ''}`}
+                      >
+                        <span className="sort-item-label">{option}</span>
+                        {perPage === option && <i className="ri-check-line sort-item-check"></i>}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+              
+              {/* Sort Selector */}
+              <div className="d-flex align-items-center gap-2">
+                <span className="fw-500 text-sub fs-small" style={{ whiteSpace: 'nowrap' }}>
+                  TRIER:
+                </span>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button className="custom-select-btn" type="button" style={{ minWidth: '200px' }}>
+                      <span className="d-flex align-items-center gap-2">
+                        <i className={SORT_OPTIONS.find(o => o.value === sortBy)?.icon || 'ri-sparkling-line'} style={{ color: 'var(--blue-copyfy)' }}></i>
+                        {SORT_OPTIONS.find(o => o.value === sortBy)?.label || 'Pertinence'}
+                      </span>
+                      <i className="ri-arrow-down-s-line"></i>
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="sort-dropdown-menu">
+                    {SORT_OPTIONS.map((option) => (
+                      <DropdownMenuItem
+                        key={option.value}
+                        onClick={() => { setSortBy(option.value); setPage(1); }}
+                        className={`sort-dropdown-item ${sortBy === option.value ? 'active' : ''}`}
+                      >
+                        <i className={`sort-item-icon ${option.icon}`}></i>
+                        <span className="sort-item-label">{option.label}</span>
+                        {sortBy === option.value && <i className="ri-check-line sort-item-check"></i>}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                
+                {/* Sort Order Toggle */}
+                <button
+                  type="button"
+                  className={`sort-order-btn ${sortOrder === 'asc' ? 'active' : ''}`}
+                  onClick={() => { setSortOrder(prev => prev === 'desc' ? 'asc' : 'desc'); setPage(1); }}
+                  title={sortOrder === 'desc' ? 'Ordre decroissant - Cliquer pour croissant' : 'Ordre croissant - Cliquer pour decroissant'}
+                >
+                  {sortOrder === 'desc' ? (
+                    <i className="ri-sort-desc" style={{ fontSize: '16px' }}></i>
+                  ) : (
+                    <i className="ri-sort-asc" style={{ fontSize: '16px' }}></i>
+                  )}
+                </button>
+              </div>
             </div>
           </div>
 
@@ -1258,9 +1328,8 @@ export default function ShopsPage() {
           )}
 
           {/* Shops Table */}
-          <div            className="table-view mt-2"
-          >
-            {isLoading ? (
+          <div className="table-view mt-2">
+            {isFetching ? (
               <div className="table-wrapper" style={{ paddingBottom: '100px', overflowX: 'auto' }}>
                 <Table id="shopsTable" className="table mb-0">
                   <TableHeader className="bg-weak-gray">
@@ -1610,14 +1679,105 @@ export default function ShopsPage() {
                         </TableCell>
                       </TableRow>
                     ))}
-                    
-                    {/* Loading more skeleton */}
-                    {isLoadingMore && <ShopTableSkeleton rows={5} />}
                   </TableBody>
                 </Table>
 
-                {/* Infinite scroll trigger */}
-                <div ref={loadMoreRef} style={{ height: '20px' }}></div>
+                {/* Pagination */}
+                {pagination.totalPages > 1 && (
+                  <div className="d-flex justify-content-center align-items-center gap-2 py-4 mt-3 border-top">
+                    {/* Previous Button */}
+                    <button
+                      className="btn btn-outline-secondary btn-sm d-flex align-items-center gap-1"
+                      onClick={() => { handlePageChange(page - 1); prefetchPrevPage(); }}
+                      disabled={page === 1 || isFetching}
+                      style={{ minWidth: '100px' }}
+                    >
+                      <i className="ri-arrow-left-s-line"></i>
+                      Precedent
+                    </button>
+                    
+                    {/* Page Numbers */}
+                    <div className="d-flex align-items-center gap-1">
+                      {/* First page */}
+                      {page > 3 && (
+                        <>
+                          <button
+                            className="btn btn-outline-secondary btn-sm"
+                            onClick={() => handlePageChange(1)}
+                            disabled={isFetching}
+                            style={{ minWidth: '40px' }}
+                          >
+                            1
+                          </button>
+                          {page > 4 && <span className="px-1 text-muted">...</span>}
+                        </>
+                      )}
+                      
+                      {/* Pages around current */}
+                      {Array.from({ length: Math.min(5, pagination.totalPages) }, (_, i) => {
+                        let pageNum: number;
+                        if (pagination.totalPages <= 5) {
+                          pageNum = i + 1;
+                        } else if (page <= 3) {
+                          pageNum = i + 1;
+                        } else if (page >= pagination.totalPages - 2) {
+                          pageNum = pagination.totalPages - 4 + i;
+                        } else {
+                          pageNum = page - 2 + i;
+                        }
+                        
+                        if (pageNum < 1 || pageNum > pagination.totalPages) return null;
+                        if (pageNum === 1 && page > 3) return null;
+                        if (pageNum === pagination.totalPages && page < pagination.totalPages - 2) return null;
+                        
+                        return (
+                          <button
+                            key={pageNum}
+                            className={`btn btn-sm ${pageNum === page ? 'btn-primary' : 'btn-outline-secondary'}`}
+                            onClick={() => handlePageChange(pageNum)}
+                            disabled={isFetching}
+                            style={{ minWidth: '40px' }}
+                          >
+                            {pageNum}
+                          </button>
+                        );
+                      })}
+                      
+                      {/* Last page */}
+                      {page < pagination.totalPages - 2 && pagination.totalPages > 5 && (
+                        <>
+                          {page < pagination.totalPages - 3 && <span className="px-1 text-muted">...</span>}
+                          <button
+                            className="btn btn-outline-secondary btn-sm"
+                            onClick={() => handlePageChange(pagination.totalPages)}
+                            disabled={isFetching}
+                            style={{ minWidth: '40px' }}
+                          >
+                            {pagination.totalPages}
+                          </button>
+                        </>
+                      )}
+                    </div>
+                    
+                    {/* Next Button */}
+                    <button
+                      className="btn btn-outline-secondary btn-sm d-flex align-items-center gap-1"
+                      onClick={() => { handlePageChange(page + 1); prefetchNextPage(); }}
+                      disabled={page === pagination.totalPages || isFetching}
+                      style={{ minWidth: '100px' }}
+                    >
+                      Suivant
+                      <i className="ri-arrow-right-s-line"></i>
+                    </button>
+                  </div>
+                )}
+                
+                {/* Page Info */}
+                <div className="text-center py-2 text-muted fs-small">
+                  <span>
+                    Page {page} sur {pagination.totalPages} ({pagination.total.toLocaleString('fr-FR')} boutiques)
+                  </span>
+                </div>
               </div>
             )}
           </div>

@@ -7,7 +7,16 @@ const countCache = new Map<string, { count: number; timestamp: number }>()
 const COUNT_CACHE_TTL = 60000 // 1 minute
 
 export async function GET(request: NextRequest) {
+  const timings: Record<string, number> = {}
+  const requestStart = Date.now()
+  
+  console.log(`[Shops API] ========== REQUEST START ==========`)
+  console.log(`[Shops API] Time: ${new Date().toISOString()}`)
+  
+  const authStart = Date.now()
   const session = await auth()
+  timings.auth = Date.now() - authStart
+  console.log(`[Shops API] Auth: ${timings.auth}ms`)
   
   if (!session?.user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -17,6 +26,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Database not configured' }, { status: 503 })
   }
 
+  const parseStart = Date.now()
   const searchParams = request.nextUrl.searchParams
   
   // Parse query params
@@ -24,6 +34,7 @@ export async function GET(request: NextRequest) {
   const perPage = parseInt(searchParams.get('perPage') || '20')
   const searchText = searchParams.get('search') || ''
   const sortBy = searchParams.get('sortBy') || 'recommended'
+  const sortOrder = searchParams.get('sortOrder') || 'desc'
   
   // Filters
   const minRevenue = searchParams.get('minRevenue') ? parseInt(searchParams.get('minRevenue')!) : null
@@ -50,6 +61,8 @@ export async function GET(request: NextRequest) {
   const themes = searchParams.get('themes')?.split(',').filter(Boolean) || []
   // Note: 'applications' searches in 'apps' text column
   const applications = searchParams.get('applications')?.split(',').filter(Boolean) || []
+  // Social networks filter
+  const socialNetworks = searchParams.get('socialNetworks')?.split(',').filter(Boolean) || []
   const shopCreationDate = searchParams.get('shopCreationDate') || ''
   // Monthly orders filter
   const minOrders = searchParams.get('minOrders') ? parseInt(searchParams.get('minOrders')!) : null
@@ -60,6 +73,10 @@ export async function GET(request: NextRequest) {
   const maxPrice = searchParams.get('maxPrice') ? parseFloat(searchParams.get('maxPrice')!) : null
   const minCatalogSize = searchParams.get('minCatalogSize') ? parseInt(searchParams.get('minCatalogSize')!) : null
   const maxCatalogSize = searchParams.get('maxCatalogSize') ? parseInt(searchParams.get('maxCatalogSize')!) : null
+
+  timings.parse = Date.now() - parseStart
+  console.log(`[Shops API] Parse: ${timings.parse}ms`)
+  console.log(`[Shops API] Filters: page=${page}, perPage=${perPage}, sortBy=${sortBy}, search=${searchText || 'none'}`)
 
   try {
     // Build the WHERE conditions for shops table only (fast filtering)
@@ -235,12 +252,40 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // Social Networks filter (needs traffic table for social column)
+    if (socialNetworks.length > 0) {
+      // Map frontend network names to database keys (case-sensitive in JSON)
+      const networkMap: Record<string, string[]> = {
+        'Facebook': ['Facebook', 'Facebook Messenger'],
+        'Instagram': ['Instagram'],
+        'TikTok': ['Tiktok', 'TikTok'],
+        'YouTube': ['YouTube', 'Youtube'],
+        'Twitter': ['Twitter', 'X'],
+        'Pinterest': ['Pinterest'],
+        'Snapchat': ['Snapchat'],
+        'Reddit': ['Reddit'],
+      }
+
+      const networkConditions: string[] = []
+      socialNetworks.forEach(network => {
+        const dbKeys = networkMap[network] || [network]
+        // Check if any of the mapped keys exist in traffic.social->'data'
+        const keyConditions = dbKeys.map(key => `t.social::jsonb->'data' ? '${key}'`).join(' OR ')
+        networkConditions.push(`(${keyConditions})`)
+      })
+
+      if (networkConditions.length > 0) {
+        trafficConditions.push(`(${networkConditions.join(' AND ')})`)
+      }
+    }
+
     // Traffic-based filters (will be applied after join)
     const hasTrafficFilters = minRevenue !== null || maxRevenue !== null || 
                               minTraffic !== null || maxTraffic !== null ||
                               minTrafficGrowth !== null || maxTrafficGrowth !== null ||
                               minOrders !== null || maxOrders !== null ||
-                              minPrice !== null || maxPrice !== null
+                              minPrice !== null || maxPrice !== null ||
+                              socialNetworks.length > 0
 
     // Revenue filter (from traffic table)
     if (minRevenue !== null) {
@@ -305,46 +350,52 @@ export async function GET(request: NextRequest) {
     const shopWhereClause = shopConditions.length > 0 ? `WHERE ${shopConditions.join(' AND ')}` : ''
     const trafficWhereClause = trafficConditions.length > 0 ? `AND ${trafficConditions.join(' AND ')}` : ''
 
-    // Build ORDER BY clause based on sortBy
+    // Build ORDER BY clause based on sortBy and sortOrder
+    const order = sortOrder === 'asc' ? 'ASC' : 'DESC'
     let orderByClause = ''
     let needsTrafficForSort = false
     switch (sortBy) {
       case 'traffic':
       case 'most_traffic':
-        orderByClause = 'ORDER BY COALESCE(t.last_month_visits, 0) DESC NULLS LAST'
+      case 'last_month_visits':
+        orderByClause = `ORDER BY COALESCE(t.last_month_visits, 0) ${order} NULLS LAST`
         needsTrafficForSort = true
         break
       case 'revenue':
       case 'highest_revenue':
-        orderByClause = 'ORDER BY COALESCE(t.estimated_monthly, 0) DESC NULLS LAST'
+      case 'estimated_monthly':
+        orderByClause = `ORDER BY COALESCE(t.estimated_monthly, 0) ${order} NULLS LAST`
         needsTrafficForSort = true
         break
       case 'activeAds':
       case 'most_active_ads':
-        orderByClause = 'ORDER BY s.active_ads DESC NULLS LAST'
+      case 'active_ads':
+        orderByClause = `ORDER BY s.active_ads ${order} NULLS LAST`
         break
       case 'newest':
       case 'most_recent':
-        orderByClause = 'ORDER BY s.created_at DESC NULLS LAST'
+      case 'created_at':
+        orderByClause = `ORDER BY s.created_at ${order} NULLS LAST`
         break
       case 'trafficGrowth':
       case 'traffic_growth':
-        orderByClause = 'ORDER BY COALESCE(t.growth_rate, 0) DESC NULLS LAST'
+      case 'growth_rate':
+        orderByClause = `ORDER BY COALESCE(t.growth_rate, 0) ${order} NULLS LAST`
         needsTrafficForSort = true
         break
       case 'productsCount':
-        orderByClause = 'ORDER BY s.products_count DESC NULLS LAST'
+      case 'products_count':
+        orderByClause = `ORDER BY s.products_count ${order} NULLS LAST`
         break
       case 'recommended':
       default:
         // Recommended: Deterministic scoring without RANDOM for cacheability
-        // Use shop id modulo for pseudo-randomness that's stable per page load
         orderByClause = `ORDER BY (
           COALESCE(t.growth_rate, 0) * 0.3 + 
           COALESCE(s.active_ads, 0) * 10000 + 
           COALESCE(t.estimated_order, 0) * 0.1 +
           (s.id % 1000) * 5
-        ) DESC NULLS LAST`
+        ) ${order} NULLS LAST`
         needsTrafficForSort = true
         break
     }
@@ -357,96 +408,197 @@ export async function GET(request: NextRequest) {
     
     const offset = (page - 1) * perPage
 
-    // Use optimized query with subquery for latest traffic
-    // This avoids LATERAL JOIN which is slow
-    const mainQuery = `
-      WITH latest_traffic AS (
-        SELECT DISTINCT ON (shop_id) 
-          shop_id,
-          last_month_visits,
-          last_last_month_visits,
-          estimated_monthly,
-          estimated_order,
-          growth_rate,
-          visits,
-          dates,
-          countries,
-          avg_price
-        FROM traffic
-        ORDER BY shop_id, created_at DESC
-      ),
-      filtered_shops AS (
-        SELECT s.id
-        FROM shops s
-        LEFT JOIN latest_traffic t ON t.shop_id = s.id
-        ${shopWhereClause}
-        ${trafficWhereClause}
-        ${orderByClause}
-        LIMIT $${paramIndex}
-        OFFSET $${paramIndex + 1}
+    // Check if we need to join with shops table for specific filters
+    const needsShopsJoin = pixels.length > 0 || themes.length > 0 || applications.length > 0 || 
+                           searchText || languages.length > 0 || domains.length > 0
+    // Check if we need traffic table for social networks filter
+    const needsTrafficJoin = socialNetworks.length > 0
+
+    // OPTIMIZED: Use top_shops_materialized view which has pre-computed data
+    // This is MUCH faster than complex LATERAL JOINs on raw tables
+    let mainQuery: string
+    
+    if (!needsShopsJoin && !needsTrafficJoin) {
+      // FAST PATH: Use materialized view but still get extra data (market share, best ads, etc.)
+      // Filter out conditions that don't exist in materialized view (deleted_at, disabled)
+      const mvShopConditions = shopConditions.filter(c => 
+        !c.includes('deleted_at') && !c.includes('disabled')
       )
-      SELECT 
-        s.id,
-        s.url,
-        s.merchant_name,
-        s.screenshot,
-        s.country,
-        s.currency,
-        s.products_count,
-        s.active_ads,
-        s.created_at as whois_at,
-        s.pixels,
-        t.last_month_visits,
-        t.last_last_month_visits,
-        t.estimated_monthly,
-        t.estimated_order,
-        t.growth_rate,
-        t.visits,
-        t.dates,
-        t.countries as traffic_countries,
-        bp.best_product,
-        ba.best_ads,
-        ah.ads_history,
-        CASE WHEN us.shop_id IS NOT NULL THEN true ELSE false END as is_tracked
-      FROM filtered_shops fs
-      JOIN shops s ON s.id = fs.id
-      LEFT JOIN latest_traffic t ON t.shop_id = s.id
-      LEFT JOIN LATERAL (
-        SELECT jsonb_build_object(
-          'id', p.id,
-          'title', p.title,
-          'handle', p.handle,
-          'price', pv.min_price,
-          'image', pi.src
-        ) as best_product
-        FROM products p
+      const mvTrafficConditions = trafficConditions.filter(c => 
+        !c.includes('deleted_at') && !c.includes('disabled')
+      )
+      
+      mainQuery = `
+        WITH filtered_shops AS (
+          SELECT m.*
+          FROM top_shops_materialized m
+          WHERE 1=1
+          ${mvShopConditions.length > 0 ? 'AND ' + mvShopConditions.map(c => c.replace(/s\.active_ads/g, 'm.active_ads_count').replace(/s\./g, 'm.')).join(' AND ') : ''}
+          ${mvTrafficConditions.length > 0 ? 'AND ' + mvTrafficConditions.map(c => c.replace(/t\./g, 'm.')).join(' AND ') : ''}
+          ${orderByClause.replace(/s\.active_ads/g, 'm.active_ads_count').replace(/s\./g, 'm.').replace(/t\./g, 'm.')}
+          LIMIT $${paramIndex}
+          OFFSET $${paramIndex + 1}
+        )
+        SELECT 
+          fs.id,
+          fs.shop_url as url,
+          fs.merchant_name,
+          fs.screenshot,
+          fs.country,
+          fs.currency,
+          fs.products_count,
+          fs.active_ads_count as active_ads,
+          fs.whois_at,
+          fs.last_month_visits,
+          fs.last_last_month_visits,
+          fs.estimated_monthly,
+          fs.estimated_order,
+          fs.growth_rate,
+          fs.best_product_id,
+          fs.best_product_title,
+          fs.best_product_handle,
+          fs.best_product_price,
+          fs.best_product_image,
+          tc.countries as traffic_countries,
+          ba.best_ads,
+          ah.ads_history,
+          CASE WHEN us.shop_id IS NOT NULL THEN true ELSE false END as is_tracked
+        FROM filtered_shops fs
+        LEFT JOIN user_shops us ON us.shop_id = fs.id AND us.user_id = $${paramIndex + 2}
         LEFT JOIN LATERAL (
-          SELECT MIN(price) as min_price FROM product_variants WHERE product_id = p.id
-        ) pv ON true
+          SELECT countries
+          FROM traffic
+          WHERE shop_id = fs.id
+          ORDER BY created_at DESC
+          LIMIT 1
+        ) tc ON true
         LEFT JOIN LATERAL (
-          SELECT src FROM product_images WHERE product_id = p.id ORDER BY position LIMIT 1
-        ) pi ON true
-        WHERE p.shop_id = s.id
-          AND p.handle IS NOT NULL
-          AND p.title NOT ILIKE '%Protection%'
-          AND p.title NOT ILIKE '%Shipping%'
-        ORDER BY p.sort, p.id
-        LIMIT 1
-      ) bp ON true
-      LEFT JOIN LATERAL (
-        SELECT jsonb_agg(
-          jsonb_build_object(
-            'id', a.id,
-            'type', a.type,
-            'video_link', a.video_link,
-            'video_preview_link', a.video_preview_link,
-            'image_link', a.image_link
-          )
-        ) as best_ads
-        FROM (
-          SELECT id, type, video_link, video_preview_link, image_link
-          FROM ads 
-          WHERE shop_id = s.id 
+          SELECT jsonb_agg(
+            jsonb_build_object(
+              'id', a.id,
+              'type', a.type,
+              'video_link', a.video_link,
+              'video_preview_link', a.video_preview_link,
+              'image_link', a.image_link
+            )
+          ) as best_ads
+          FROM (
+            SELECT id, type, video_link, video_preview_link, image_link
+            FROM ads 
+            WHERE shop_id = fs.id 
+            AND is_active = 1 
+            AND video_link IS NOT NULL
+            ORDER BY start_date DESC 
+            LIMIT 2
+          ) a
+        ) ba ON true
+        LEFT JOIN LATERAL (
+          SELECT jsonb_agg(
+            jsonb_build_object(
+              'active_ads_count', h.active_ads_count,
+              'date', h.created_at
+            )
+          ) as ads_history
+          FROM (
+            SELECT active_ads_count, created_at
+            FROM shops_ads_active_history 
+            WHERE shop_id = fs.id 
+              AND created_at >= NOW() - INTERVAL '90 days'
+            ORDER BY created_at ASC
+          ) h
+        ) ah ON true
+      `
+    } else {
+      // SLOWER PATH: Need to join with shops/traffic tables for specific filters
+      mainQuery = `
+        WITH latest_traffic AS (
+          SELECT DISTINCT ON (shop_id)
+            shop_id,
+            last_month_visits,
+            last_last_month_visits,
+            estimated_monthly,
+            estimated_order,
+            growth_rate,
+            visits,
+            dates,
+            countries,
+            avg_price,
+            social
+          FROM traffic
+          ORDER BY shop_id, created_at DESC
+        ),
+        filtered_shops AS (
+          SELECT s.id
+          FROM shops s
+          LEFT JOIN latest_traffic t ON t.shop_id = s.id
+          ${shopWhereClause}
+          ${trafficWhereClause}
+          ${orderByClause}
+          LIMIT $${paramIndex}
+          OFFSET $${paramIndex + 1}
+        )
+        SELECT 
+          s.id,
+          s.url,
+          s.merchant_name,
+          s.screenshot,
+          s.country,
+          s.currency,
+          s.products_count,
+          s.active_ads,
+          s.created_at as whois_at,
+          s.pixels,
+          t.last_month_visits,
+          t.last_last_month_visits,
+          t.estimated_monthly,
+          t.estimated_order,
+          t.growth_rate,
+          t.visits,
+          t.dates,
+          t.countries as traffic_countries,
+          bp.best_product,
+          ba.best_ads,
+          ah.ads_history,
+          CASE WHEN us.shop_id IS NOT NULL THEN true ELSE false END as is_tracked
+        FROM filtered_shops fs
+        JOIN shops s ON s.id = fs.id
+        LEFT JOIN latest_traffic t ON t.shop_id = s.id
+        LEFT JOIN LATERAL (
+          SELECT jsonb_build_object(
+            'id', p.id,
+            'title', p.title,
+            'handle', p.handle,
+            'price', pv.min_price,
+            'image', pi.src
+          ) as best_product
+          FROM products p
+          LEFT JOIN LATERAL (
+            SELECT MIN(price) as min_price FROM product_variants WHERE product_id = p.id
+          ) pv ON true
+          LEFT JOIN LATERAL (
+            SELECT src FROM product_images WHERE product_id = p.id ORDER BY position LIMIT 1
+          ) pi ON true
+          WHERE p.shop_id = s.id
+            AND p.handle IS NOT NULL
+            AND p.title NOT ILIKE '%Protection%'
+            AND p.title NOT ILIKE '%Shipping%'
+          ORDER BY p.sort, p.id
+          LIMIT 1
+        ) bp ON true
+        LEFT JOIN LATERAL (
+          SELECT jsonb_agg(
+            jsonb_build_object(
+              'id', a.id,
+              'type', a.type,
+              'video_link', a.video_link,
+              'video_preview_link', a.video_preview_link,
+              'image_link', a.image_link
+            )
+          ) as best_ads
+          FROM (
+            SELECT id, type, video_link, video_preview_link, image_link
+            FROM ads 
+            WHERE shop_id = s.id 
             AND is_active = 1 
             AND video_link IS NOT NULL
           ORDER BY start_date DESC 
@@ -468,42 +620,76 @@ export async function GET(request: NextRequest) {
           ORDER BY created_at ASC
         ) h
       ) ah ON true
-      LEFT JOIN user_shops us ON us.shop_id = s.id AND us.user_id = $${paramIndex + 2}
-      ${orderByClause.replace('ORDER BY', 'ORDER BY ')}
-    `
+        LEFT JOIN user_shops us ON us.shop_id = s.id AND us.user_id = $${paramIndex + 2}
+        ${orderByClause.replace('ORDER BY', 'ORDER BY ')}
+      `
+    }
 
     params.push(perPage)
     params.push(offset)
     params.push(parseInt(session.user.id))
 
     // Execute main query
+    const mainQueryStart = Date.now()
+    console.log(`[Shops API] Executing main query...`)
     const shopsResult = await prisma.$queryRawUnsafe<any[]>(mainQuery, ...params)
+    timings.mainQuery = Date.now() - mainQueryStart
+    console.log(`[Shops API] Main Query: ${timings.mainQuery}ms - ${shopsResult.length} results`)
 
     // Get count - use cache if available, otherwise run optimized count
+    const countStart = Date.now()
     if (cached && Date.now() - cached.timestamp < COUNT_CACHE_TTL) {
+      timings.countQuery = 0
+      console.log(`[Shops API] Count from cache: ${cached.count}`)
       total = cached.count
     } else {
-      // Optimized count query without LATERAL
-      const countQuery = `
-        WITH latest_traffic AS (
-          SELECT DISTINCT ON (shop_id) shop_id, estimated_monthly, last_month_visits, growth_rate, estimated_order, avg_price
-          FROM traffic
-          ORDER BY shop_id, created_at DESC
+      // Optimized count query 
+      console.log(`[Shops API] Executing count query...`)
+      let countQuery: string
+      
+      if (!needsShopsJoin && !needsTrafficJoin) {
+        // FAST PATH: Count from materialized view
+        // Filter out conditions that don't exist in materialized view
+        const mvShopConditions = shopConditions.filter(c => 
+          !c.includes('deleted_at') && !c.includes('disabled')
         )
-        SELECT COUNT(*) as total
-        FROM shops s
-        LEFT JOIN latest_traffic t ON t.shop_id = s.id
-        ${shopWhereClause}
-        ${trafficWhereClause}
-      `
+        const mvTrafficConditions = trafficConditions.filter(c => 
+          !c.includes('deleted_at') && !c.includes('disabled')
+        )
+        
+        countQuery = `
+          SELECT COUNT(*) as total
+          FROM top_shops_materialized m
+          WHERE 1=1
+          ${mvShopConditions.length > 0 ? 'AND ' + mvShopConditions.map(c => c.replace(/s\.active_ads/g, 'm.active_ads_count').replace(/s\./g, 'm.')).join(' AND ') : ''}
+          ${mvTrafficConditions.length > 0 ? 'AND ' + mvTrafficConditions.map(c => c.replace(/t\./g, 'm.')).join(' AND ') : ''}
+        `
+      } else {
+        // SLOWER PATH: Need to join with shops/traffic tables
+        countQuery = `
+          WITH latest_traffic AS (
+            SELECT DISTINCT ON (shop_id) shop_id, estimated_monthly, last_month_visits, growth_rate, estimated_order, avg_price, social
+            FROM traffic
+            ORDER BY shop_id, created_at DESC
+          )
+          SELECT COUNT(*) as total
+          FROM shops s
+          LEFT JOIN latest_traffic t ON t.shop_id = s.id
+          ${shopWhereClause}
+          ${trafficWhereClause}
+        `
+      }
+      
       const countResult = await prisma.$queryRawUnsafe<[{ total: bigint }]>(countQuery, ...params.slice(0, -3))
       total = Number(countResult[0]?.total || 0)
+      timings.countQuery = Date.now() - countStart
+      console.log(`[Shops API] Count Query: ${timings.countQuery}ms - Total: ${total}`)
       countCache.set(cacheKey, { count: total, timestamp: Date.now() })
     }
 
     // Transform results
     const shops = shopsResult.map((shop: any, index: number) => {
-      // Parse traffic history
+      // Parse traffic history (only available in slow path)
       let trafficData: number[] = []
       let trafficDates: string[] = []
       if (shop.visits) {
@@ -516,7 +702,7 @@ export async function GET(request: NextRequest) {
       const trafficPrevious = shop.last_last_month_visits || 0
       const trafficChange = trafficCurrent - trafficPrevious
 
-      // Parse ads history
+      // Parse ads history (only available in slow path)
       let adsHistoryData: number[] = []
       let adsChange = 0
       const currentAds = shop.active_ads || 0
@@ -527,7 +713,7 @@ export async function GET(request: NextRequest) {
         }
       }
 
-      // Parse market share countries
+      // Parse market share countries (only available in slow path)
       let marketCountries: { code: string; share: number }[] = []
       if (shop.traffic_countries) {
         try {
@@ -545,17 +731,31 @@ export async function GET(request: NextRequest) {
         }
       }
 
-      // Best product
-      const bestProduct = shop.best_product ? {
-        id: shop.best_product.id,
-        name: shop.best_product.title,
-        handle: shop.best_product.handle,
-        price: Number(shop.best_product.price) || 0,
-        image: shop.best_product.image || null,
-        currency: shop.currency || '$'
-      } : null
+      // Best product - handle both materialized view format and slow path format
+      let bestProduct = null
+      if (shop.best_product) {
+        // Slow path format (JSON object)
+        bestProduct = {
+          id: shop.best_product.id,
+          name: shop.best_product.title,
+          handle: shop.best_product.handle,
+          price: Number(shop.best_product.price) || 0,
+          image: shop.best_product.image || null,
+          currency: shop.currency || '$'
+        }
+      } else if (shop.best_product_id) {
+        // Fast path format (from materialized view)
+        bestProduct = {
+          id: Number(shop.best_product_id),
+          name: shop.best_product_title,
+          handle: shop.best_product_handle,
+          price: Number(shop.best_product_price) || 0,
+          image: shop.best_product_image || null,
+          currency: shop.currency || '$'
+        }
+      }
 
-      // Best ads
+      // Best ads (only available in slow path)
       const bestAds = shop.best_ads || []
 
       return {
@@ -566,17 +766,17 @@ export async function GET(request: NextRequest) {
         screenshot: shop.screenshot,
         country: shop.country,
         currency: shop.currency || 'USD',
-        productsCount: shop.products_count || 0,
-        activeAds: currentAds,
-        adsChange,
+        productsCount: Number(shop.products_count) || 0,
+        activeAds: Number(currentAds) || 0,
+        adsChange: Number(adsChange) || 0,
         adsHistoryData,
-        monthlyVisits: trafficCurrent,
-        trafficChange,
-        trafficGrowth: shop.growth_rate || 0,
+        monthlyVisits: Number(trafficCurrent) || 0,
+        trafficChange: Number(trafficChange) || 0,
+        trafficGrowth: Number(shop.growth_rate) || 0,
         trafficData: trafficData.slice(-13), // Last ~90 days
         trafficDates: trafficDates.slice(-13),
-        estimatedMonthly: shop.estimated_monthly || 0,
-        dailyRevenue: Math.round((shop.estimated_monthly || 0) / 30),
+        estimatedMonthly: Number(shop.estimated_monthly) || 0,
+        dailyRevenue: Math.round((Number(shop.estimated_monthly) || 0) / 30),
         marketCountries,
         bestProduct,
         bestAds,
@@ -585,7 +785,16 @@ export async function GET(request: NextRequest) {
       }
     })
 
-    return NextResponse.json({
+    timings.total = Date.now() - requestStart
+    console.log(`[Shops API] ========== TIMING SUMMARY ==========`)
+    console.log(`[Shops API] Auth: ${timings.auth}ms`)
+    console.log(`[Shops API] Parse: ${timings.parse}ms`)
+    console.log(`[Shops API] Main Query: ${timings.mainQuery}ms`)
+    console.log(`[Shops API] Count Query: ${timings.countQuery}ms`)
+    console.log(`[Shops API] TOTAL: ${timings.total}ms (${(timings.total/1000).toFixed(2)}s)`)
+    console.log(`[Shops API] ========== REQUEST END ==========`)
+
+    const response = NextResponse.json({
       success: true,
       data: shops,
       pagination: {
@@ -594,12 +803,22 @@ export async function GET(request: NextRequest) {
         total,
         totalPages: Math.ceil(total / perPage),
         hasMore: page * perPage < total
+      },
+      _timings: {
+        totalMs: timings.total,
+        totalSec: (timings.total/1000).toFixed(2)
       }
     })
+    
+    // Add cache headers for better performance
+    response.headers.set('Cache-Control', 'private, max-age=30, stale-while-revalidate=60')
+    
+    return response
   } catch (error) {
-    console.error('Failed to fetch shops:', error)
-    return NextResponse.json({ 
-      success: false, 
+    console.error('[Shops API] ========== REQUEST FAILED ==========')
+    console.error('[Shops API] Error:', error)
+    return NextResponse.json({
+      success: false,
       error: 'Failed to fetch shops',
       details: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 })

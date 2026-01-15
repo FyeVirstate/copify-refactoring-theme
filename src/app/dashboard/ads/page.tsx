@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import DashboardHeader from "@/components/DashboardHeader";
@@ -32,7 +32,25 @@ import {
 import NicheDropdown from "@/components/NicheDropdown";
 import FilterDropdown, { FilterApplyButton } from "@/components/filters/FilterDropdown";
 import { useAds, AdsFilters } from "@/lib/hooks/use-ads";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import TutorialModal, { TUTORIAL_CONFIGS } from "@/components/TutorialModal";
+
+// Sort options for ads
+const SORT_OPTIONS = [
+  { value: "recommended", label: "Pertinence", icon: "ri-sparkling-line" },
+  { value: "start_date", label: "Plus recentes", icon: "ri-calendar-line" },
+  { value: "estimated_monthly", label: "Chiffre d'affaires", icon: "ri-money-euro-circle-line" },
+  { value: "last_month_visits", label: "Portee", icon: "ri-eye-line" },
+  { value: "growth_rate", label: "Croissance", icon: "ri-arrow-up-circle-line" },
+  { value: "trending", label: "Tendance", icon: "ri-fire-line" },
+];
+
+const PER_PAGE_OPTIONS = [10, 25, 50, 100];
 
 // Interface for user stats
 interface UserStats {
@@ -447,17 +465,6 @@ const PRESET_CONFIGS: Record<string, Partial<AdsFilters>> = {
   recent_winners: { sortBy: 'most_recent', status: 'active' },
 };
 
-// Sort options
-const SORT_OPTIONS = [
-  { value: "recommended", label: "Recommandé - Classement IA basé sur l'activité p...", icon: "🎯" },
-  { value: "most_recent", label: "Plus récentes", icon: "🔥" },
-  { value: "oldest_first", label: "Plus anciennes", icon: "⏰" },
-  { value: "highest_reach", label: "Meilleure portée", icon: "📈" },
-  { value: "most_engaging", label: "Plus engageantes", icon: "💬" },
-  { value: "highest_spend", label: "Budget le plus élevé", icon: "💰" },
-  { value: "trending", label: "Tendance", icon: "🚀" },
-];
-
 // Active filter interface
 interface ActiveFilter {
   id: string;
@@ -518,68 +525,82 @@ export default function AdsPage() {
   const [minCatalogSize, setMinCatalogSize] = useState<number | undefined>();
   const [maxCatalogSize, setMaxCatalogSize] = useState<number | undefined>();
   
-  const { 
-    ads, 
-    pagination, 
-    isLoading, 
-    isLoadingMore, 
-    hasMore, 
-    error, 
-    fetchAds, 
-    fetchMoreAds, 
-    toggleFavorite 
-  } = useAds();
-  
-  const loadMoreRef = useRef<HTMLDivElement>(null);
+  // Pagination state
+  const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState(25);
+  const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
 
-  // Build filters
-  const buildFilters = useCallback((): AdsFilters => {
-    const filters: AdsFilters = { sortBy };
-    if (appliedSearchText) filters.search = appliedSearchText;
-    if (selectedCountries.length) filters.country = selectedCountries.join(',');
-    if (selectedNiches.length) filters.category = selectedNiches.join(',');
-    if (selectedCTAs.length) filters.ctas = selectedCTAs;
-    if (selectedStatus !== 'all') filters.status = selectedStatus;
-    if (selectedMediaType) filters.mediaType = selectedMediaType;
-    if (minActiveAds !== undefined) filters.minActiveAds = minActiveAds;
-    if (maxActiveAds !== undefined) filters.maxActiveAds = maxActiveAds;
-    if (euTransparency) filters.euTransparency = true;
+  // Build filters - memoized for TanStack Query
+  const filters = useMemo((): AdsFilters => {
+    const f: AdsFilters = { sortBy, sortOrder };
+    if (appliedSearchText) f.search = appliedSearchText;
+    if (selectedCountries.length) f.country = selectedCountries.join(',');
+    if (selectedNiches.length) f.category = selectedNiches.join(',');
+    if (selectedCTAs.length) f.ctas = selectedCTAs.join(',');
+    if (selectedStatus !== 'all') f.status = selectedStatus;
+    if (selectedMediaType) f.mediaType = selectedMediaType;
+    if (minActiveAds !== undefined) f.minActiveAds = minActiveAds;
+    if (maxActiveAds !== undefined) f.maxActiveAds = maxActiveAds;
+    if (euTransparency) f.euTransparency = true;
     
-    // New filters from Top Boutiques/Produits
-    if (minTraffic !== undefined) filters.minVisits = minTraffic;
-    if (maxTraffic !== undefined) filters.maxVisits = maxTraffic;
-    if (minTrafficGrowth !== undefined) filters.minGrowth = minTrafficGrowth;
-    if (maxTrafficGrowth !== undefined) filters.maxGrowth = maxTrafficGrowth;
-    if (minRevenue !== undefined) filters.minRevenue = minRevenue;
-    if (maxRevenue !== undefined) filters.maxRevenue = maxRevenue;
-    if (minOrders !== undefined) filters.minOrders = minOrders;
-    if (maxOrders !== undefined) filters.maxOrders = maxOrders;
-    if (shopCreationDate) filters.shopCreationDate = shopCreationDate;
-    if (selectedCurrencies.length) filters.currencies = selectedCurrencies.join(',');
-    if (selectedPixels.length) filters.pixels = selectedPixels.join(',');
-    if (selectedOrigins.length) filters.origins = selectedOrigins.join(',');
-    if (selectedLanguages.length) filters.languages = selectedLanguages.join(',');
-    if (selectedDomains.length) filters.domains = selectedDomains.join(',');
-    if (minTrustpilotRating !== undefined) filters.minTrustpilotRating = minTrustpilotRating;
-    if (maxTrustpilotRating !== undefined) filters.maxTrustpilotRating = maxTrustpilotRating;
-    if (minTrustpilotReviews !== undefined) filters.minTrustpilotReviews = minTrustpilotReviews;
-    if (maxTrustpilotReviews !== undefined) filters.maxTrustpilotReviews = maxTrustpilotReviews;
-    if (selectedThemes.length) filters.themes = selectedThemes.join(',');
-    if (selectedApps.length) filters.apps = selectedApps.join(',');
-    if (selectedSocialNetworks.length) filters.socialNetworks = selectedSocialNetworks.join(',');
-    if (minPrice !== undefined) filters.minPrice = minPrice;
-    if (maxPrice !== undefined) filters.maxPrice = maxPrice;
-    if (minCatalogSize !== undefined) filters.minCatalogSize = minCatalogSize;
-    if (maxCatalogSize !== undefined) filters.maxCatalogSize = maxCatalogSize;
+    if (minTraffic !== undefined) f.minVisits = minTraffic;
+    if (maxTraffic !== undefined) f.maxVisits = maxTraffic;
+    if (minTrafficGrowth !== undefined) f.minGrowth = minTrafficGrowth;
+    if (maxTrafficGrowth !== undefined) f.maxGrowth = maxTrafficGrowth;
+    if (minRevenue !== undefined) f.minRevenue = minRevenue;
+    if (maxRevenue !== undefined) f.maxRevenue = maxRevenue;
+    if (minOrders !== undefined) f.minOrders = minOrders;
+    if (maxOrders !== undefined) f.maxOrders = maxOrders;
+    if (shopCreationDate) f.shopCreationDate = shopCreationDate;
+    if (selectedCurrencies.length) f.currencies = selectedCurrencies.join(',');
+    if (selectedPixels.length) f.pixels = selectedPixels.join(',');
+    if (selectedOrigins.length) f.origins = selectedOrigins.join(',');
+    if (selectedLanguages.length) f.languages = selectedLanguages.join(',');
+    if (selectedDomains.length) f.domains = selectedDomains.join(',');
+    if (minTrustpilotRating !== undefined) f.minTrustpilotRating = minTrustpilotRating;
+    if (maxTrustpilotRating !== undefined) f.maxTrustpilotRating = maxTrustpilotRating;
+    if (minTrustpilotReviews !== undefined) f.minTrustpilotReviews = minTrustpilotReviews;
+    if (maxTrustpilotReviews !== undefined) f.maxTrustpilotReviews = maxTrustpilotReviews;
+    if (selectedThemes.length) f.themes = selectedThemes.join(',');
+    if (selectedApps.length) f.apps = selectedApps.join(',');
+    if (selectedSocialNetworks.length) f.socialNetworks = selectedSocialNetworks.join(',');
+    if (minPrice !== undefined) f.minPrice = minPrice;
+    if (maxPrice !== undefined) f.maxPrice = maxPrice;
+    if (minCatalogSize !== undefined) f.minCatalogSize = minCatalogSize;
+    if (maxCatalogSize !== undefined) f.maxCatalogSize = maxCatalogSize;
     
-    return filters;
-  }, [sortBy, appliedSearchText, selectedCountries, selectedNiches, selectedCTAs, 
+    return f;
+  }, [sortBy, sortOrder, appliedSearchText, selectedCountries, selectedNiches, selectedCTAs, 
       selectedStatus, selectedMediaType, minActiveAds, maxActiveAds, euTransparency,
       minTraffic, maxTraffic, minTrafficGrowth, maxTrafficGrowth, minRevenue, maxRevenue,
       minOrders, maxOrders, shopCreationDate, selectedCurrencies, selectedPixels,
       selectedOrigins, selectedLanguages, selectedDomains, minTrustpilotRating,
       maxTrustpilotRating, minTrustpilotReviews, maxTrustpilotReviews, selectedThemes,
       selectedApps, selectedSocialNetworks, minPrice, maxPrice, minCatalogSize, maxCatalogSize]);
+
+  // Use ads hook with TanStack Query
+  const { 
+    ads, 
+    pagination, 
+    isFetching,
+    error, 
+    toggleFavorite,
+    invalidateAds,
+    prefetchNextPage,
+    prefetchPrevPage,
+  } = useAds(filters, page, perPage);
+
+  // Handle page change
+  const handlePageChange = (newPage: number) => {
+    setPage(newPage);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // Handle per page change
+  const handlePerPageChange = (newPerPage: number) => {
+    setPerPage(newPerPage);
+    setPage(1);
+  };
 
   // Toast functions
   const addToast = (type: ToastAlert['type'], message: string, shopUrl?: string, shopId?: number) => {
@@ -589,11 +610,6 @@ export default function AdsPage() {
   };
 
   const dismissToast = (id: string) => setToastAlerts(prev => prev.filter(a => a.id !== id));
-
-  // Fetch ads on mount
-  useEffect(() => {
-    fetchAds({ sortBy: 'recommended' }, 1, 20);
-  }, []);
 
   // Fetch tracked shops
   useEffect(() => {
@@ -647,38 +663,30 @@ export default function AdsPage() {
     }
   };
 
-  // Infinite scroll
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting && hasMore && !isLoading && !isLoadingMore) {
-          fetchMoreAds(buildFilters());
-        }
-      },
-      { threshold: 0.1 }
-    );
-    if (loadMoreRef.current) observer.observe(loadMoreRef.current);
-    return () => observer.disconnect();
-  }, [hasMore, isLoading, isLoadingMore, fetchMoreAds, buildFilters]);
 
   const handleSearch = () => {
     setAppliedSearchText(searchText);
-    fetchAds({ ...buildFilters(), search: searchText }, 1, 20);
-  };
-
-  const handleSortChange = (newSortBy: string) => {
-    setSortBy(newSortBy);
-    setActivePreset('');
-    fetchAds({ ...buildFilters(), sortBy: newSortBy }, 1, 20);
+    if (page === 1) {
+      invalidateAds();
+    } else {
+      setPage(1);
+    }
   };
 
   const handleApplyFilters = (overrideFilters?: Partial<AdsFilters>) => {
     setActivePreset('');
-    const currentFilters = buildFilters();
-    const mergedFilters = overrideFilters 
-      ? { ...currentFilters, ...overrideFilters } 
-      : currentFilters;
-    fetchAds(mergedFilters, 1, 20);
+    // Apply any override filters to local state
+    if (overrideFilters) {
+      if (overrideFilters.minVisits !== undefined) setMinTraffic(overrideFilters.minVisits);
+      if (overrideFilters.maxVisits !== undefined) setMaxTraffic(overrideFilters.maxVisits);
+      if (overrideFilters.minGrowth !== undefined) setMinTrafficGrowth(overrideFilters.minGrowth);
+      if (overrideFilters.maxGrowth !== undefined) setMaxTrafficGrowth(overrideFilters.maxGrowth);
+    }
+    if (page === 1) {
+      invalidateAds();
+    } else {
+      setPage(1);
+    }
   };
 
   const resetFilters = () => {
@@ -692,6 +700,7 @@ export default function AdsPage() {
     setMinActiveAds(undefined);
     setMaxActiveAds(undefined);
     setSortBy("recommended");
+    setSortOrder("desc");
     setActivePreset("");
     setEuTransparency(false);
     
@@ -722,7 +731,12 @@ export default function AdsPage() {
     setMinCatalogSize(undefined);
     setMaxCatalogSize(undefined);
     
-    fetchAds({ sortBy: 'recommended' }, 1, 20);
+    // Reset to page 1
+    if (page === 1) {
+      invalidateAds();
+    } else {
+      setPage(1);
+    }
   };
 
   const applyPreset = (preset: string) => {
@@ -735,7 +749,12 @@ export default function AdsPage() {
     setSelectedCountries(config.country ? config.country.split(',') : []);
     setSelectedStatus(config.status || 'all');
     if (config.sortBy) setSortBy(config.sortBy);
-    fetchAds(config, 1, 20);
+    // Reset to page 1
+    if (page === 1) {
+      invalidateAds();
+    } else {
+      setPage(1);
+    }
   };
 
   const handleTrackShop = async (shopId: number, shopUrl?: string): Promise<boolean> => {
@@ -773,17 +792,19 @@ export default function AdsPage() {
   const handleViewShop = (shopId: number) => router.push(`/dashboard/track/${shopId}`);
 
   const handleToggleFavorite = async (adId: number) => {
-    try {
-      const result = await toggleFavorite(adId);
-      if (result.data.isFavorited) {
-        addToast('success', 'Publicité ajoutée à vos favoris');
-      } else {
-        addToast('info', 'Publicité retirée de vos favoris');
+    toggleFavorite(adId, {
+      onSuccess: (result) => {
+        if (result.data.isFavorited) {
+          addToast('success', 'Publicite ajoutee a vos favoris');
+        } else {
+          addToast('info', 'Publicite retiree de vos favoris');
+        }
+        if (savedAdsDrawerOpen) fetchSavedAds();
+      },
+      onError: () => {
+        addToast('error', 'Erreur lors de la sauvegarde');
       }
-      if (savedAdsDrawerOpen) fetchSavedAds();
-    } catch (err) {
-      addToast('error', 'Erreur lors de la sauvegarde');
-    }
+    });
   };
 
   const getActiveDays = (firstSeenDate: string | null, lastSeenDate?: string | null) => {
@@ -1090,7 +1111,6 @@ export default function AdsPage() {
                 maxActiveAds={maxActiveAds} 
                 onMinActiveAdsChange={setMinActiveAds}
                 onMaxActiveAdsChange={setMaxActiveAds}
-                onActiveAdsChange={(min, max) => { setMinActiveAds(min); setMaxActiveAds(max); }} 
                 onOpenChange={() => {}} 
                 onApply={handleApplyFilters} 
                 isActive={minActiveAds !== undefined || maxActiveAds !== undefined} 
@@ -1296,28 +1316,90 @@ export default function AdsPage() {
           </div>
 
           {/* Results & Sort */}
-          <div            className="d-flex align-items-center justify-content-between mb-4 gap-3 flex-wrap"
-          >
+          <div className="d-flex align-items-center justify-content-between mb-4 gap-3 flex-wrap">
+            {/* Left: Count */}
+            <div className="d-flex align-items-center gap-3">
               <h3 className="fs-small text-sub mb-0">
                 <span className="py-2 px-3 bg-weak-50 rounded" style={{ lineHeight: '36px' }}>
-                {isLoading ? "..." : formatNumber(pagination.total)}
+                  {pagination.total.toLocaleString('fr-FR')}
                 </span>{' '}
-                <span>Total des publicités</span>
+                <span>Publicites disponibles</span>
               </h3>
+            </div>
 
-            <div className="d-flex align-items-center sort-wrapper gap-2">
-              <label htmlFor="sortSelect" className="form-label mb-0 me-2 fw-500 text-sub fs-small" style={{ whiteSpace: 'nowrap' }}>Trier:</label>
-              <select 
-                id="sortSelect" 
-                className="form-select fs-small" 
-                value={sortBy}
-                onChange={(e) => handleSortChange(e.target.value)}
-                style={{ width: '350px', maxWidth: '100%' }}
-              >
-                {SORT_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>{option.icon} {option.label}</option>
-                ))}
-              </select>
+            {/* Right: Controls */}
+            <div className="d-flex align-items-center sort-wrapper gap-3 flex-wrap">
+              {/* Per Page Selector */}
+              <div className="d-flex align-items-center gap-2">
+                <span className="fw-500 text-sub fs-small" style={{ whiteSpace: 'nowrap' }}>
+                  AFFICHER:
+                </span>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button className="custom-select-btn" type="button">
+                      <span>{perPage}</span>
+                      <i className="ri-arrow-down-s-line"></i>
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="sort-dropdown-menu" style={{ minWidth: '90px' }}>
+                    {PER_PAGE_OPTIONS.map((option) => (
+                      <DropdownMenuItem
+                        key={option}
+                        onClick={() => handlePerPageChange(option)}
+                        className={`sort-dropdown-item ${perPage === option ? 'active' : ''}`}
+                      >
+                        <span className="sort-item-label">{option}</span>
+                        {perPage === option && <i className="ri-check-line sort-item-check"></i>}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+              
+              {/* Sort Selector */}
+              <div className="d-flex align-items-center gap-2">
+                <span className="fw-500 text-sub fs-small" style={{ whiteSpace: 'nowrap' }}>
+                  TRIER:
+                </span>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button className="custom-select-btn" type="button" style={{ minWidth: '200px' }}>
+                      <span className="d-flex align-items-center gap-2">
+                        <i className={SORT_OPTIONS.find(o => o.value === sortBy)?.icon || 'ri-sparkling-line'} style={{ color: 'var(--blue-copyfy)' }}></i>
+                        {SORT_OPTIONS.find(o => o.value === sortBy)?.label || 'Pertinence'}
+                      </span>
+                      <i className="ri-arrow-down-s-line"></i>
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="sort-dropdown-menu">
+                    {SORT_OPTIONS.map((option) => (
+                      <DropdownMenuItem
+                        key={option.value}
+                        onClick={() => { setSortBy(option.value); setPage(1); }}
+                        className={`sort-dropdown-item ${sortBy === option.value ? 'active' : ''}`}
+                      >
+                        <i className={`sort-item-icon ${option.icon}`}></i>
+                        <span className="sort-item-label">{option.label}</span>
+                        {sortBy === option.value && <i className="ri-check-line sort-item-check"></i>}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                
+                {/* Sort Order Toggle */}
+                <button
+                  type="button"
+                  className={`sort-order-btn ${sortOrder === 'asc' ? 'active' : ''}`}
+                  onClick={() => { setSortOrder(prev => prev === 'desc' ? 'asc' : 'desc'); setPage(1); }}
+                  title={sortOrder === 'desc' ? 'Ordre decroissant - Cliquer pour croissant' : 'Ordre croissant - Cliquer pour decroissant'}
+                >
+                  {sortOrder === 'desc' ? (
+                    <i className="ri-sort-desc" style={{ fontSize: '16px' }}></i>
+                  ) : (
+                    <i className="ri-sort-asc" style={{ fontSize: '16px' }}></i>
+                  )}
+                </button>
+              </div>
             </div>
           </div>
 
@@ -1325,16 +1407,16 @@ export default function AdsPage() {
           {error && <div className="alert alert-danger mb-4">{error}</div>}
 
           {/* Ads Grid - CSS Grid for 3 columns */}
-          <div   >
-            {isLoading ? (
+          <div>
+            {isFetching ? (
               <div className="ads-grid-container">
                 {Array.from({ length: 9 }).map((_, i) => <AdCardSkeleton key={i} />)}
               </div>
             ) : ads.length === 0 ? (
               <div className="text-center py-5">
                 <i className="ri-advertisement-line fs-1 text-muted mb-3 d-block"></i>
-                <h5>Aucune publicité trouvée</h5>
-                <p className="text-muted">Essayez de modifier vos filtres pour voir plus de résultats.</p>
+                <h5>Aucune publicite trouvee</h5>
+                <p className="text-muted">Essayez de modifier vos filtres pour voir plus de resultats.</p>
               </div>
             ) : (
               <>
@@ -1352,16 +1434,101 @@ export default function AdsPage() {
                   ))}
                 </div>
 
-                {/* Load More - Show skeleton cards on infinite scroll */}
-                <div ref={loadMoreRef} className="py-3">
-                  {isLoadingMore && (
-                    <div className="ads-grid-container">
-                      {Array.from({ length: 3 }).map((_, i) => <AdCardSkeleton key={`loading-more-${i}`} />)}
+                {/* Pagination */}
+                {pagination.totalPages > 1 && (
+                  <div className="d-flex justify-content-center align-items-center gap-2 py-4 mt-3 border-top">
+                    {/* Previous Button */}
+                    <button
+                      className="btn btn-outline-secondary btn-sm d-flex align-items-center gap-1"
+                      onClick={() => { handlePageChange(page - 1); prefetchPrevPage(); }}
+                      disabled={page === 1 || isFetching}
+                      style={{ minWidth: '100px' }}
+                    >
+                      <i className="ri-arrow-left-s-line"></i>
+                      Precedent
+                    </button>
+                    
+                    {/* Page Numbers */}
+                    <div className="d-flex align-items-center gap-1">
+                      {/* First page */}
+                      {page > 3 && (
+                        <>
+                          <button
+                            className="btn btn-outline-secondary btn-sm"
+                            onClick={() => handlePageChange(1)}
+                            disabled={isFetching}
+                            style={{ minWidth: '40px' }}
+                          >
+                            1
+                          </button>
+                          {page > 4 && <span className="px-1 text-muted">...</span>}
+                        </>
+                      )}
+                      
+                      {/* Pages around current */}
+                      {Array.from({ length: Math.min(5, pagination.totalPages) }, (_, i) => {
+                        let pageNum: number;
+                        if (pagination.totalPages <= 5) {
+                          pageNum = i + 1;
+                        } else if (page <= 3) {
+                          pageNum = i + 1;
+                        } else if (page >= pagination.totalPages - 2) {
+                          pageNum = pagination.totalPages - 4 + i;
+                        } else {
+                          pageNum = page - 2 + i;
+                        }
+                        
+                        if (pageNum < 1 || pageNum > pagination.totalPages) return null;
+                        if (pageNum === 1 && page > 3) return null;
+                        if (pageNum === pagination.totalPages && page < pagination.totalPages - 2) return null;
+                        
+                        return (
+                          <button
+                            key={pageNum}
+                            className={`btn btn-sm ${pageNum === page ? 'btn-primary' : 'btn-outline-secondary'}`}
+                            onClick={() => handlePageChange(pageNum)}
+                            disabled={isFetching}
+                            style={{ minWidth: '40px' }}
+                          >
+                            {pageNum}
+                          </button>
+                        );
+                      })}
+                      
+                      {/* Last page */}
+                      {page < pagination.totalPages - 2 && pagination.totalPages > 5 && (
+                        <>
+                          {page < pagination.totalPages - 3 && <span className="px-1 text-muted">...</span>}
+                          <button
+                            className="btn btn-outline-secondary btn-sm"
+                            onClick={() => handlePageChange(pagination.totalPages)}
+                            disabled={isFetching}
+                            style={{ minWidth: '40px' }}
+                          >
+                            {pagination.totalPages}
+                          </button>
+                        </>
+                      )}
+                    </div>
+                    
+                    {/* Next Button */}
+                    <button
+                      className="btn btn-outline-secondary btn-sm d-flex align-items-center gap-1"
+                      onClick={() => { handlePageChange(page + 1); prefetchNextPage(); }}
+                      disabled={page === pagination.totalPages || isFetching}
+                      style={{ minWidth: '100px' }}
+                    >
+                      Suivant
+                      <i className="ri-arrow-right-s-line"></i>
+                    </button>
                   </div>
                 )}
-                  {!hasMore && ads.length > 0 && (
-                    <p className="text-muted text-center mb-0">Toutes les publicités ont été chargées</p>
-                  )}
+                
+                {/* Page Info */}
+                <div className="text-center py-2 text-muted fs-small">
+                  <span>
+                    Page {page} sur {pagination.totalPages} ({pagination.total.toLocaleString('fr-FR')} publicites)
+                  </span>
                 </div>
               </>
             )}

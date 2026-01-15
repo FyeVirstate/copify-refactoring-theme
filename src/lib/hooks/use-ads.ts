@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useCallback, useRef } from 'react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useCallback } from 'react'
 
 export interface Ad {
   id: number
@@ -40,10 +41,10 @@ export interface Ad {
 
 export interface AdsFilters {
   search?: string
-  status?: string // all, active, inactive
-  mediaType?: string // video, image
+  status?: string
+  mediaType?: string
   cta?: string
-  ctas?: string[]
+  ctas?: string
   country?: string
   market?: string
   category?: string
@@ -61,8 +62,7 @@ export interface AdsFilters {
   dateFilter?: string
   euTransparency?: boolean
   sortBy?: string
-  
-  // New filters from Top Boutiques/Produits
+  sortOrder?: 'asc' | 'desc'
   minOrders?: number
   maxOrders?: number
   shopCreationDate?: string
@@ -84,223 +84,161 @@ export interface AdsFilters {
   maxCatalogSize?: number
 }
 
-export interface AdsPagination {
-  page: number
-  perPage: number
-  total: number
-  totalPages: number
-  hasMore: boolean
+interface AdsResponse {
+  success: boolean
+  data: Ad[]
+  pagination: {
+    page: number
+    perPage: number
+    total: number
+    totalPages: number
+    hasMore: boolean
+  }
 }
 
-export function useAds() {
-  const [ads, setAds] = useState<Ad[]>([])
-  const [isLoading, setIsLoading] = useState(false)
-  const [isLoadingMore, setIsLoadingMore] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [hasMore, setHasMore] = useState(true)
-  const [pagination, setPagination] = useState<AdsPagination>({
-    page: 1,
-    perPage: 20,
-    total: 0,
-    totalPages: 0,
-    hasMore: false,
+// API fetcher function
+async function fetchAds(
+  filters: AdsFilters,
+  page: number,
+  perPage: number,
+  signal?: AbortSignal
+): Promise<AdsResponse> {
+  const params = new URLSearchParams()
+  params.set('page', page.toString())
+  params.set('perPage', perPage.toString())
+
+  Object.entries(filters).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== '') {
+      params.set(key, value.toString())
+    }
   })
+
+  const res = await fetch(`/api/ads?${params}`, { signal })
   
-  // AbortController ref to cancel previous requests
-  const abortControllerRef = useRef<AbortController | null>(null)
-  // Request counter to track the latest request
-  const requestIdRef = useRef(0)
+  if (!res.ok) {
+    throw new Error('Failed to fetch ads')
+  }
+  
+  const data = await res.json()
+  
+  if (!data.success) {
+    throw new Error(data.error || 'Failed to fetch ads')
+  }
+  
+  return data
+}
 
-  // Build query params from filters
-  const buildQueryParams = (filters: AdsFilters, page: number, perPage: number) => {
-    const params = new URLSearchParams()
-    params.set('page', page.toString())
-    params.set('perPage', perPage.toString())
+// Toggle favorite API
+async function toggleFavoriteApi(adId: number): Promise<{ success: boolean; data: { isFavorited: boolean } }> {
+  const res = await fetch('/api/ads/favorite', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ adId }),
+  })
 
-    if (filters.search) params.set('search', filters.search)
-    if (filters.status && filters.status !== 'all') params.set('status', filters.status)
-    if (filters.mediaType) params.set('mediaType', filters.mediaType)
-    if (filters.cta) params.set('cta', filters.cta)
-    if (filters.ctas?.length) params.set('ctas', filters.ctas.join(','))
-    if (filters.country) params.set('country', filters.country)
-    if (filters.market) params.set('market', filters.market)
-    if (filters.category) params.set('category', filters.category)
-    if (filters.niche) params.set('niche', filters.niche)
-    if (filters.minScore !== undefined) params.set('minScore', filters.minScore.toString())
-    if (filters.maxScore !== undefined) params.set('maxScore', filters.maxScore.toString())
-    if (filters.minActiveAds !== undefined) params.set('minActiveAds', filters.minActiveAds.toString())
-    if (filters.maxActiveAds !== undefined) params.set('maxActiveAds', filters.maxActiveAds.toString())
-    if (filters.minVisits !== undefined) params.set('minVisits', filters.minVisits.toString())
-    if (filters.maxVisits !== undefined) params.set('maxVisits', filters.maxVisits.toString())
-    if (filters.minRevenue !== undefined) params.set('minRevenue', filters.minRevenue.toString())
-    if (filters.maxRevenue !== undefined) params.set('maxRevenue', filters.maxRevenue.toString())
-    if (filters.minGrowth !== undefined) params.set('minGrowth', filters.minGrowth.toString())
-    if (filters.maxGrowth !== undefined) params.set('maxGrowth', filters.maxGrowth.toString())
-    if (filters.dateFilter) params.set('dateFilter', filters.dateFilter)
-    if (filters.euTransparency) params.set('euTransparency', 'true')
-    if (filters.sortBy) params.set('sortBy', filters.sortBy)
-    
-    // New filters from Top Boutiques/Produits
-    if (filters.minOrders !== undefined) params.set('minOrders', filters.minOrders.toString())
-    if (filters.maxOrders !== undefined) params.set('maxOrders', filters.maxOrders.toString())
-    if (filters.shopCreationDate) params.set('shopCreationDate', filters.shopCreationDate)
-    if (filters.currencies) params.set('currencies', filters.currencies)
-    if (filters.pixels) params.set('pixels', filters.pixels)
-    if (filters.origins) params.set('origins', filters.origins)
-    if (filters.languages) params.set('languages', filters.languages)
-    if (filters.domains) params.set('domains', filters.domains)
-    if (filters.minTrustpilotRating !== undefined) params.set('minTrustpilotRating', filters.minTrustpilotRating.toString())
-    if (filters.maxTrustpilotRating !== undefined) params.set('maxTrustpilotRating', filters.maxTrustpilotRating.toString())
-    if (filters.minTrustpilotReviews !== undefined) params.set('minTrustpilotReviews', filters.minTrustpilotReviews.toString())
-    if (filters.maxTrustpilotReviews !== undefined) params.set('maxTrustpilotReviews', filters.maxTrustpilotReviews.toString())
-    if (filters.themes) params.set('themes', filters.themes)
-    if (filters.apps) params.set('apps', filters.apps)
-    if (filters.socialNetworks) params.set('socialNetworks', filters.socialNetworks)
-    if (filters.minPrice !== undefined) params.set('minPrice', filters.minPrice.toString())
-    if (filters.maxPrice !== undefined) params.set('maxPrice', filters.maxPrice.toString())
-    if (filters.minCatalogSize !== undefined) params.set('minCatalogSize', filters.minCatalogSize.toString())
-    if (filters.maxCatalogSize !== undefined) params.set('maxCatalogSize', filters.maxCatalogSize.toString())
+  const data = await res.json()
 
-    return params
+  if (!data.success) {
+    throw new Error(data.error || 'Failed to toggle favorite')
   }
 
-  // Fetch ads with filters (replaces current list)
-  const fetchAds = useCallback(async (
-    filters: AdsFilters = {},
-    page = 1,
-    perPage = 20
-  ) => {
-    // Cancel any pending request
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort()
-    }
-    
-    // Create new AbortController for this request
-    const controller = new AbortController()
-    abortControllerRef.current = controller
-    
-    // Increment request ID to track this request
-    const currentRequestId = ++requestIdRef.current
-    
-    setIsLoading(true)
-    setError(null)
+  return data
+}
 
-    try {
-      const params = buildQueryParams(filters, page, perPage)
-      const res = await fetch(`/api/ads?${params}`, {
-        signal: controller.signal
+// Generate query key for caching
+function getAdsQueryKey(filters: AdsFilters, page: number, perPage: number) {
+  return ['ads', { filters, page, perPage }] as const
+}
+
+export function useAds(
+  filters: AdsFilters = {},
+  page: number = 1,
+  perPage: number = 25
+) {
+  const queryClient = useQueryClient()
+
+  // Main ads query with TanStack Query
+  const {
+    data,
+    isLoading,
+    isFetching,
+    error,
+    refetch,
+  } = useQuery({
+    queryKey: getAdsQueryKey(filters, page, perPage),
+    queryFn: ({ signal }) => fetchAds(filters, page, perPage, signal),
+    placeholderData: (previousData) => previousData,
+  })
+
+  // Favorite mutation
+  const favoriteMutation = useMutation({
+    mutationFn: toggleFavoriteApi,
+    onSuccess: (result, adId) => {
+      // Update the cache
+      queryClient.setQueryData(
+        getAdsQueryKey(filters, page, perPage),
+        (old: AdsResponse | undefined) => {
+          if (!old) return old
+          return {
+            ...old,
+            data: old.data.map(ad =>
+              ad.id === adId
+                ? { ...ad, isFavorited: result.data.isFavorited }
+                : ad
+            ),
+          }
+        }
+      )
+    },
+  })
+
+  // Prefetch next page
+  const prefetchNextPage = useCallback(() => {
+    if (data && page < data.pagination.totalPages) {
+      queryClient.prefetchQuery({
+        queryKey: getAdsQueryKey(filters, page + 1, perPage),
+        queryFn: ({ signal }) => fetchAds(filters, page + 1, perPage, signal),
       })
-      
-      // If this is not the latest request, ignore the response
-      if (currentRequestId !== requestIdRef.current) {
-        return null
-      }
-      
-      const data = await res.json()
-
-      if (data.success) {
-        setAds(data.data)
-        setPagination(data.pagination)
-        setHasMore(data.pagination.hasMore)
-        return data
-      } else {
-        throw new Error(data.error || 'Failed to fetch ads')
-      }
-    } catch (err) {
-      // Ignore abort errors
-      if (err instanceof Error && err.name === 'AbortError') {
-        return null
-      }
-      const message = err instanceof Error ? err.message : 'Failed to fetch ads'
-      setError(message)
-      throw err
-    } finally {
-      // Only set loading to false if this is still the latest request
-      if (currentRequestId === requestIdRef.current) {
-        setIsLoading(false)
-      }
     }
-  }, [])
+  }, [queryClient, filters, page, perPage, data])
 
-  // Fetch more ads (append to current list for infinite scroll)
-  const fetchMoreAds = useCallback(async (
-    filters: AdsFilters = {},
-    perPage = 20
-  ) => {
-    if (!hasMore || isLoadingMore || isLoading) return
-
-    setIsLoadingMore(true)
-    setError(null)
-
-    try {
-      const nextPage = pagination.page + 1
-      const params = buildQueryParams(filters, nextPage, perPage)
-      const res = await fetch(`/api/ads?${params}`)
-      const data = await res.json()
-
-      if (data.success) {
-        setAds(prev => [...prev, ...data.data])
-        setPagination(data.pagination)
-        setHasMore(data.pagination.hasMore)
-        return data
-      } else {
-        throw new Error(data.error || 'Failed to fetch more ads')
-      }
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to fetch more ads'
-      setError(message)
-      throw err
-    } finally {
-      setIsLoadingMore(false)
+  // Prefetch previous page
+  const prefetchPrevPage = useCallback(() => {
+    if (page > 1) {
+      queryClient.prefetchQuery({
+        queryKey: getAdsQueryKey(filters, page - 1, perPage),
+        queryFn: ({ signal }) => fetchAds(filters, page - 1, perPage, signal),
+      })
     }
-  }, [hasMore, isLoadingMore, isLoading, pagination.page])
+  }, [queryClient, filters, page, perPage])
 
-  // Toggle ad favorite
-  const toggleFavorite = useCallback(async (adId: number) => {
-    const res = await fetch('/api/ads/favorite', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ adId }),
-    })
-
-    const data = await res.json()
-
-    if (!data.success) {
-      throw new Error(data.error || 'Failed to toggle favorite')
-    }
-
-    // Update local state
-    setAds(prev => prev.map(ad => 
-      ad.id === adId 
-        ? { ...ad, isFavorited: data.data.isFavorited }
-        : ad
-    ))
-
-    return data
-  }, [])
-
-  // Get favorite ads
-  const getFavorites = useCallback(async (page = 1, perPage = 20) => {
-    const res = await fetch(`/api/ads/favorite?page=${page}&perPage=${perPage}`)
-    const data = await res.json()
-
-    if (!data.success) {
-      throw new Error(data.error || 'Failed to fetch favorites')
-    }
-
-    return data
-  }, [])
+  // Invalidate and refetch
+  const invalidateAds = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ['ads'] })
+  }, [queryClient])
 
   return {
-    ads,
-    pagination,
+    // Data
+    ads: data?.data ?? [],
+    pagination: data?.pagination ?? { page: 1, perPage: 25, total: 0, totalPages: 0, hasMore: false },
+    
+    // Loading states
     isLoading,
-    isLoadingMore,
-    hasMore,
-    error,
-    fetchAds,
-    fetchMoreAds,
-    toggleFavorite,
-    getFavorites,
+    isFetching,
+    
+    // Error
+    error: error instanceof Error ? error.message : null,
+    
+    // Actions
+    refetch,
+    toggleFavorite: favoriteMutation.mutate,
+    isTogglingFavorite: favoriteMutation.isPending,
+    
+    // Prefetch
+    prefetchNextPage,
+    prefetchPrevPage,
+    invalidateAds,
   }
 }
+
+export type { AdsResponse }

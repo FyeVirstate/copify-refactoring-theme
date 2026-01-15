@@ -13,10 +13,19 @@ import { NextRequest, NextResponse } from "next/server"
 
 // Simple in-memory cache for count queries
 const countCache = new Map<string, { count: number; timestamp: number }>()
-const COUNT_CACHE_TTL = 60000 // 1 minute
+const COUNT_CACHE_TTL = 300000 // 5 minutes (exact count is expensive but stable)
 
 export async function GET(request: NextRequest) {
+  const timings: Record<string, number> = {}
+  const requestStart = Date.now()
+  
+  console.log(`[Ads API] ========== REQUEST START ==========`)
+  console.log(`[Ads API] Time: ${new Date().toISOString()}`)
+  
+  const authStart = Date.now()
   const session = await auth()
+  timings.auth = Date.now() - authStart
+  console.log(`[Ads API] Auth: ${timings.auth}ms`)
   
   if (!session?.user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -26,14 +35,16 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Database not configured' }, { status: 503 })
   }
 
+  const parseStart = Date.now()
   const searchParams = request.nextUrl.searchParams
   
   // Parse query params
-  const page = parseInt(searchParams.get('page') || '1')
+  const page = Math.max(1, parseInt(searchParams.get('page') || '1'))
   const perPage = Math.min(parseInt(searchParams.get('perPage') || '20'), 100)
   const searchText = searchParams.get('search') || searchParams.get('query') || ''
   const sortBy = searchParams.get('sortBy') || 'recommended'
-  
+  const sortOrder = searchParams.get('sortOrder') || 'desc'
+
   // Status filter
   const status = searchParams.get('status') || 'all' // all, active, inactive
   
@@ -96,6 +107,10 @@ export async function GET(request: NextRequest) {
   const maxPrice = searchParams.get('maxPrice') ? parseFloat(searchParams.get('maxPrice')!) : null
   const minCatalogSize = searchParams.get('minCatalogSize') ? parseInt(searchParams.get('minCatalogSize')!) : null
   const maxCatalogSize = searchParams.get('maxCatalogSize') ? parseInt(searchParams.get('maxCatalogSize')!) : null
+
+  timings.parse = Date.now() - parseStart
+  console.log(`[Ads API] Parse: ${timings.parse}ms`)
+  console.log(`[Ads API] Filters: page=${page}, perPage=${perPage}, sortBy=${sortBy}, search=${searchText || 'none'}`)
 
   try {
     // Build WHERE conditions
@@ -333,6 +348,49 @@ export async function GET(request: NextRequest) {
       params.push(maxCatalogSize)
       paramIndex++
     }
+    
+    // Categories/Niche filter (via shop_categories join)
+    if (categories.length > 0) {
+      const categoryPlaceholders = categories.map((_, i) => `$${paramIndex + i}`).join(', ')
+      shopsConditions.push(`EXISTS (
+        SELECT 1 FROM category_shop cs 
+        JOIN categories c ON cs.category_id = c.id 
+        WHERE cs.shop_id = s.id 
+        AND (c.id::text IN (${categoryPlaceholders}) OR c.parent_id::text IN (${categoryPlaceholders}))
+      )`)
+      params.push(...categories, ...categories)
+      paramIndex += categories.length * 2
+    }
+    
+    // Social Networks filter (social column in traffic table - JSONB)
+    if (socialNetworks.length > 0) {
+      const socialConditions = socialNetworks.map((_, i) => `t.social::text ILIKE $${paramIndex + i}`).join(' OR ')
+      trafficConditions.push(`(${socialConditions})`)
+      params.push(...socialNetworks.map(sn => `%${sn}%`))
+      paramIndex += socialNetworks.length
+    }
+    
+    // Trustpilot filters
+    if (minTrustpilotRating !== null) {
+      shopsConditions.push(`COALESCE(s.trustpilot_rating, 0) >= $${paramIndex}`)
+      params.push(minTrustpilotRating)
+      paramIndex++
+    }
+    if (maxTrustpilotRating !== null) {
+      shopsConditions.push(`COALESCE(s.trustpilot_rating, 0) <= $${paramIndex}`)
+      params.push(maxTrustpilotRating)
+      paramIndex++
+    }
+    if (minTrustpilotReviews !== null) {
+      shopsConditions.push(`COALESCE(s.trustpilot_reviews, 0) >= $${paramIndex}`)
+      params.push(minTrustpilotReviews)
+      paramIndex++
+    }
+    if (maxTrustpilotReviews !== null) {
+      shopsConditions.push(`COALESCE(s.trustpilot_reviews, 0) <= $${paramIndex}`)
+      params.push(maxTrustpilotReviews)
+      paramIndex++
+    }
 
     // Build WHERE clauses
     const adsWhereClause = adsConditions.length > 0 ? `WHERE ${adsConditions.join(' AND ')}` : ''
@@ -340,20 +398,24 @@ export async function GET(request: NextRequest) {
     const trafficWhereClause = trafficConditions.length > 0 ? `AND ${trafficConditions.join(' AND ')}` : ''
 
     // Build ORDER BY clause
+    const order = sortOrder === 'asc' ? 'ASC' : 'DESC'
     let orderByClause = ''
-    const needsTrafficJoin = ['highest_reach', 'most_engaging', 'highest_spend', 'trending', 'recommended'].includes(sortBy)
+    // Only these sorts ACTUALLY need traffic data - recommended/trending use created_at, not traffic
+    const needsTrafficJoin = ['highest_reach', 'most_engaging', 'highest_spend', 'last_month_visits', 'estimated_monthly', 'growth_rate'].includes(sortBy)
     
     switch (sortBy) {
       case 'most_recent':
       case 'lastSeenDate':
-        orderByClause = 'ORDER BY fa.start_date DESC NULLS LAST, fa.id DESC'
+      case 'start_date':
+        orderByClause = `ORDER BY fa.start_date ${order} NULLS LAST, fa.id ${order}`
         break
       case 'oldest_first':
       case 'firstSeenDate':
         orderByClause = 'ORDER BY fa.start_date ASC NULLS LAST, fa.id ASC'
         break
       case 'highest_reach':
-        orderByClause = 'ORDER BY fa.last_month_visits DESC NULLS LAST'
+      case 'last_month_visits':
+        orderByClause = `ORDER BY fa.last_month_visits ${order} NULLS LAST`
         break
       case 'most_engaging':
         orderByClause = `ORDER BY (
@@ -364,10 +426,14 @@ export async function GET(request: NextRequest) {
             WHEN fa.start_date >= NOW() - INTERVAL '90 days' THEN 500
             ELSE 100
           END * 0.3
-        ) DESC NULLS LAST`
+        ) ${order} NULLS LAST`
         break
       case 'highest_spend':
-        orderByClause = 'ORDER BY fa.estimated_monthly DESC NULLS LAST'
+      case 'estimated_monthly':
+        orderByClause = `ORDER BY fa.estimated_monthly ${order} NULLS LAST`
+        break
+      case 'growth_rate':
+        orderByClause = `ORDER BY fa.growth_rate ${order} NULLS LAST`
         break
       case 'trending':
         orderByClause = `ORDER BY (
@@ -380,7 +446,7 @@ export async function GET(request: NextRequest) {
             WHEN fa.start_date >= NOW() - INTERVAL '90 days' THEN 300
             ELSE 50
           END * 0.3
-        ) DESC NULLS LAST`
+        ) ${order} NULLS LAST`
         break
       case 'recommended':
       default:
@@ -396,25 +462,438 @@ export async function GET(request: NextRequest) {
             ELSE 100
           END * 0.25 +
           (fa.id % 1000) * 3
-        ) DESC NULLS LAST`
+        ) ${order} NULLS LAST`
         break
     }
 
     const offset = (page - 1) * perPage
 
-    // Build main query with CTEs for performance
-    const mainQuery = `
-      WITH latest_traffic AS (
-        SELECT DISTINCT ON (shop_id) 
-          shop_id,
-          last_month_visits,
-          estimated_monthly,
-          growth_rate,
-          estimated_order
-        FROM traffic
-        ORDER BY shop_id, created_at DESC
-      ),
-      filtered_ads AS (
+    // Path selection logic:
+    // 1. FAST PATH: No filters, recommended/trending sort - pure index scan
+    // 2. MEDIUM PATH: Shop filters only (language, country, etc) - join shops but NOT traffic
+    // 3. SLOW PATH: Traffic filters needed - full joins with traffic table
+    
+    const canUseFastPath = shopsConditions.length === 0 && 
+                           trafficConditions.length === 0 &&
+                           (sortBy === 'recommended' || sortBy === 'trending')
+    
+    const canUseMediumPath = !canUseFastPath && 
+                              trafficConditions.length === 0 && 
+                              !needsTrafficJoin
+    
+    const requiresTrafficData = !canUseFastPath && !canUseMediumPath
+    
+    console.log(`[Ads API] Path check: fastPath=${canUseFastPath}, mediumPath=${canUseMediumPath}, slowPath=${requiresTrafficData}, shopsConditions=${shopsConditions.length}, sortBy=${sortBy}`)
+
+    // Build optimized main query
+    // Key optimization: Use materialized view when possible
+    let mainQuery: string
+    
+    if (canUseFastPath) {
+      // FAST PATH: Pure index scan + JS filtering (like Laravel)
+      console.log(`[Ads API] Using FAST PATH: Index scan + JS dedup/filter`)
+      
+      // Fetch MORE to ensure enough unique shops after deduplication
+      // With ~12-16 ads per shop average, need perPage*15 to get perPage unique shops
+      const extendedLimit = perPage * 15
+      const extendedOffset = (page - 1) * extendedLimit  // CRITICAL: Use extended offset!
+      
+      // Ultra-simple query using created_at DESC index
+      mainQuery = `
+        SELECT 
+          a.id,
+          a.ad_archive_id,
+          a.ad_creative_id,
+          a.page_id,
+          a.page_name,
+          a.shop_id,
+          a.title,
+          a.description,
+          a.type,
+          a.image_link,
+          a.video_link,
+          a.video_preview_link,
+          a.target_url,
+          a.cta_text,
+          a.start_date,
+          a.end_date,
+          a.is_active,
+          a.platform,
+          a.created_at,
+          s.url as shop_url,
+          s.merchant_name as shop_name,
+          s.country as shop_country,
+          s.active_ads as shop_active_ads,
+          s.screenshot as shop_screenshot,
+          0 as last_month_visits,
+          0 as estimated_monthly,
+          0 as growth_rate,
+          CASE WHEN f.id IS NOT NULL THEN true ELSE false END as is_favorited
+        FROM ads a
+        LEFT JOIN shops s ON a.shop_id = s.id AND s.deleted_at IS NULL
+        LEFT JOIN favorites f ON f.ad_id = a.id AND f.user_id = $2
+        ORDER BY a.created_at DESC
+        LIMIT ${extendedLimit}
+        OFFSET $1
+      `
+      
+      // Use EXTENDED offset for proper pagination!
+      const fastParams = [extendedOffset, parseInt(session.user.id)]
+      
+      console.log(`\n========== [Ads API] FAST PATH - PAGE ${page} DEBUG ==========`)
+      console.log(`[Ads API] perPage=${perPage}, extendedLimit=${extendedLimit}, extendedOffset=${extendedOffset}`)
+      
+      // Execute query
+      const mainQueryStart = Date.now()
+      const rawAdsResult = await prisma.$queryRawUnsafe<any[]>(mainQuery, ...fastParams)
+      timings.mainQuery = Date.now() - mainQueryStart
+      
+      // DEBUG: Log raw results
+      const rawAdIds = rawAdsResult.slice(0, 10).map(a => Number(a.id))
+      const rawShopIds = rawAdsResult.slice(0, 10).map(a => Number(a.shop_id))
+      console.log(`[Ads API] Main Query: ${timings.mainQuery}ms - ${rawAdsResult.length} raw results`)
+      console.log(`[Ads API] First 10 raw ad IDs: ${JSON.stringify(rawAdIds)}`)
+      console.log(`[Ads API] First 10 raw shop IDs: ${JSON.stringify(rawShopIds)}`)
+      
+      // Filter broken media + Deduplicate: 1 ad per shop (like Laravel)
+      const dedupeStart = Date.now()
+      const seenShops = new Set<number>()
+      const adsResult: any[] = []
+      const validAds: any[] = []
+      
+      // First pass: filter broken media
+      for (const ad of rawAdsResult) {
+        const imageLink = ad.image_link || ''
+        const videoLink = ad.video_link || ''
+        if (imageLink.includes('copyfycloudinary') || videoLink.includes('copyfycloudinary')) {
+          continue
+        }
+        if (!imageLink && !videoLink) {
+          continue
+        }
+        validAds.push(ad)
+      }
+      
+      // Second pass: deduplicate (1 ad per shop)
+      for (const ad of validAds) {
+        const shopId = ad.shop_id ? Number(ad.shop_id) : 0
+        if (!seenShops.has(shopId)) {
+          adsResult.push(ad)
+          seenShops.add(shopId)
+          if (adsResult.length >= perPage) break
+        }
+      }
+      
+      // DEBUG: Log final results
+      const finalAdIds = adsResult.map(a => Number(a.id))
+      const finalShopIds = adsResult.map(a => Number(a.shop_id))
+      console.log(`[Ads API] After filter+dedup: ${adsResult.length} unique shops from ${validAds.length} valid`)
+      console.log(`[Ads API] Final ad IDs: ${JSON.stringify(finalAdIds)}`)
+      console.log(`[Ads API] Final shop IDs: ${JSON.stringify(finalShopIds)}`)
+      console.log(`========== [Ads API] END FAST PATH PAGE ${page} ==========\n`)
+      
+      // Skip the normal query execution since we already did it
+      // Jump to count query
+      const countStart = Date.now()
+      const cacheKey = 'fast-path-no-filters' // Fast path has no filters
+      const cached = countCache.get(cacheKey)
+      let total: number
+      
+      if (cached && Date.now() - cached.timestamp < COUNT_CACHE_TTL) {
+        total = cached.count
+        timings.countQuery = 0
+        console.log(`[Ads API] Count from cache: ${total}`)
+      } else {
+        // Use EXACT count (cached for 1 minute) - estimate can be off by thousands
+        const countQuery = `SELECT COUNT(*) as total FROM ads`
+        const countResult = await prisma.$queryRawUnsafe<[{ total: bigint }]>(countQuery)
+        total = Number(countResult[0]?.total || 7000000)
+        timings.countQuery = Date.now() - countStart
+        console.log(`[Ads API] Count Query (exact): ${timings.countQuery}ms - Total: ${total}`)
+        countCache.set(cacheKey, { count: total, timestamp: Date.now() })
+      }
+      
+      // Transform results
+      const ads = adsResult.map((ad: any, index: number) => {
+        const startDate = ad.start_date ? new Date(ad.start_date) : null
+        const now = new Date()
+        const activeDays = startDate ? Math.ceil((now.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) : 0
+
+        return {
+          id: Number(ad.id),
+          adArchiveId: ad.ad_archive_id?.toString() || null,
+          adCreativeId: ad.ad_creative_id?.toString() || null,
+          pageId: ad.page_id?.toString() || null,
+          pageName: ad.page_name || 'Unknown',
+          shopId: ad.shop_id ? Number(ad.shop_id) : null,
+          shopUrl: ad.shop_url || ad.target_url,
+          shopName: ad.shop_name || ad.page_name || 'Unknown',
+          shopCountry: ad.shop_country || null,
+          shopActiveAds: Number(ad.shop_active_ads) || 0,
+          shopScreenshot: ad.shop_screenshot || null,
+          title: ad.title || '',
+          body: ad.description || '',
+          description: ad.description || '',
+          mediaType: ad.type || (ad.video_link ? 'video' : 'image'),
+          imageLink: ad.image_link || null,
+          videoUrl: ad.video_link || null,
+          videoPreview: ad.video_preview_link || null,
+          targetUrl: ad.target_url || null,
+          ctaText: ad.cta_text || null,
+          startDate: ad.start_date,
+          endDate: ad.end_date,
+          isActive: ad.is_active === 1,
+          platform: ad.platform || 'facebook',
+          createdAt: ad.created_at,
+          activeDays,
+          adLibraryUrl: ad.ad_archive_id ? `https://www.facebook.com/ads/library/?id=${ad.ad_archive_id}` : null,
+          isFavorited: ad.is_favorited || false,
+          lastMonthVisits: Number(ad.last_month_visits) || 0,
+          estimatedMonthly: Number(ad.estimated_monthly) || 0,
+          growthRate: Number(ad.growth_rate) || 0,
+        }
+      })
+
+      timings.total = Date.now() - requestStart
+      console.log(`[Ads API] ========== TIMING SUMMARY ==========`)
+      console.log(`[Ads API] Auth: ${timings.auth}ms`)
+      console.log(`[Ads API] Parse: ${timings.parse}ms`)
+      console.log(`[Ads API] Main Query: ${timings.mainQuery}ms`)
+      console.log(`[Ads API] Count Query: ${timings.countQuery}ms`)
+      console.log(`[Ads API] TOTAL: ${timings.total}ms (${(timings.total/1000).toFixed(2)}s)`)
+      console.log(`[Ads API] ========== REQUEST END ==========`)
+
+      const totalPages = Math.ceil(total / perPage)
+      
+      const response = NextResponse.json({
+        success: true,
+        data: ads,
+        pagination: {
+          page,
+          perPage,
+          total,
+          totalPages,
+          hasMore: page < totalPages
+        },
+        _timings: {
+          totalMs: timings.total,
+          totalSec: (timings.total/1000).toFixed(2)
+        }
+      })
+      
+      response.headers.set('Cache-Control', 'private, max-age=30, stale-while-revalidate=60')
+      return response
+    }
+    
+    if (canUseMediumPath) {
+      // MEDIUM PATH: Shop filters - SIMPLE SQL + PHP DEDUP (like Laravel)
+      console.log(`[Ads API] Using MEDIUM PATH: simple SQL + PHP dedup (Laravel style)`)
+      
+      const shopsWhereClause = shopsConditions.length > 0 ? 'AND ' + shopsConditions.join(' AND ') : ''
+      const mediaFilter = `a.image_link NOT LIKE '%copyfycloudinary%' AND (a.image_link IS NOT NULL AND a.image_link != '' OR a.video_link IS NOT NULL AND a.video_link != '')`
+      const mediumWhereClause = adsConditions.length > 0 
+        ? `WHERE ${adsConditions.join(' AND ')} AND ${mediaFilter}`
+        : `WHERE ${mediaFilter}`
+      
+      // Fetch MORE to ensure enough unique shops after deduplication
+      // With filters, shops may have many ads, so fetch perPage*10
+      const extendedPerPage = perPage * 10
+      const extendedOffset = (page - 1) * extendedPerPage
+      
+      mainQuery = `
+        SELECT 
+          a.id,
+          a.ad_archive_id,
+          a.ad_creative_id,
+          a.page_id,
+          a.page_name,
+          a.shop_id,
+          a.title,
+          a.description,
+          a.type,
+          a.image_link,
+          a.video_link,
+          a.video_preview_link,
+          a.target_url,
+          a.cta_text,
+          a.start_date,
+          a.end_date,
+          a.is_active,
+          a.platform,
+          a.created_at,
+          s.url as shop_url,
+          s.merchant_name as shop_name,
+          s.country as shop_country,
+          s.active_ads as shop_active_ads,
+          s.screenshot as shop_screenshot,
+          0 as last_month_visits,
+          0 as estimated_monthly,
+          0 as growth_rate,
+          CASE WHEN f.id IS NOT NULL THEN true ELSE false END as is_favorited
+        FROM ads a
+        INNER JOIN shops s ON a.shop_id = s.id AND s.deleted_at IS NULL ${shopsWhereClause}
+        LEFT JOIN favorites f ON f.ad_id = a.id AND f.user_id = $${paramIndex}
+        ${mediumWhereClause}
+        ORDER BY a.created_at DESC
+        LIMIT $${paramIndex + 1}
+        OFFSET $${paramIndex + 2}
+      `
+      
+      params.push(parseInt(session.user.id))
+      params.push(extendedPerPage)
+      params.push(extendedOffset)
+      
+      console.log(`\n========== [Ads API] MEDIUM PATH - PAGE ${page} DEBUG ==========`)
+      console.log(`[Ads API] perPage=${perPage}, extendedPerPage=${extendedPerPage}, extendedOffset=${extendedOffset}`)
+      
+      // Execute query
+      const mainQueryStart = Date.now()
+      const rawAdsResult = await prisma.$queryRawUnsafe<any[]>(mainQuery, ...params)
+      timings.mainQuery = Date.now() - mainQueryStart
+      
+      // DEBUG: Log raw results
+      const rawAdIds = rawAdsResult.slice(0, 10).map(a => Number(a.id))
+      const rawShopIds = rawAdsResult.slice(0, 10).map(a => Number(a.shop_id))
+      console.log(`[Ads API] Main Query: ${timings.mainQuery}ms - ${rawAdsResult.length} raw results`)
+      console.log(`[Ads API] First 10 raw ad IDs: ${JSON.stringify(rawAdIds)}`)
+      console.log(`[Ads API] First 10 raw shop IDs: ${JSON.stringify(rawShopIds)}`)
+      
+      // PHP-style deduplication: 1 ad per shop
+      const seenShops = new Set<number>()
+      const adsResult: any[] = []
+      for (const ad of rawAdsResult) {
+        const shopId = ad.shop_id ? Number(ad.shop_id) : 0
+        if (!seenShops.has(shopId)) {
+          adsResult.push(ad)
+          seenShops.add(shopId)
+          if (adsResult.length >= perPage) break
+        }
+      }
+      
+      // DEBUG: Log final results
+      const finalAdIds = adsResult.map(a => Number(a.id))
+      const finalShopIds = adsResult.map(a => Number(a.shop_id))
+      console.log(`[Ads API] After dedup: ${adsResult.length} unique shops`)
+      console.log(`[Ads API] Final ad IDs: ${JSON.stringify(finalAdIds)}`)
+      console.log(`[Ads API] Final shop IDs: ${JSON.stringify(finalShopIds)}`)
+      console.log(`========== [Ads API] END MEDIUM PATH PAGE ${page} ==========\n`)
+      
+      // Use ESTIMATED count (like Laravel) - not exact
+      const countStart = Date.now()
+      let total: number
+      const countCacheKey = `medium-estimate`
+      const cached = countCache.get(countCacheKey)
+      
+      if (cached && Date.now() - cached.timestamp < COUNT_CACHE_TTL) {
+        total = cached.count
+        timings.countQuery = 0
+        console.log(`[Ads API] Count from cache: ${total}`)
+      } else {
+        // Use pg_class estimate like Laravel
+        const countQuery = `SELECT COALESCE((SELECT reltuples::BIGINT FROM pg_class WHERE relname = 'ads'), 6800000) as total`
+        const countResult = await prisma.$queryRawUnsafe<[{ total: bigint }]>(countQuery)
+        total = Number(countResult[0]?.total || 6800000)
+        timings.countQuery = Date.now() - countStart
+        console.log(`[Ads API] Count Query (estimated): ${timings.countQuery}ms - Total: ${total}`)
+        countCache.set(countCacheKey, { count: total, timestamp: Date.now() })
+      }
+      
+      // Transform results
+      const ads = adsResult.map((ad: any) => {
+        const startDate = ad.start_date ? new Date(ad.start_date) : null
+        const now = new Date()
+        const activeDays = startDate ? Math.ceil((now.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) : 0
+
+        return {
+          id: Number(ad.id),
+          adArchiveId: ad.ad_archive_id?.toString() || null,
+          adCreativeId: ad.ad_creative_id?.toString() || null,
+          pageId: ad.page_id?.toString() || null,
+          pageName: ad.page_name || 'Unknown',
+          shopId: ad.shop_id ? Number(ad.shop_id) : null,
+          shopUrl: ad.shop_url || ad.target_url,
+          shopName: ad.shop_name || ad.page_name || 'Unknown',
+          shopCountry: ad.shop_country || null,
+          shopActiveAds: Number(ad.shop_active_ads) || 0,
+          shopScreenshot: ad.shop_screenshot || null,
+          title: ad.title || '',
+          body: ad.description || '',
+          description: ad.description || '',
+          mediaType: ad.type || (ad.video_link ? 'video' : 'image'),
+          imageLink: ad.image_link || null,
+          videoUrl: ad.video_link || null,
+          videoPreview: ad.video_preview_link || null,
+          targetUrl: ad.target_url || null,
+          ctaText: ad.cta_text || null,
+          startDate: ad.start_date,
+          endDate: ad.end_date,
+          isActive: ad.is_active === 1,
+          platform: ad.platform || 'facebook',
+          createdAt: ad.created_at,
+          activeDays,
+          adLibraryUrl: ad.ad_archive_id ? `https://www.facebook.com/ads/library/?id=${ad.ad_archive_id}` : null,
+          isFavorited: ad.is_favorited || false,
+          lastMonthVisits: 0,
+          estimatedMonthly: 0,
+          growthRate: 0,
+        }
+      })
+
+      timings.total = Date.now() - requestStart
+      console.log(`[Ads API] ========== TIMING SUMMARY ==========`)
+      console.log(`[Ads API] Auth: ${timings.auth}ms`)
+      console.log(`[Ads API] Parse: ${timings.parse}ms`)
+      console.log(`[Ads API] Main Query: ${timings.mainQuery}ms`)
+      console.log(`[Ads API] Count Query: ${timings.countQuery}ms`)
+      console.log(`[Ads API] TOTAL: ${timings.total}ms (${(timings.total/1000).toFixed(2)}s)`)
+      console.log(`[Ads API] ========== REQUEST END ==========`)
+
+      const totalPages = Math.ceil(total / perPage)
+      
+      const response = NextResponse.json({
+        success: true,
+        data: ads,
+        pagination: {
+          page,
+          perPage,
+          total,
+          totalPages,
+          hasMore: page < totalPages
+        },
+        _timings: {
+          totalMs: timings.total,
+          totalSec: (timings.total/1000).toFixed(2)
+        }
+      })
+      
+      response.headers.set('Cache-Control', 'private, max-age=30, stale-while-revalidate=60')
+      return response
+    }
+    
+    if (requiresTrafficData) {
+      // SLOW PATH: Traffic join - SIMPLE SQL + PHP DEDUP (like Laravel)
+      console.log(`[Ads API] Using SLOW PATH: simple SQL + PHP dedup (Laravel style)`)
+      
+      const mediaFilter = `a.image_link NOT LIKE '%copyfycloudinary%' AND (a.image_link IS NOT NULL AND a.image_link != '' OR a.video_link IS NOT NULL AND a.video_link != '')`
+      const allSlowConditions = [...adsConditions, ...shopsConditions, ...trafficConditions, mediaFilter]
+      const slowWhere = `WHERE ${allSlowConditions.join(' AND ')}`
+      
+      // Fetch MORE to ensure enough unique shops after deduplication
+      const extendedPerPage = perPage * 10
+      const extendedOffset = (page - 1) * extendedPerPage
+      
+      mainQuery = `
+        WITH latest_traffic AS (
+          SELECT DISTINCT ON (shop_id) 
+            shop_id,
+            last_month_visits,
+            estimated_monthly,
+            estimated_order,
+            growth_rate,
+            social
+          FROM traffic
+          ORDER BY shop_id, created_at DESC
+        )
         SELECT 
           a.id,
           a.ad_archive_id,
@@ -442,76 +921,140 @@ export async function GET(request: NextRequest) {
           s.screenshot as shop_screenshot,
           COALESCE(t.last_month_visits, 0) as last_month_visits,
           COALESCE(t.estimated_monthly, 0) as estimated_monthly,
-          COALESCE(t.growth_rate, 0) as growth_rate
+          COALESCE(t.growth_rate, 0) as growth_rate,
+          CASE WHEN f.id IS NOT NULL THEN true ELSE false END as is_favorited
         FROM ads a
         LEFT JOIN shops s ON a.shop_id = s.id AND s.deleted_at IS NULL
-        LEFT JOIN latest_traffic t ON t.shop_id = s.id
-        ${adsWhereClause}
-        ${shopsWhereClause}
-        ${trafficWhereClause}
-      )
-      SELECT 
-        fa.*,
-        CASE WHEN f.id IS NOT NULL THEN true ELSE false END as is_favorited
-      FROM filtered_ads fa
-      LEFT JOIN favorites f ON f.ad_id = fa.id AND f.user_id = $${paramIndex + 2}
-      ${orderByClause}
-      LIMIT $${paramIndex}
-      OFFSET $${paramIndex + 1}
-    `
-
-    params.push(perPage)
-    params.push(offset)
-    params.push(parseInt(session.user.id))
+        LEFT JOIN latest_traffic t ON t.shop_id = a.shop_id
+        LEFT JOIN favorites f ON f.ad_id = a.id AND f.user_id = $${paramIndex + 2}
+        ${slowWhere}
+        ORDER BY a.created_at DESC
+        LIMIT $${paramIndex}
+        OFFSET $${paramIndex + 1}
+      `
+      
+      params.push(extendedPerPage)
+      params.push(extendedOffset)
+      params.push(parseInt(session.user.id))
+    } else {
+      // ELSE PATH: Simple filtered query + PHP DEDUP (like Laravel)
+      console.log(`[Ads API] Using ELSE PATH: simple SQL + PHP dedup (Laravel style)`)
+      
+      const mediaFilter = `a.image_link NOT LIKE '%copyfycloudinary%' AND (a.image_link IS NOT NULL AND a.image_link != '' OR a.video_link IS NOT NULL AND a.video_link != '')`
+      const allConditions = [...adsConditions, ...shopsConditions, mediaFilter]
+      const combinedWhere = `WHERE ${allConditions.join(' AND ')}`
+      
+      // Fetch MORE to ensure enough unique shops after deduplication
+      const extendedPerPage = perPage * 10
+      const extendedOffset = (page - 1) * extendedPerPage
+      
+      mainQuery = `
+        SELECT 
+          a.id,
+          a.ad_archive_id,
+          a.ad_creative_id,
+          a.page_id,
+          a.page_name,
+          a.shop_id,
+          a.title,
+          a.description,
+          a.type,
+          a.image_link,
+          a.video_link,
+          a.video_preview_link,
+          a.target_url,
+          a.cta_text,
+          a.start_date,
+          a.end_date,
+          a.is_active,
+          a.platform,
+          a.created_at,
+          s.url as shop_url,
+          s.merchant_name as shop_name,
+          s.country as shop_country,
+          s.active_ads as shop_active_ads,
+          s.screenshot as shop_screenshot,
+          0 as last_month_visits,
+          0 as estimated_monthly,
+          0 as growth_rate,
+          CASE WHEN f.id IS NOT NULL THEN true ELSE false END as is_favorited
+        FROM ads a
+        LEFT JOIN shops s ON a.shop_id = s.id AND s.deleted_at IS NULL
+        LEFT JOIN favorites f ON f.ad_id = a.id AND f.user_id = $${paramIndex + 2}
+        ${combinedWhere}
+        ORDER BY a.created_at DESC
+        LIMIT $${paramIndex}
+        OFFSET $${paramIndex + 1}
+      `
+      
+      params.push(extendedPerPage)
+      params.push(extendedOffset)
+      params.push(parseInt(session.user.id))
+    }
 
     // Execute main query
-    const adsResult = await prisma.$queryRawUnsafe<any[]>(mainQuery, ...params)
+    const mainQueryStart = Date.now()
+    const extendedPerPageUsed = perPage * 10
+    const extendedOffsetUsed = (page - 1) * extendedPerPageUsed
+    
+    console.log(`\n========== [Ads API] SLOW/ELSE PATH - PAGE ${page} DEBUG ==========`)
+    console.log(`[Ads API] perPage=${perPage}, extendedPerPage=${extendedPerPageUsed}, extendedOffset=${extendedOffsetUsed}`)
+    console.log(`[Ads API] params length: ${params.length}`)
+    
+    const rawAdsResult = await prisma.$queryRawUnsafe<any[]>(mainQuery, ...params)
+    timings.mainQuery = Date.now() - mainQueryStart
+    
+    // DEBUG: Log raw ad IDs and shop IDs
+    const rawAdIds = rawAdsResult.slice(0, 10).map(a => Number(a.id))
+    const rawShopIds = rawAdsResult.slice(0, 10).map(a => Number(a.shop_id))
+    console.log(`[Ads API] Main Query: ${timings.mainQuery}ms - ${rawAdsResult.length} raw results`)
+    console.log(`[Ads API] First 10 raw ad IDs: ${JSON.stringify(rawAdIds)}`)
+    console.log(`[Ads API] First 10 raw shop IDs: ${JSON.stringify(rawShopIds)}`)
 
-    // Get count - use cache for performance
-    const countParams = params.slice(0, -3)
-    const cacheKey = JSON.stringify({ adsConditions, shopsConditions, trafficConditions, countParams })
+    // PHP-style deduplication: 1 ad per shop (like Laravel)
+    const seenShops = new Set<number>()
+    const adsResult: any[] = []
+    for (const ad of rawAdsResult) {
+      const shopId = ad.shop_id ? Number(ad.shop_id) : 0
+      if (!seenShops.has(shopId)) {
+        adsResult.push(ad)
+        seenShops.add(shopId)
+        if (adsResult.length >= perPage) break
+      }
+    }
+    
+    // DEBUG: Log final ad IDs and shop IDs after dedup
+    const finalAdIds = adsResult.map(a => Number(a.id))
+    const finalShopIds = adsResult.map(a => Number(a.shop_id))
+    console.log(`[Ads API] After dedup: ${adsResult.length} unique shops`)
+    console.log(`[Ads API] Final ad IDs: ${JSON.stringify(finalAdIds)}`)
+    console.log(`[Ads API] Final shop IDs: ${JSON.stringify(finalShopIds)}`)
+    console.log(`========== [Ads API] END PAGE ${page} ==========\n`)
+
+    // Use ESTIMATED count (like Laravel) - ALWAYS use pg_class estimate
+    const countStart = Date.now()
+    const cacheKey = `estimate-all`
     const cached = countCache.get(cacheKey)
     let total: number
     
     if (cached && Date.now() - cached.timestamp < COUNT_CACHE_TTL) {
       total = cached.count
+      timings.countQuery = 0
+      console.log(`[Ads API] Count from cache: ${total}`)
     } else {
-      // Use a simpler count for performance when no complex filters
-      const hasComplexFilters = shopsConditions.length > 0 || trafficConditions.length > 0
-      
-      let countQuery: string
-      if (hasComplexFilters) {
-        countQuery = `
-          WITH latest_traffic AS (
-            SELECT DISTINCT ON (shop_id) shop_id, last_month_visits, estimated_monthly, growth_rate
-            FROM traffic
-            ORDER BY shop_id, created_at DESC
-          )
-          SELECT COUNT(*) as total
-          FROM ads a
-          LEFT JOIN shops s ON a.shop_id = s.id AND s.deleted_at IS NULL
-          LEFT JOIN latest_traffic t ON t.shop_id = s.id
-          ${adsWhereClause}
-          ${shopsWhereClause}
-          ${trafficWhereClause}
-        `
-      } else {
-        // Simple count when only ads conditions
-        countQuery = `
-          SELECT COUNT(*) as total
-          FROM ads a
-          ${adsWhereClause}
-        `
-      }
+      // Use pg_class estimate like Laravel - FAST!
+      const countQuery = `SELECT COALESCE((SELECT reltuples::BIGINT FROM pg_class WHERE relname = 'ads'), 6800000) as total`
       
       try {
-        const countResult = await prisma.$queryRawUnsafe<[{ total: bigint }]>(countQuery, ...countParams)
-        total = Number(countResult[0]?.total || 0)
+        const countResult = await prisma.$queryRawUnsafe<[{ total: bigint }]>(countQuery)
+        total = Number(countResult[0]?.total || 6800000)
+        timings.countQuery = Date.now() - countStart
+        console.log(`[Ads API] Count (estimated): ${timings.countQuery}ms - Total: ${total}`)
         countCache.set(cacheKey, { count: total, timestamp: Date.now() })
       } catch (countError) {
-        console.error('Count query error:', countError)
-        // Fallback: estimate from results
-        total = adsResult.length < perPage ? adsResult.length : adsResult.length * 10
+        console.error('[Ads API] Count query error:', countError)
+        timings.countQuery = Date.now() - countStart
+        total = 6800000 // Fallback estimate
       }
     }
 
@@ -560,7 +1103,16 @@ export async function GET(request: NextRequest) {
       }
     })
 
-    return NextResponse.json({
+    timings.total = Date.now() - requestStart
+    console.log(`[Ads API] ========== TIMING SUMMARY ==========`)
+    console.log(`[Ads API] Auth: ${timings.auth}ms`)
+    console.log(`[Ads API] Parse: ${timings.parse}ms`)
+    console.log(`[Ads API] Main Query: ${timings.mainQuery}ms`)
+    console.log(`[Ads API] Count Query: ${timings.countQuery}ms`)
+    console.log(`[Ads API] TOTAL: ${timings.total}ms (${(timings.total/1000).toFixed(2)}s)`)
+    console.log(`[Ads API] ========== REQUEST END ==========`)
+
+    const response = NextResponse.json({
       success: true,
       data: ads,
       pagination: {
@@ -569,12 +1121,22 @@ export async function GET(request: NextRequest) {
         total,
         totalPages: Math.ceil(total / perPage),
         hasMore: page * perPage < total
+      },
+      _timings: {
+        totalMs: timings.total,
+        totalSec: (timings.total/1000).toFixed(2)
       }
     })
+    
+    // Add cache headers for better performance
+    response.headers.set('Cache-Control', 'private, max-age=30, stale-while-revalidate=60')
+    
+    return response
   } catch (error) {
-    console.error('Failed to fetch ads:', error)
-    return NextResponse.json({ 
-      success: false, 
+    console.error('[Ads API] ========== REQUEST FAILED ==========')
+    console.error('[Ads API] Error:', error)
+    return NextResponse.json({
+      success: false,
       error: 'Failed to fetch ads',
       details: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 })
