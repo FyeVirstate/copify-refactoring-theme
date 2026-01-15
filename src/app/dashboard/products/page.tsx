@@ -853,20 +853,12 @@ function ProductsContent() {
         addToast('success', `${shopUrl || 'La boutique'} a été ajouté à la liste de vos boutiques suivies`, shopUrl, shopId);
         // Refresh navbar stats
         refreshStats();
-        // Open drawer after successful tracking
-        setAnalyticsShopId(shopId);
-        setAnalyticsShopUrl(shopUrl);
-        setAnalyticsShopName(shopName);
-        setAnalyticsDrawerOpen(true);
+        // Don't auto-open drawer - user can click "Voir l'analyse" or use toast
       } else if (data.error === 'Already tracking') {
         // Also add to tracked (in case we missed it)
         setTrackedShopIds(prev => new Set(prev).add(shopId));
         addToast('info', `${shopUrl || 'Cette boutique'} est déjà dans votre liste de boutiques suivies`, shopUrl, shopId);
-        // Open drawer
-        setAnalyticsShopId(shopId);
-        setAnalyticsShopUrl(shopUrl);
-        setAnalyticsShopName(shopName);
-        setAnalyticsDrawerOpen(true);
+        // Don't auto-open drawer
       } else if (data.limitReached) {
         addToast('limit', 'Vous avez atteint la limite maximale de boutique à suivre avec votre abonnement.');
       } else {

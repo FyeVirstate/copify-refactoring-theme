@@ -91,6 +91,11 @@ export async function GET(request: NextRequest) {
     
     // Minimum quality filters like Laravel
     shopConditions.push(`s.products_count > 0`)
+    
+    // For top_score filter, enforce minimum active ads
+    if (sortBy === 'top_score') {
+      shopConditions.push(`s.active_ads >= 5`)
+    }
 
     // Search text - use index if available
     if (searchText) {
@@ -386,6 +391,38 @@ export async function GET(request: NextRequest) {
       case 'productsCount':
       case 'products_count':
         orderByClause = `ORDER BY s.products_count ${order} NULLS LAST`
+        break
+      case 'top_score':
+        // Score IA Custom - Adapted scoring formula for shops
+        const dailySeed = new Date().toISOString().split('T')[0]
+        const hourSeed = new Date().getHours().toString()
+        orderByClause = `ORDER BY (
+          -- 1) Business signals (traffic growth, active ads, estimated orders)
+          COALESCE(t.growth_rate, 0) * 0.25 +
+          LN(1 + COALESCE(s.active_ads, 0)) * 0.22 +
+          LN(1 + COALESCE(t.estimated_order, 0)) * 0.18 +
+          
+          -- 2) Traffic momentum (recent visits)
+          LN(1 + COALESCE(t.last_month_visits, 0)) * 0.12 +
+          
+          -- 3) Bonus "sweet spot" products (10-30 products = ideal store)
+          CASE 
+            WHEN COALESCE(s.products_count, 0) BETWEEN 10 AND 30 THEN 0.12
+            WHEN COALESCE(s.products_count, 0) BETWEEN 5 AND 9 THEN 0.06
+            WHEN COALESCE(s.products_count, 0) BETWEEN 31 AND 50 THEN 0.04
+            ELSE 0
+          END +
+          
+          -- 4) Store freshness (newer stores get slight boost, capped)
+          LEAST(
+            0.06,
+            0.06 * EXP(- (EXTRACT(EPOCH FROM (NOW() - COALESCE(s.created_at, NOW()))) / 86400.0) / 90.0)
+          ) +
+          
+          -- 5) Random factor for rotation (daily + hourly refresh)
+          (MOD(ABS(HASHTEXT(s.url || '${dailySeed}' || '${hourSeed}')), 1000) / 1000.0) * 0.05
+        ) DESC NULLS LAST`
+        needsTrafficForSort = true
         break
       case 'recommended':
       default:

@@ -51,6 +51,7 @@ import ShopAnalyticsDrawer from "@/components/ShopAnalyticsDrawer";
 // Sort options for shops
 const SORT_OPTIONS = [
   { value: "recommended", label: "Pertinence", icon: "ri-sparkling-line" },
+  { value: "top_score", label: "Score IA (Custom)", icon: "ri-brain-line" },
   { value: "estimated_monthly", label: "Chiffre d'affaires", icon: "ri-money-euro-circle-line" },
   { value: "last_month_visits", label: "Trafic", icon: "ri-line-chart-line" },
   { value: "growth_rate", label: "Croissance", icon: "ri-arrow-up-circle-line" },
@@ -555,20 +556,12 @@ export default function ShopsPage() {
         addToast('success', `${shopUrl} a été ajouté à la liste de vos boutiques suivies`, shopUrl, shopId);
         // Refresh navbar stats
         refreshStats();
-        // Open drawer after successful tracking
-        setAnalyticsShopId(shopId);
-        setAnalyticsShopUrl(shopUrl);
-        setAnalyticsShopName(shopName);
-        setAnalyticsDrawerOpen(true);
+        // Don't auto-open drawer - user can click "Voir l'analyse" or use toast
       } else if (data.error === 'Already tracking') {
         // Also add to tracked (in case we missed it)
         setTrackedShopIds(prev => new Set(prev).add(shopId));
         addToast('info', `${shopUrl} est déjà dans votre liste de boutiques suivies`, shopUrl, shopId);
-        // Open drawer
-        setAnalyticsShopId(shopId);
-        setAnalyticsShopUrl(shopUrl);
-        setAnalyticsShopName(shopName);
-        setAnalyticsDrawerOpen(true);
+        // Don't auto-open drawer
       } else if (data.limitReached) {
         addToast('limit', 'Vous avez atteint la limite maximale de boutique à suivre avec votre abonnement.');
       } else {

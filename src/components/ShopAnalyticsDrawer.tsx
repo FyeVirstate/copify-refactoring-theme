@@ -155,6 +155,19 @@ export default function ShopAnalyticsDrawer({ isOpen, onClose, shopId, shopUrl, 
   
   const loadMoreRef = useRef<HTMLDivElement>(null);
 
+  // Clear old data when shopId changes (before loading new data)
+  useEffect(() => {
+    // Reset all state when shopId changes
+    setShopDetails(null);
+    setError(null);
+    setActiveTab('overview');
+    setAdsToShow(25);
+    setShowAllProducts(false);
+    setFormatFilter([]);
+    setStatusFilter([]);
+    setIframeError(false);
+  }, [shopId]);
+
   // Load shop details
   useEffect(() => {
     if (isOpen && shopId) {
@@ -397,8 +410,57 @@ export default function ShopAnalyticsDrawer({ isOpen, onClose, shopId, shopUrl, 
         {/* Content */}
         <div style={{ flex: 1, overflow: 'auto', padding: 24 }}>
           {isLoading ? (
-            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
-              <div className="spinner-border text-primary" style={{ width: 48, height: 48 }}></div>
+            <div style={{ maxWidth: 1400, margin: '0 auto' }}>
+              {/* Skeleton Loading State */}
+              {/* Metrics Row Skeleton */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 24 }}>
+                {[1, 2, 3, 4].map(i => (
+                  <div key={i} style={{ ...cardStyle, padding: '20px 24px' }}>
+                    <div style={{ height: 28, width: '60%', background: 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.5s infinite', borderRadius: 6, marginBottom: 8 }} />
+                    <div style={{ height: 14, width: '80%', background: 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.5s infinite', borderRadius: 4 }} />
+                  </div>
+                ))}
+              </div>
+              {/* Chart Skeleton */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: 16, marginBottom: 24 }}>
+                <div style={{ ...cardStyle, padding: 20, height: 320 }}>
+                  <div style={{ height: 20, width: '40%', background: 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.5s infinite', borderRadius: 4, marginBottom: 16 }} />
+                  <div style={{ height: 220, background: 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.5s infinite', borderRadius: 8 }} />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                  <div style={{ ...cardStyle, padding: 20, height: 150 }}>
+                    <div style={{ height: 16, width: '50%', background: 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.5s infinite', borderRadius: 4, marginBottom: 12 }} />
+                    <div style={{ display: 'flex', gap: 16 }}>
+                      <div style={{ width: 80, height: 80, borderRadius: '50%', background: 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.5s infinite' }} />
+                      <div style={{ flex: 1 }}>
+                        {[1, 2, 3].map(j => <div key={j} style={{ height: 12, width: '70%', background: 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.5s infinite', borderRadius: 4, marginBottom: 8 }} />)}
+                      </div>
+                    </div>
+                  </div>
+                  <div style={{ ...cardStyle, padding: 20, flex: 1 }}>
+                    <div style={{ height: 16, width: '50%', background: 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.5s infinite', borderRadius: 4, marginBottom: 12 }} />
+                    {[1, 2, 3].map(j => <div key={j} style={{ height: 14, width: '90%', background: 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.5s infinite', borderRadius: 4, marginBottom: 10 }} />)}
+                  </div>
+                </div>
+              </div>
+              {/* Ads Preview Skeleton */}
+              <div style={{ ...cardStyle, padding: 20 }}>
+                <div style={{ height: 18, width: '30%', background: 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.5s infinite', borderRadius: 4, marginBottom: 16 }} />
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
+                  {[1, 2, 3].map(i => (
+                    <div key={i} style={{ border: '1px solid #E5E7EB', borderRadius: 10, overflow: 'hidden' }}>
+                      <div style={{ padding: 12, borderBottom: '1px solid #F3F4F6', display: 'flex', gap: 8 }}>
+                        <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.5s infinite' }} />
+                        <div style={{ flex: 1 }}>
+                          <div style={{ height: 14, width: '70%', background: 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.5s infinite', borderRadius: 4, marginBottom: 6 }} />
+                          <div style={{ height: 10, width: '40%', background: 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.5s infinite', borderRadius: 4 }} />
+                        </div>
+                      </div>
+                      <div style={{ aspectRatio: '1/1', background: 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.5s infinite' }} />
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           ) : error ? (
             <div style={{ textAlign: 'center', color: '#EF4444', paddingTop: 100 }}>
@@ -999,7 +1061,7 @@ export default function ShopAnalyticsDrawer({ isOpen, onClose, shopId, shopUrl, 
                       </button>
                     </div>
 
-                    {/* Content - iframe or error fallback */}
+                    {/* Content - iframe with fallback notice */}
                     <div style={{ flex: 1, background: '#fff', position: 'relative' }}>
                       {!iframeError ? (
                         <>
@@ -1012,25 +1074,41 @@ export default function ShopAnalyticsDrawer({ isOpen, onClose, shopId, shopUrl, 
                               border: 'none',
                               display: 'block',
                             }}
-                            sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+                            sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-top-navigation"
                             loading="lazy"
                             title={`${displayName} website`}
                             onError={() => setIframeError(true)}
-                            onLoad={(e) => {
-                              // Try to detect if blocked (limited but helpful)
-                              setTimeout(() => {
-                                try {
-                                  const iframe = e.target as HTMLIFrameElement;
-                                  // If we can't access anything, might be blocked
-                                  if (!iframe.contentWindow?.location) {
-                                    setIframeError(true);
-                                  }
-                                } catch {
-                                  setIframeError(true);
-                                }
-                              }, 2000);
-                            }}
                           />
+                          {/* Floating "Open in new tab" button - always visible as fallback */}
+                          <a
+                            href={`https://${displayUrl}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{
+                              position: 'absolute',
+                              bottom: 16,
+                              right: 16,
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 8,
+                              padding: '10px 16px',
+                              background: 'rgba(0,0,0,0.8)',
+                              color: '#fff',
+                              borderRadius: 8,
+                              textDecoration: 'none',
+                              fontSize: 13,
+                              fontWeight: 500,
+                              boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                              zIndex: 10,
+                            }}
+                          >
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+                              <polyline points="15 3 21 3 21 9"/>
+                              <line x1="10" y1="14" x2="21" y2="3"/>
+                            </svg>
+                            Ouvrir dans un nouvel onglet
+                          </a>
                           
                           {/* Loading Overlay - shows briefly */}
                           <div 
@@ -1043,12 +1121,13 @@ export default function ShopAnalyticsDrawer({ isOpen, onClose, shopId, shopUrl, 
                               flexDirection: 'column',
                               alignItems: 'center',
                               justifyContent: 'center',
-                              gap: 16,
-                              animation: 'fadeOut 0.5s ease-out 2s forwards',
+                              gap: 12,
+                              animation: 'fadeOut 0.5s ease-out 3s forwards',
                             }}
                           >
                             <div style={{ width: 48, height: 48, borderRadius: '50%', border: '3px solid #E5E7EB', borderTopColor: '#3B82F6', animation: 'spin 1s linear infinite' }} />
                             <span style={{ fontSize: 14, color: '#6B7280' }}>Chargement de {displayUrl}...</span>
+                            <span style={{ fontSize: 12, color: '#9CA3AF' }}>Si le site ne s&apos;affiche pas, utilisez le bouton en bas à droite</span>
                           </div>
                         </>
                       ) : (
@@ -1144,6 +1223,7 @@ export default function ShopAnalyticsDrawer({ isOpen, onClose, shopId, shopUrl, 
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; pointer-events: none; } }
         @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
         .hide-scrollbar::-webkit-scrollbar { display: none; }
       `}</style>
     </>

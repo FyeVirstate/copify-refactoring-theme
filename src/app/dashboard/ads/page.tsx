@@ -285,8 +285,7 @@ const AdCard = React.memo(function AdCard({ ad, index, isTracked: initialIsTrack
       const success = await onTrackShop(ad.shopId, ad.shopUrl || undefined);
       if (success) {
         setIsTracked(true);
-        // Open drawer after successful tracking
-        onOpenAnalytics(ad.shopId, ad.shopUrl || ad.targetUrl, ad.pageName || ad.shopName);
+        // Don't auto-open drawer - user must click "Voir l'analyse"
       }
     } finally {
       setIsTracking(false);
