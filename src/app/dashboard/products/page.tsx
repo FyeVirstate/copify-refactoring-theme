@@ -49,6 +49,7 @@ import {
   SocialNetworksFilter,
 } from "@/components/filters";
 import { useProducts, ProductsFilters } from "@/lib/hooks/use-products";
+import ShopAnalyticsDrawer from "@/components/ShopAnalyticsDrawer";
 
 // Currency symbols mapping
 const CURRENCY_SYMBOLS: Record<string, string> = {
@@ -114,6 +115,7 @@ const PRESET_CONFIGS: Record<string, Record<string, any>> = {
 // Sort options configuration - clean French labels
 const SORT_OPTIONS = [
   { value: "recommended", label: "Pertinence", icon: "ri-sparkling-line" },
+  { value: "top_score", label: "Score IA (Custom)", icon: "ri-robot-line" },
   { value: "estimated_monthly", label: "Chiffre d'affaires", icon: "ri-money-euro-circle-line" },
   { value: "estimated_order", label: "Commandes", icon: "ri-shopping-cart-line" },
   { value: "last_month_visits", label: "Trafic", icon: "ri-line-chart-line" },
@@ -239,6 +241,12 @@ function ProductsContent() {
   const [toastAlerts, setToastAlerts] = useState<ToastAlert[]>([]);
   const [userStats, setUserStats] = useState<UserStats | null>(null);
   const [showTutorialModal, setShowTutorialModal] = useState(false);
+  
+  // Analytics drawer state
+  const [analyticsDrawerOpen, setAnalyticsDrawerOpen] = useState(false);
+  const [analyticsShopId, setAnalyticsShopId] = useState<number | null>(null);
+  const [analyticsShopUrl, setAnalyticsShopUrl] = useState<string | undefined>();
+  const [analyticsShopName, setAnalyticsShopName] = useState<string | undefined>();
   
   // Filter states - matching shops page structure with number types
   const [minPrice, setMinPrice] = useState<number | undefined>();
@@ -817,12 +825,16 @@ function ProductsContent() {
     setToastAlerts(prev => prev.filter(a => a.id !== id));
   };
 
-  const handleViewShop = (shopId: number) => {
-    router.push(`/dashboard/track/${shopId}`);
+  const handleViewShop = (shopId: number, shopUrl?: string, shopName?: string) => {
+    // Open drawer instead of navigating
+    setAnalyticsShopId(shopId);
+    setAnalyticsShopUrl(shopUrl);
+    setAnalyticsShopName(shopName);
+    setAnalyticsDrawerOpen(true);
   };
 
   // Handle analyze shop - NO REDIRECT, just toast - supports multiple parallel analyses
-  const handleAnalyzeShop = async (shopId: number, shopUrl?: string) => {
+  const handleAnalyzeShop = async (shopId: number, shopUrl?: string, shopName?: string) => {
     // Add to analyzing set (allows multiple)
     setAnalyzingShopIds(prev => new Set(prev).add(shopId));
     
@@ -841,10 +853,20 @@ function ProductsContent() {
         addToast('success', `${shopUrl || 'La boutique'} a été ajouté à la liste de vos boutiques suivies`, shopUrl, shopId);
         // Refresh navbar stats
         refreshStats();
+        // Open drawer after successful tracking
+        setAnalyticsShopId(shopId);
+        setAnalyticsShopUrl(shopUrl);
+        setAnalyticsShopName(shopName);
+        setAnalyticsDrawerOpen(true);
       } else if (data.error === 'Already tracking') {
         // Also add to tracked (in case we missed it)
         setTrackedShopIds(prev => new Set(prev).add(shopId));
         addToast('info', `${shopUrl || 'Cette boutique'} est déjà dans votre liste de boutiques suivies`, shopUrl, shopId);
+        // Open drawer
+        setAnalyticsShopId(shopId);
+        setAnalyticsShopUrl(shopUrl);
+        setAnalyticsShopName(shopName);
+        setAnalyticsDrawerOpen(true);
       } else if (data.limitReached) {
         addToast('limit', 'Vous avez atteint la limite maximale de boutique à suivre avec votre abonnement.');
       } else {
@@ -1591,7 +1613,7 @@ function ProductsContent() {
                                 trackedShopIds.has(product.shop.id) && !analyzingShopIds.has(product.shop.id) ? (
                                   // Already tracked - Show "Voir l'analyse" button (BLUE)
                                   <button
-                                    onClick={() => handleViewShop(product.shop!.id)}
+                                    onClick={() => handleViewShop(product.shop!.id, product.shop!.url, product.shop!.name || undefined)}
                                     className="btn d-inline-flex align-items-center gap-2"
                                     style={{ 
                                       whiteSpace: 'nowrap', 
@@ -1607,11 +1629,8 @@ function ProductsContent() {
                                       justifyContent: 'center',
                                     }}
                                   >
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                                      <circle cx="12" cy="12" r="3"></circle>
-                                    </svg>
-                                    <span>Voir l'analyse</span>
+                                    <i className="ri-line-chart-line" style={{ fontSize: 14 }}></i>
+                                    <span>Voir l&apos;analyse</span>
                                   </button>
                                 ) : analyzingShopIds.has(product.shop.id) ? (
                                   // Currently analyzing - Light yellow with refresh icon
@@ -1642,7 +1661,7 @@ function ProductsContent() {
                                 ) : (
                                   // Not tracked - Show analyze button (WHITE/original)
                                   <button
-                                    onClick={() => handleAnalyzeShop(product.shop!.id, product.shop!.url)}
+                                    onClick={() => handleAnalyzeShop(product.shop!.id, product.shop!.url, product.shop!.name || undefined)}
                                     className="btn btn-secondary d-inline-flex align-items-center gap-2"
                                     style={{ 
                                       whiteSpace: 'nowrap', 
@@ -1653,8 +1672,8 @@ function ProductsContent() {
                                       justifyContent: 'center',
                                     }}
                                   >
-                                    <img src="/img/icons/target-icon.svg" alt="" style={{ width: '14px', height: '14px' }} />
-                                    <span>Analyser la boutique</span>
+                                    <i className="ri-focus-3-line" style={{ fontSize: 14 }}></i>
+                                    <span>Suivre les données</span>
                                   </button>
                                 )
                               )}
@@ -1790,6 +1809,15 @@ function ProductsContent() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Shop Analytics Drawer */}
+      <ShopAnalyticsDrawer
+        isOpen={analyticsDrawerOpen}
+        onClose={() => setAnalyticsDrawerOpen(false)}
+        shopId={analyticsShopId}
+        shopUrl={analyticsShopUrl}
+        shopName={analyticsShopName}
+      />
     </>
   );
 }

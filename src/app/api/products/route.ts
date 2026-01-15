@@ -391,6 +391,10 @@ export async function GET(request: NextRequest) {
     if (sortBy === 'most_profitable') {
       conditions.push(`m.last_month_visits > 0`)
     }
+    if (sortBy === 'top_score') {
+      // Top score requires products with active advertising (minimum 5 ads)
+      conditions.push(`m.active_ads_count >= 5`)
+    }
 
     // Category filter - needs async lookup
     let categoryCondition = ''
@@ -429,6 +433,7 @@ export async function GET(request: NextRequest) {
     // Build ORDER BY clause - using column names from materialized view
     const dailySeed = new Date().toISOString().split('T')[0].replace(/-/g, '')
     const seedHash = parseInt(dailySeed) % 1000
+    const hourSeed = new Date().getHours()
     const order = sortOrder === 'asc' ? 'ASC' : 'DESC'
     
     let orderByClause = ''
@@ -440,6 +445,26 @@ export async function GET(request: NextRequest) {
           COALESCE(active_ads_count, 0) * 10000 + 
           COALESCE(estimated_order, 0) * 0.1 + 
           (MOD(ABS(HASHTEXT(product_handle || '${seedHash}')), 50000))
+        ) ${order}`
+        break
+      case 'top_score':
+        // Custom AI Score algorithm combining multiple business signals
+        // 1. Growth rate - strong indicator of trending products (40%)
+        // 2. Active ads - proves product is being marketed (25%)
+        // 3. Estimated orders - actual sales performance (25%)
+        // 4. Random factor for variety/rotation (10%)
+        orderByClause = `ORDER BY (
+          -- 1) Growth rate (traffic growth) - strong signal
+          COALESCE(growth_rate, 0) * 0.40
+          
+          -- 2) Active ads count (log scale to avoid outliers dominating)
+          + LN(1 + COALESCE(active_ads_count, 0)) * 0.25
+          
+          -- 3) Estimated orders (log scale for normalization)
+          + LN(1 + COALESCE(estimated_order, 0)) * 0.25
+          
+          -- 4) Random factor for rotation (daily + hourly seed)
+          + (MOD(ABS(HASHTEXT(product_handle || '${dailySeed}' || '${hourSeed}')), 1000) / 1000.0) * 0.10
         ) ${order}`
         break
       case 'most_active_ads':

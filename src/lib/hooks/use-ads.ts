@@ -1,7 +1,7 @@
 'use client'
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { useCallback } from 'react'
+import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useCallback, useMemo } from 'react'
 
 export interface Ad {
   id: number
@@ -146,85 +146,122 @@ async function toggleFavoriteApi(adId: number): Promise<{ success: boolean; data
 }
 
 // Generate query key for caching
-function getAdsQueryKey(filters: AdsFilters, page: number, perPage: number) {
-  return ['ads', { filters, page, perPage }] as const
+function getAdsQueryKey(filters: AdsFilters, perPage: number) {
+  return ['ads-infinite', { filters, perPage }] as const
 }
 
 export function useAds(
   filters: AdsFilters = {},
-  page: number = 1,
+  _page: number = 1, // Ignored for infinite scroll, kept for backwards compatibility
   perPage: number = 25
 ) {
   const queryClient = useQueryClient()
 
-  // Main ads query with TanStack Query
+  // Infinite query for ads
   const {
     data,
     isLoading,
     isFetching,
+    isFetchingNextPage,
     error,
     refetch,
-  } = useQuery({
-    queryKey: getAdsQueryKey(filters, page, perPage),
-    queryFn: ({ signal }) => fetchAds(filters, page, perPage, signal),
-    placeholderData: (previousData) => previousData,
+    fetchNextPage,
+    hasNextPage,
+  } = useInfiniteQuery({
+    queryKey: getAdsQueryKey(filters, perPage),
+    queryFn: ({ pageParam = 1, signal }) => fetchAds(filters, pageParam, perPage, signal),
+    getNextPageParam: (lastPage) => {
+      if (lastPage.pagination.page < lastPage.pagination.totalPages) {
+        return lastPage.pagination.page + 1
+      }
+      return undefined
+    },
+    initialPageParam: 1,
   })
+
+  // Flatten all pages into a single array + deduplicate by shop
+  const { ads, seenShopIds } = useMemo(() => {
+    if (!data?.pages) return { ads: [], seenShopIds: new Set<number>() }
+    
+    const allAds: Ad[] = []
+    const seen = new Set<number>()
+    
+    for (const page of data.pages) {
+      for (const ad of page.data) {
+        // Deduplicate by shop - 1 ad per shop
+        const shopId = ad.shopId ?? 0
+        if (!seen.has(shopId)) {
+          allAds.push(ad)
+          seen.add(shopId)
+        }
+      }
+    }
+    
+    return { ads: allAds, seenShopIds: seen }
+  }, [data?.pages])
+
+  // Get pagination info from last page
+  const pagination = useMemo(() => {
+    if (!data?.pages?.length) {
+      return { page: 1, perPage: 25, total: 0, totalPages: 0, hasMore: false }
+    }
+    const lastPage = data.pages[data.pages.length - 1]
+    return {
+      ...lastPage.pagination,
+      hasMore: hasNextPage ?? false,
+    }
+  }, [data?.pages, hasNextPage])
 
   // Favorite mutation
   const favoriteMutation = useMutation({
     mutationFn: toggleFavoriteApi,
     onSuccess: (result, adId) => {
-      // Update the cache
+      // Update the cache for all pages
       queryClient.setQueryData(
-        getAdsQueryKey(filters, page, perPage),
-        (old: AdsResponse | undefined) => {
+        getAdsQueryKey(filters, perPage),
+        (old: typeof data) => {
           if (!old) return old
           return {
             ...old,
-            data: old.data.map(ad =>
-              ad.id === adId
-                ? { ...ad, isFavorited: result.data.isFavorited }
-                : ad
-            ),
+            pages: old.pages.map(page => ({
+              ...page,
+              data: page.data.map(ad =>
+                ad.id === adId
+                  ? { ...ad, isFavorited: result.data.isFavorited }
+                  : ad
+              ),
+            })),
           }
         }
       )
     },
   })
 
-  // Prefetch next page
-  const prefetchNextPage = useCallback(() => {
-    if (data && page < data.pagination.totalPages) {
-      queryClient.prefetchQuery({
-        queryKey: getAdsQueryKey(filters, page + 1, perPage),
-        queryFn: ({ signal }) => fetchAds(filters, page + 1, perPage, signal),
-      })
-    }
-  }, [queryClient, filters, page, perPage, data])
-
-  // Prefetch previous page
-  const prefetchPrevPage = useCallback(() => {
-    if (page > 1) {
-      queryClient.prefetchQuery({
-        queryKey: getAdsQueryKey(filters, page - 1, perPage),
-        queryFn: ({ signal }) => fetchAds(filters, page - 1, perPage, signal),
-      })
-    }
-  }, [queryClient, filters, page, perPage])
-
-  // Invalidate and refetch
+  // Invalidate and refetch - reset to first page
   const invalidateAds = useCallback(() => {
-    queryClient.invalidateQueries({ queryKey: ['ads'] })
+    queryClient.invalidateQueries({ queryKey: ['ads-infinite'] })
   }, [queryClient])
+
+  // Load more function for infinite scroll
+  const loadMore = useCallback(() => {
+    if (hasNextPage && !isFetchingNextPage) {
+      fetchNextPage()
+    }
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage])
 
   return {
     // Data
-    ads: data?.data ?? [],
-    pagination: data?.pagination ?? { page: 1, perPage: 25, total: 0, totalPages: 0, hasMore: false },
+    ads,
+    pagination,
     
     // Loading states
     isLoading,
     isFetching,
+    isFetchingNextPage,
+    
+    // Infinite scroll
+    hasNextPage: hasNextPage ?? false,
+    loadMore,
     
     // Error
     error: error instanceof Error ? error.message : null,
@@ -234,9 +271,9 @@ export function useAds(
     toggleFavorite: favoriteMutation.mutate,
     isTogglingFavorite: favoriteMutation.isPending,
     
-    // Prefetch
-    prefetchNextPage,
-    prefetchPrevPage,
+    // Legacy - kept for backwards compatibility
+    prefetchNextPage: loadMore,
+    prefetchPrevPage: () => {},
     invalidateAds,
   }
 }

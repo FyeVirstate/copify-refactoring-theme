@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import DashboardHeader from "@/components/DashboardHeader";
@@ -39,10 +39,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import TutorialModal, { TUTORIAL_CONFIGS } from "@/components/TutorialModal";
+import ShopAnalyticsDrawer from "@/components/ShopAnalyticsDrawer";
 
 // Sort options for ads
 const SORT_OPTIONS = [
   { value: "recommended", label: "Pertinence", icon: "ri-sparkling-line" },
+  { value: "top_score", label: "Score IA (Custom)", icon: "ri-robot-line" },
   { value: "start_date", label: "Plus recentes", icon: "ri-calendar-line" },
   { value: "estimated_monthly", label: "Chiffre d'affaires", icon: "ri-money-euro-circle-line" },
   { value: "last_month_visits", label: "Portee", icon: "ri-eye-line" },
@@ -50,7 +52,7 @@ const SORT_OPTIONS = [
   { value: "trending", label: "Tendance", icon: "ri-fire-line" },
 ];
 
-const PER_PAGE_OPTIONS = [10, 25, 50, 100];
+// Removed PER_PAGE_OPTIONS - using infinite scroll
 
 // Interface for user stats
 interface UserStats {
@@ -258,22 +260,33 @@ interface AdCardProps {
   onTrackShop: (shopId: number, shopUrl?: string) => Promise<boolean>;
   onToggleFavorite: (adId: number) => void;
   getActiveDays: (firstSeenDate: string | null, lastSeenDate?: string | null) => number;
+  onOpenAnalytics: (shopId: number, shopUrl?: string, shopName?: string) => void;
 }
 
-const AdCard = React.memo(function AdCard({ ad, index, isTracked: initialIsTracked, onTrackShop, onToggleFavorite, getActiveDays }: AdCardProps) {
+const AdCard = React.memo(function AdCard({ ad, index, isTracked: initialIsTracked, onTrackShop, onToggleFavorite, getActiveDays, onOpenAnalytics }: AdCardProps) {
   const [isTracking, setIsTracking] = useState(false);
   const [isTracked, setIsTracked] = useState(initialIsTracked);
   const [isFavorited, setIsFavorited] = useState(ad.isFavorited);
   
-  const activeDays = getActiveDays(ad.firstSeenDate, ad.lastSeenDate);
+  // Use API-calculated activeDays, fallback to frontend calculation if 0
+  const activeDays = ad.activeDays > 0 ? ad.activeDays : getActiveDays(ad.firstSeenDate || ad.startDate, ad.lastSeenDate || ad.endDate);
   
   const handleTrackClick = async () => {
-    if (!ad.shopId || isTracking || isTracked) return;
+    if (!ad.shopId || isTracking) return;
+    
+    // If already tracked, just open the drawer
+    if (isTracked) {
+      onOpenAnalytics(ad.shopId, ad.shopUrl || ad.targetUrl, ad.pageName || ad.shopName);
+      return;
+    }
+    
     setIsTracking(true);
     try {
       const success = await onTrackShop(ad.shopId, ad.shopUrl || undefined);
       if (success) {
         setIsTracked(true);
+        // Open drawer after successful tracking
+        onOpenAnalytics(ad.shopId, ad.shopUrl || ad.targetUrl, ad.pageName || ad.shopName);
       }
     } finally {
       setIsTracking(false);
@@ -298,12 +311,22 @@ const AdCard = React.memo(function AdCard({ ad, index, isTracked: initialIsTrack
           />
           <div>
             <h4 className="fs-small mb-0 fw-500">{(ad.pageName || ad.shopName || 'Unknown')?.substring(0, 25)}{(ad.pageName || ad.shopName || '')?.length > 25 ? '...' : ''}</h4>
+            {/* Active days status */}
             <div className="d-flex align-items-center gap-1">
               <span className={`${ad.isActive ? 'bg-success' : 'bg-secondary'}`} style={{ width: '6px', height: '6px', borderRadius: '50%', display: 'inline-block' }}></span>
               <span className={`fs-xs ${ad.isActive ? 'text-success' : 'text-secondary'} fw-normal`}>
                 {ad.isActive ? `Active pendant ${activeDays} jours` : 'Inactive'}
               </span>
             </div>
+            {/* Live Ads count */}
+            {ad.shopActiveAds > 0 && (
+              <div className="d-flex align-items-center gap-1 mt-1">
+                <span className="fs-xs text-primary fw-500">
+                  {ad.shopActiveAds} Live Ads
+                </span>
+                <i className="ri-advertisement-line text-primary" style={{ fontSize: '12px' }}></i>
+              </div>
+            )}
           </div>
         </div>
         {/* Meta Icon - with gray background like Laravel */}
@@ -418,9 +441,9 @@ const AdCard = React.memo(function AdCard({ ad, index, isTracked: initialIsTrack
         <div className="d-flex gap-2" style={{ height: '38px' }}>
           {ad.shopId && (
             isTracked ? (
-              <button type="button" className="btn btn-outline-success flex-grow-1 d-flex align-items-center justify-content-center gap-1" style={{ height: '38px', fontSize: '13px' }} disabled>
-                <i className="ri-check-line"></i>
-                Boutique suivie
+              <button type="button" onClick={handleTrackClick} className="btn btn-outline-primary flex-grow-1 d-flex align-items-center justify-content-center gap-1" style={{ height: '38px', fontSize: '13px' }}>
+                <i className="ri-line-chart-line"></i>
+                Voir l&apos;analyse
               </button>
             ) : isTracking ? (
               <button type="button" className="btn btn-primary flex-grow-1 d-flex align-items-center justify-content-center gap-1" style={{ height: '38px' }} disabled>
@@ -488,6 +511,12 @@ export default function AdsPage() {
   const [userStats, setUserStats] = useState<UserStats | null>(null);
   const [showTutorialModal, setShowTutorialModal] = useState(false);
   
+  // Analytics drawer state
+  const [analyticsDrawerOpen, setAnalyticsDrawerOpen] = useState(false);
+  const [analyticsShopId, setAnalyticsShopId] = useState<number | null>(null);
+  const [analyticsShopUrl, setAnalyticsShopUrl] = useState<string | undefined>();
+  const [analyticsShopName, setAnalyticsShopName] = useState<string | undefined>();
+  
   // Filter states
   const [selectedCountries, setSelectedCountries] = useState<string[]>([]);
   const [selectedNiches, setSelectedNiches] = useState<string[]>([]);
@@ -525,10 +554,10 @@ export default function AdsPage() {
   const [minCatalogSize, setMinCatalogSize] = useState<number | undefined>();
   const [maxCatalogSize, setMaxCatalogSize] = useState<number | undefined>();
   
-  // Pagination state
-  const [page, setPage] = useState(1);
-  const [perPage, setPerPage] = useState(25);
+  // Infinite scroll settings
+  const [perPage] = useState(25);
   const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
+  const loadMoreRef = useRef<HTMLDivElement>(null);
 
   // Build filters - memoized for TanStack Query
   const filters = useMemo((): AdsFilters => {
@@ -578,29 +607,43 @@ export default function AdsPage() {
       maxTrustpilotRating, minTrustpilotReviews, maxTrustpilotReviews, selectedThemes,
       selectedApps, selectedSocialNetworks, minPrice, maxPrice, minCatalogSize, maxCatalogSize]);
 
-  // Use ads hook with TanStack Query
+  // Use ads hook with TanStack Query (infinite scroll)
   const { 
     ads, 
     pagination, 
+    isLoading,
     isFetching,
+    isFetchingNextPage,
+    hasNextPage,
+    loadMore,
     error, 
     toggleFavorite,
     invalidateAds,
-    prefetchNextPage,
-    prefetchPrevPage,
-  } = useAds(filters, page, perPage);
+  } = useAds(filters, 1, perPage);
 
-  // Handle page change
-  const handlePageChange = (newPage: number) => {
-    setPage(newPage);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
+  // Infinite scroll - Intersection Observer
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const first = entries[0];
+        if (first.isIntersecting && hasNextPage && !isFetchingNextPage) {
+          loadMore();
+        }
+      },
+      { threshold: 0.1, rootMargin: '200px' }
+    );
 
-  // Handle per page change
-  const handlePerPageChange = (newPerPage: number) => {
-    setPerPage(newPerPage);
-    setPage(1);
-  };
+    const currentRef = loadMoreRef.current;
+    if (currentRef) {
+      observer.observe(currentRef);
+    }
+
+    return () => {
+      if (currentRef) {
+        observer.unobserve(currentRef);
+      }
+    };
+  }, [hasNextPage, isFetchingNextPage, loadMore]);
 
   // Toast functions
   const addToast = (type: ToastAlert['type'], message: string, shopUrl?: string, shopId?: number) => {
@@ -666,11 +709,7 @@ export default function AdsPage() {
 
   const handleSearch = () => {
     setAppliedSearchText(searchText);
-    if (page === 1) {
-      invalidateAds();
-    } else {
-      setPage(1);
-    }
+    invalidateAds();
   };
 
   const handleApplyFilters = (overrideFilters?: Partial<AdsFilters>) => {
@@ -682,11 +721,7 @@ export default function AdsPage() {
       if (overrideFilters.minGrowth !== undefined) setMinTrafficGrowth(overrideFilters.minGrowth);
       if (overrideFilters.maxGrowth !== undefined) setMaxTrafficGrowth(overrideFilters.maxGrowth);
     }
-    if (page === 1) {
-      invalidateAds();
-    } else {
-      setPage(1);
-    }
+    invalidateAds();
   };
 
   const resetFilters = () => {
@@ -731,12 +766,8 @@ export default function AdsPage() {
     setMinCatalogSize(undefined);
     setMaxCatalogSize(undefined);
     
-    // Reset to page 1
-    if (page === 1) {
-      invalidateAds();
-    } else {
-      setPage(1);
-    }
+    // Reset and refetch
+    invalidateAds();
   };
 
   const applyPreset = (preset: string) => {
@@ -749,12 +780,8 @@ export default function AdsPage() {
     setSelectedCountries(config.country ? config.country.split(',') : []);
     setSelectedStatus(config.status || 'all');
     if (config.sortBy) setSortBy(config.sortBy);
-    // Reset to page 1
-    if (page === 1) {
-      invalidateAds();
-    } else {
-      setPage(1);
-    }
+    // Refetch with new filters
+    invalidateAds();
   };
 
   const handleTrackShop = async (shopId: number, shopUrl?: string): Promise<boolean> => {
@@ -790,6 +817,13 @@ export default function AdsPage() {
   };
 
   const handleViewShop = (shopId: number) => router.push(`/dashboard/track/${shopId}`);
+
+  const handleOpenAnalytics = (shopId: number, shopUrl?: string, shopName?: string) => {
+    setAnalyticsShopId(shopId);
+    setAnalyticsShopUrl(shopUrl);
+    setAnalyticsShopName(shopName);
+    setAnalyticsDrawerOpen(true);
+  };
 
   const handleToggleFavorite = async (adId: number) => {
     toggleFavorite(adId, {
@@ -1328,87 +1362,59 @@ export default function AdsPage() {
             </div>
 
             {/* Right: Controls */}
-            <div className="d-flex align-items-center sort-wrapper gap-3 flex-wrap">
-              {/* Per Page Selector */}
-              <div className="d-flex align-items-center gap-2">
-                <span className="fw-500 text-sub fs-small" style={{ whiteSpace: 'nowrap' }}>
-                  AFFICHER:
-                </span>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <button className="custom-select-btn" type="button">
-                      <span>{perPage}</span>
-                      <i className="ri-arrow-down-s-line"></i>
-                    </button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start" className="sort-dropdown-menu" style={{ minWidth: '90px' }}>
-                    {PER_PAGE_OPTIONS.map((option) => (
-                      <DropdownMenuItem
-                        key={option}
-                        onClick={() => handlePerPageChange(option)}
-                        className={`sort-dropdown-item ${perPage === option ? 'active' : ''}`}
-                      >
-                        <span className="sort-item-label">{option}</span>
-                        {perPage === option && <i className="ri-check-line sort-item-check"></i>}
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
+            {/* Sort Selector */}
+            <div className="d-flex align-items-center sort-wrapper gap-2">
+              <span className="fw-500 text-sub fs-small" style={{ whiteSpace: 'nowrap' }}>
+                TRIER:
+              </span>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button className="custom-select-btn" type="button" style={{ minWidth: '200px' }}>
+                    <span className="d-flex align-items-center gap-2">
+                      <i className={SORT_OPTIONS.find(o => o.value === sortBy)?.icon || 'ri-sparkling-line'} style={{ color: 'var(--blue-copyfy)' }}></i>
+                      {SORT_OPTIONS.find(o => o.value === sortBy)?.label || 'Pertinence'}
+                    </span>
+                    <i className="ri-arrow-down-s-line"></i>
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="sort-dropdown-menu">
+                  {SORT_OPTIONS.map((option) => (
+                    <DropdownMenuItem
+                      key={option.value}
+                      onClick={() => { setSortBy(option.value); invalidateAds(); }}
+                      className={`sort-dropdown-item ${sortBy === option.value ? 'active' : ''}`}
+                    >
+                      <i className={`sort-item-icon ${option.icon}`}></i>
+                      <span className="sort-item-label">{option.label}</span>
+                      {sortBy === option.value && <i className="ri-check-line sort-item-check"></i>}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
               
-              {/* Sort Selector */}
-              <div className="d-flex align-items-center gap-2">
-                <span className="fw-500 text-sub fs-small" style={{ whiteSpace: 'nowrap' }}>
-                  TRIER:
-                </span>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <button className="custom-select-btn" type="button" style={{ minWidth: '200px' }}>
-                      <span className="d-flex align-items-center gap-2">
-                        <i className={SORT_OPTIONS.find(o => o.value === sortBy)?.icon || 'ri-sparkling-line'} style={{ color: 'var(--blue-copyfy)' }}></i>
-                        {SORT_OPTIONS.find(o => o.value === sortBy)?.label || 'Pertinence'}
-                      </span>
-                      <i className="ri-arrow-down-s-line"></i>
-                    </button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="sort-dropdown-menu">
-                    {SORT_OPTIONS.map((option) => (
-                      <DropdownMenuItem
-                        key={option.value}
-                        onClick={() => { setSortBy(option.value); setPage(1); }}
-                        className={`sort-dropdown-item ${sortBy === option.value ? 'active' : ''}`}
-                      >
-                        <i className={`sort-item-icon ${option.icon}`}></i>
-                        <span className="sort-item-label">{option.label}</span>
-                        {sortBy === option.value && <i className="ri-check-line sort-item-check"></i>}
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-                
-                {/* Sort Order Toggle */}
-                <button
-                  type="button"
-                  className={`sort-order-btn ${sortOrder === 'asc' ? 'active' : ''}`}
-                  onClick={() => { setSortOrder(prev => prev === 'desc' ? 'asc' : 'desc'); setPage(1); }}
-                  title={sortOrder === 'desc' ? 'Ordre decroissant - Cliquer pour croissant' : 'Ordre croissant - Cliquer pour decroissant'}
-                >
-                  {sortOrder === 'desc' ? (
-                    <i className="ri-sort-desc" style={{ fontSize: '16px' }}></i>
-                  ) : (
-                    <i className="ri-sort-asc" style={{ fontSize: '16px' }}></i>
-                  )}
-                </button>
-              </div>
+              {/* Sort Order Toggle */}
+              <button
+                type="button"
+                className={`sort-order-btn ${sortOrder === 'asc' ? 'active' : ''}`}
+                onClick={() => { setSortOrder(prev => prev === 'desc' ? 'asc' : 'desc'); invalidateAds(); }}
+                title={sortOrder === 'desc' ? 'Ordre decroissant - Cliquer pour croissant' : 'Ordre croissant - Cliquer pour decroissant'}
+              >
+                {sortOrder === 'desc' ? (
+                  <i className="ri-sort-desc" style={{ fontSize: '16px' }}></i>
+                ) : (
+                  <i className="ri-sort-asc" style={{ fontSize: '16px' }}></i>
+                )}
+              </button>
             </div>
           </div>
 
           {/* Error */}
           {error && <div className="alert alert-danger mb-4">{error}</div>}
 
-          {/* Ads Grid - CSS Grid for 3 columns */}
+          {/* Ads Grid - CSS Grid for 3 columns with Infinite Scroll */}
           <div>
-            {isFetching ? (
+            {/* Initial loading state */}
+            {isLoading ? (
               <div className="ads-grid-container">
                 {Array.from({ length: 9 }).map((_, i) => <AdCardSkeleton key={i} />)}
               </div>
@@ -1420,114 +1426,56 @@ export default function AdsPage() {
               </div>
             ) : (
               <>
+                {/* Ads Grid */}
                 <div className="ads-grid-container">
                   {ads.map((ad, index) => (
                     <AdCard
-                      key={ad.id}
+                      key={`${ad.id}-${index}`}
                       ad={ad}
                       index={index}
                       isTracked={ad.shopId ? trackedShopIds.has(ad.shopId) : false}
                       onTrackShop={handleTrackShop}
                       onToggleFavorite={handleToggleFavorite}
                       getActiveDays={getActiveDays}
+                      onOpenAnalytics={handleOpenAnalytics}
                     />
                   ))}
+                  
+                  {/* Loading more skeletons - shown inline in grid */}
+                  {isFetchingNextPage && (
+                    <>
+                      {Array.from({ length: 6 }).map((_, i) => (
+                        <AdCardSkeleton key={`loading-${i}`} />
+                      ))}
+                    </>
+                  )}
                 </div>
 
-                {/* Pagination */}
-                {pagination.totalPages > 1 && (
-                  <div className="d-flex justify-content-center align-items-center gap-2 py-4 mt-3 border-top">
-                    {/* Previous Button */}
-                    <button
-                      className="btn btn-outline-secondary btn-sm d-flex align-items-center gap-1"
-                      onClick={() => { handlePageChange(page - 1); prefetchPrevPage(); }}
-                      disabled={page === 1 || isFetching}
-                      style={{ minWidth: '100px' }}
-                    >
-                      <i className="ri-arrow-left-s-line"></i>
-                      Precedent
-                    </button>
-                    
-                    {/* Page Numbers */}
-                    <div className="d-flex align-items-center gap-1">
-                      {/* First page */}
-                      {page > 3 && (
-                        <>
-                          <button
-                            className="btn btn-outline-secondary btn-sm"
-                            onClick={() => handlePageChange(1)}
-                            disabled={isFetching}
-                            style={{ minWidth: '40px' }}
-                          >
-                            1
-                          </button>
-                          {page > 4 && <span className="px-1 text-muted">...</span>}
-                        </>
-                      )}
-                      
-                      {/* Pages around current */}
-                      {Array.from({ length: Math.min(5, pagination.totalPages) }, (_, i) => {
-                        let pageNum: number;
-                        if (pagination.totalPages <= 5) {
-                          pageNum = i + 1;
-                        } else if (page <= 3) {
-                          pageNum = i + 1;
-                        } else if (page >= pagination.totalPages - 2) {
-                          pageNum = pagination.totalPages - 4 + i;
-                        } else {
-                          pageNum = page - 2 + i;
-                        }
-                        
-                        if (pageNum < 1 || pageNum > pagination.totalPages) return null;
-                        if (pageNum === 1 && page > 3) return null;
-                        if (pageNum === pagination.totalPages && page < pagination.totalPages - 2) return null;
-                        
-                        return (
-                          <button
-                            key={pageNum}
-                            className={`btn btn-sm ${pageNum === page ? 'btn-primary' : 'btn-outline-secondary'}`}
-                            onClick={() => handlePageChange(pageNum)}
-                            disabled={isFetching}
-                            style={{ minWidth: '40px' }}
-                          >
-                            {pageNum}
-                          </button>
-                        );
-                      })}
-                      
-                      {/* Last page */}
-                      {page < pagination.totalPages - 2 && pagination.totalPages > 5 && (
-                        <>
-                          {page < pagination.totalPages - 3 && <span className="px-1 text-muted">...</span>}
-                          <button
-                            className="btn btn-outline-secondary btn-sm"
-                            onClick={() => handlePageChange(pagination.totalPages)}
-                            disabled={isFetching}
-                            style={{ minWidth: '40px' }}
-                          >
-                            {pagination.totalPages}
-                          </button>
-                        </>
-                      )}
+                {/* Infinite scroll trigger */}
+                <div ref={loadMoreRef} style={{ height: '20px', marginTop: '20px' }} />
+                
+                {/* Loading indicator at bottom */}
+                {isFetchingNextPage && (
+                  <div className="text-center py-4">
+                    <div className="spinner-border text-primary" role="status">
+                      <span className="visually-hidden">Chargement...</span>
                     </div>
-                    
-                    {/* Next Button */}
-                    <button
-                      className="btn btn-outline-secondary btn-sm d-flex align-items-center gap-1"
-                      onClick={() => { handlePageChange(page + 1); prefetchNextPage(); }}
-                      disabled={page === pagination.totalPages || isFetching}
-                      style={{ minWidth: '100px' }}
-                    >
-                      Suivant
-                      <i className="ri-arrow-right-s-line"></i>
-                    </button>
+                    <p className="text-muted mt-2 mb-0">Chargement de plus de publicités...</p>
                   </div>
                 )}
                 
-                {/* Page Info */}
+                {/* End of results message */}
+                {!hasNextPage && ads.length > 0 && (
+                  <div className="text-center py-4 text-muted">
+                    <i className="ri-check-double-line fs-4 d-block mb-2"></i>
+                    <span>Vous avez vu toutes les {pagination.total.toLocaleString('fr-FR')} publicités</span>
+                  </div>
+                )}
+                
+                {/* Ads count info */}
                 <div className="text-center py-2 text-muted fs-small">
                   <span>
-                    Page {page} sur {pagination.totalPages} ({pagination.total.toLocaleString('fr-FR')} publicites)
+                    {ads.length.toLocaleString('fr-FR')} publicités affichées sur {pagination.total.toLocaleString('fr-FR')}
                   </span>
                 </div>
               </>
@@ -1740,6 +1688,15 @@ export default function AdsPage() {
           }
         }
       `}</style>
+
+      {/* Shop Analytics Drawer */}
+      <ShopAnalyticsDrawer
+        isOpen={analyticsDrawerOpen}
+        onClose={() => setAnalyticsDrawerOpen(false)}
+        shopId={analyticsShopId}
+        shopUrl={analyticsShopUrl}
+        shopName={analyticsShopName}
+      />
     </>
   );
 }
