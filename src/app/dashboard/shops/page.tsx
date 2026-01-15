@@ -1498,10 +1498,12 @@ export default function ShopsPage() {
                           <div style={{ maxWidth: '120px' }}>
                             {shop.adsHistoryData && shop.adsHistoryData.length > 1 ? (
                               <MiniChart 
-                                data={shop.adsHistoryData} 
+                                data={shop.adsHistoryData}
+                                dates={shop.adsHistoryDates}
                                 trend={shop.adsChange >= 0 ? 'up' : 'down'}
                                 width={120}
                                 height={40}
+                                label="ads actives"
                               />
                             ) : (
                               <div style={{ width: '120px', height: '40px' }}></div>
@@ -1599,9 +1601,11 @@ export default function ShopsPage() {
                             {shop.trafficData && shop.trafficData.length > 1 ? (
                               <MiniChart 
                                 data={shop.trafficData} 
+                                dates={shop.trafficDates}
                                 trend={shop.trafficGrowth >= 0 ? 'up' : 'down'}
                                 width={120}
                                 height={40}
+                                label="visites"
                               />
                             ) : (
                               <div style={{ width: '120px', height: '40px' }}></div>

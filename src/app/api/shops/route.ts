@@ -465,14 +465,22 @@ export async function GET(request: NextRequest) {
         !c.includes('deleted_at') && !c.includes('disabled')
       )
       
+      // Column mappings for materialized view
+      const mvColumnReplace = (str: string) => str
+        .replace(/s\.active_ads/g, 'm.active_ads_count')
+        .replace(/s\.url/g, 'm.shop_url')
+        .replace(/s\.created_at/g, 'm.whois_at')
+        .replace(/s\./g, 'm.')
+        .replace(/t\./g, 'm.');
+      
       mainQuery = `
         WITH filtered_shops AS (
           SELECT m.*
           FROM top_shops_materialized m
           WHERE 1=1
-          ${mvShopConditions.length > 0 ? 'AND ' + mvShopConditions.map(c => c.replace(/s\.active_ads/g, 'm.active_ads_count').replace(/s\./g, 'm.')).join(' AND ') : ''}
-          ${mvTrafficConditions.length > 0 ? 'AND ' + mvTrafficConditions.map(c => c.replace(/t\./g, 'm.')).join(' AND ') : ''}
-          ${orderByClause.replace(/s\.active_ads/g, 'm.active_ads_count').replace(/s\./g, 'm.').replace(/t\./g, 'm.')}
+          ${mvShopConditions.length > 0 ? 'AND ' + mvShopConditions.map(c => mvColumnReplace(c)).join(' AND ') : ''}
+          ${mvTrafficConditions.length > 0 ? 'AND ' + mvTrafficConditions.map(c => mvColumnReplace(c)).join(' AND ') : ''}
+          ${mvColumnReplace(orderByClause)}
           LIMIT $${paramIndex}
           OFFSET $${paramIndex + 1}
         )
@@ -497,13 +505,15 @@ export async function GET(request: NextRequest) {
           fs.best_product_price,
           fs.best_product_image,
           tc.countries as traffic_countries,
+          tc.visits,
+          tc.dates,
           ba.best_ads,
           ah.ads_history,
           CASE WHEN us.shop_id IS NOT NULL THEN true ELSE false END as is_tracked
         FROM filtered_shops fs
         LEFT JOIN user_shops us ON us.shop_id = fs.id AND us.user_id = $${paramIndex + 2}
         LEFT JOIN LATERAL (
-          SELECT countries
+          SELECT countries, visits, dates
           FROM traffic
           WHERE shop_id = fs.id
           ORDER BY created_at DESC
@@ -687,19 +697,27 @@ export async function GET(request: NextRequest) {
       if (!needsShopsJoin && !needsTrafficJoin) {
         // FAST PATH: Count from materialized view
         // Filter out conditions that don't exist in materialized view
-        const mvShopConditions = shopConditions.filter(c => 
+        const mvShopConditionsCount = shopConditions.filter(c => 
           !c.includes('deleted_at') && !c.includes('disabled')
         )
-        const mvTrafficConditions = trafficConditions.filter(c => 
+        const mvTrafficConditionsCount = trafficConditions.filter(c => 
           !c.includes('deleted_at') && !c.includes('disabled')
         )
+        
+        // Column mappings for materialized view (same as main query)
+        const mvColReplace = (str: string) => str
+          .replace(/s\.active_ads/g, 'm.active_ads_count')
+          .replace(/s\.url/g, 'm.shop_url')
+          .replace(/s\.created_at/g, 'm.whois_at')
+          .replace(/s\./g, 'm.')
+          .replace(/t\./g, 'm.');
         
         countQuery = `
           SELECT COUNT(*) as total
           FROM top_shops_materialized m
           WHERE 1=1
-          ${mvShopConditions.length > 0 ? 'AND ' + mvShopConditions.map(c => c.replace(/s\.active_ads/g, 'm.active_ads_count').replace(/s\./g, 'm.')).join(' AND ') : ''}
-          ${mvTrafficConditions.length > 0 ? 'AND ' + mvTrafficConditions.map(c => c.replace(/t\./g, 'm.')).join(' AND ') : ''}
+          ${mvShopConditionsCount.length > 0 ? 'AND ' + mvShopConditionsCount.map(c => mvColReplace(c)).join(' AND ') : ''}
+          ${mvTrafficConditionsCount.length > 0 ? 'AND ' + mvTrafficConditionsCount.map(c => mvColReplace(c)).join(' AND ') : ''}
         `
       } else {
         // SLOWER PATH: Need to join with shops/traffic tables
@@ -738,13 +756,30 @@ export async function GET(request: NextRequest) {
       const trafficCurrent = shop.last_month_visits || 0
       const trafficPrevious = shop.last_last_month_visits || 0
       const trafficChange = trafficCurrent - trafficPrevious
+      
+      // Calculate growth rate properly - cap to reasonable values
+      let growthRate = Number(shop.growth_rate) || 0
+      // If the DB value seems wrong (> 1000 or < -100), recalculate from visits
+      if (Math.abs(growthRate) > 1000 || (trafficPrevious > 0 && Math.abs(growthRate) > 500)) {
+        if (trafficPrevious > 0) {
+          growthRate = ((trafficCurrent - trafficPrevious) / trafficPrevious) * 100
+        } else if (trafficCurrent > 0) {
+          growthRate = 100 // New traffic, 100% growth
+        } else {
+          growthRate = 0
+        }
+      }
+      // Cap to reasonable range: -100% to +500%
+      growthRate = Math.max(-100, Math.min(500, growthRate))
 
-      // Parse ads history (only available in slow path)
+      // Parse ads history with dates
       let adsHistoryData: number[] = []
+      let adsHistoryDates: string[] = []
       let adsChange = 0
       const currentAds = shop.active_ads || 0
       if (shop.ads_history && Array.isArray(shop.ads_history)) {
         adsHistoryData = shop.ads_history.map((h: any) => h.active_ads_count || 0)
+        adsHistoryDates = shop.ads_history.map((h: any) => h.date || '')
         if (adsHistoryData.length > 0) {
           adsChange = currentAds - adsHistoryData[0]
         }
@@ -807,11 +842,12 @@ export async function GET(request: NextRequest) {
         activeAds: Number(currentAds) || 0,
         adsChange: Number(adsChange) || 0,
         adsHistoryData,
+        adsHistoryDates,
         monthlyVisits: Number(trafficCurrent) || 0,
         trafficChange: Number(trafficChange) || 0,
-        trafficGrowth: Number(shop.growth_rate) || 0,
-        trafficData: trafficData.slice(-13), // Last ~90 days
-        trafficDates: trafficDates.slice(-13),
+        trafficGrowth: growthRate,
+        trafficData: trafficData.slice(-12), // Last ~3 months
+        trafficDates: trafficDates.slice(-12),
         estimatedMonthly: Number(shop.estimated_monthly) || 0,
         dailyRevenue: Math.round((Number(shop.estimated_monthly) || 0) / 30),
         marketCountries,

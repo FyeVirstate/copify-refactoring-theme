@@ -15,6 +15,7 @@ export interface Shop {
   activeAds: number
   adsChange: number
   adsHistoryData: number[]
+  adsHistoryDates: string[]
   monthlyVisits: number
   trafficChange: number
   trafficGrowth: number

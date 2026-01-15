@@ -65,10 +65,37 @@ export async function GET(request: NextRequest) {
     // Create a map of shopId -> traffic
     const trafficMap = new Map(trafficData.map(t => [t.shopId.toString(), t]))
 
+    // Fetch ads history for each shop (last 90 days)
+    const adsHistoryRaw = await prisma.$queryRawUnsafe<Array<{
+      shop_id: bigint
+      active_ads_count: number
+      created_at: Date
+    }>>(`
+      SELECT shop_id, active_ads_count, created_at
+      FROM shops_ads_active_history
+      WHERE shop_id = ANY($1::bigint[])
+        AND created_at >= NOW() - INTERVAL '90 days'
+      ORDER BY shop_id, created_at ASC
+    `, shopIds.map(id => BigInt(id)))
+
+    // Group ads history by shop_id
+    const adsHistoryMap = new Map<string, Array<{ count: number; date: string }>>()
+    for (const row of adsHistoryRaw) {
+      const key = row.shop_id.toString()
+      if (!adsHistoryMap.has(key)) {
+        adsHistoryMap.set(key, [])
+      }
+      adsHistoryMap.get(key)!.push({
+        count: row.active_ads_count || 0,
+        date: row.created_at.toISOString()
+      })
+    }
+
     // Transform data with traffic info
     const data = trackedShops.map(us => {
       const shop = us.shop
       const traffic = trafficMap.get(us.shopId.toString())
+      const adsHistory = adsHistoryMap.get(us.shopId.toString()) || []
       
       // Parse countries from traffic for market share
       let countries: Array<{ code: string; value: number }> = []
@@ -85,6 +112,14 @@ export async function GET(request: NextRequest) {
           }
         } catch { /* ignore */ }
       }
+
+      // Calculate ads change from history
+      let adsChange = 0
+      const currentAds = shop?.activeAds || 0
+      if (adsHistory.length > 0) {
+        const firstAds = adsHistory[0].count
+        adsChange = currentAds - firstAds
+      }
       
       return {
         id: Number(us.id),
@@ -100,6 +135,9 @@ export async function GET(request: NextRequest) {
           productsCount: shop.productsCount,
           theme: shop.theme,
           activeAds: shop.activeAds,
+          adsChange,
+          adsHistoryData: adsHistory.map(h => h.count),
+          adsHistoryDates: adsHistory.map(h => h.date),
           // Traffic data
           monthlyVisits: traffic?.lastMonthVisits ? Number(traffic.lastMonthVisits) : null,
           dailyRevenue: traffic?.estimatedMonthly ? Math.round(Number(traffic.estimatedMonthly) / 30) : null,

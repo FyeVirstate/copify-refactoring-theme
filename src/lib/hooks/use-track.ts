@@ -16,6 +16,9 @@ interface TrackedShop {
     productsCount: number | null
     theme: string | null
     activeAds: number | null
+    adsChange: number | null
+    adsHistoryData: number[]
+    adsHistoryDates: string[]
     // Traffic data
     monthlyVisits: number | null
     dailyRevenue: number | null

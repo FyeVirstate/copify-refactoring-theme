@@ -28,6 +28,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import MiniChart from "@/components/MiniChart";
 
 // Alert component for different message types
 function AlertBox({ type, message, onClose }: { 
@@ -509,7 +510,7 @@ function AnalyzeShopContent() {
                 <div 
                   ref={tableWrapperRef}
                   className="border position-relative d-none d-lg-block" 
-                  style={{ borderRadius: '6px', overflow: 'hidden', maxHeight: 'calc(100vh - 320px)', overflowY: 'auto' }}
+                  style={{ borderRadius: '6px', maxHeight: 'calc(100vh - 320px)', overflowY: 'auto', overflowX: 'visible' }}
                 >
                   {/* Mouse-following tooltip */}
                   {showTooltip && (
@@ -722,35 +723,47 @@ function AnalyzeShopContent() {
                             </div>
                           </TableCell>
 
-                          {/* Active Ads with Evolution - Laravel style */}
-                          <TableCell className="align-middle py-3 border-b-gray text-center">
-                            <div className="d-flex align-items-center justify-content-center gap-1">
-                              {/* Colored dot indicator */}
-                              <span 
-                                style={{ 
-                                  width: '8px', 
-                                  height: '8px', 
-                                  borderRadius: '50%', 
-                                  display: 'inline-block',
-                                  backgroundColor: (tracked.shop?.growthRate ?? 0) >= 0 ? '#22c55e' : '#ef4444',
-                                  flexShrink: 0
-                                }}
-                              ></span>
-                              {/* Number in bold black */}
-                              <span className="fw-600" style={{ color: '#1f2937' }}>
-                                {tracked.shop?.activeAds || 0}
-                              </span>
-                              {/* Percentage in smaller colored text */}
-                              {tracked.shop?.growthRate !== null && tracked.shop?.growthRate !== undefined && tracked.shop.growthRate !== 0 && (
+                          {/* Active Ads with Evolution Chart - Same design as shops page */}
+                          <TableCell className="align-middle py-3 border-b-gray text-center" style={{ overflow: 'visible', position: 'relative' }}>
+                            {/* Stats */}
+                            <div>
+                              <p className="mb-1 d-flex align-items-center justify-content-center gap-1">
                                 <span 
                                   style={{ 
-                                    fontSize: '11px',
-                                    fontWeight: 500,
-                                    color: tracked.shop.growthRate > 0 ? '#22c55e' : '#ef4444'
+                                    width: '8px', 
+                                    height: '8px', 
+                                    borderRadius: '50%', 
+                                    display: 'inline-block',
+                                    backgroundColor: (tracked.shop?.adsChange ?? 0) >= 0 ? '#22c55e' : '#ef4444',
+                                    flexShrink: 0
                                   }}
-                                >
-                                  ({tracked.shop.growthRate > 0 ? '+' : ''}{Math.round(tracked.shop.growthRate)}%)
-                                </span>
+                                ></span>
+                                <span className="fs-small fw-600">{tracked.shop?.activeAds || 0}</span>
+                                {tracked.shop?.adsChange !== null && tracked.shop?.adsChange !== undefined && tracked.shop.adsChange !== 0 && (
+                                  <span 
+                                    className={`fs-xs ${(tracked.shop.adsChange ?? 0) >= 0 ? 'text-success' : 'text-danger'}`}
+                                  >
+                                    {' '}({tracked.shop.adsChange > 0 ? '+' : ''}{tracked.shop.adsChange})
+                                  </span>
+                                )}
+                              </p>
+                            </div>
+                            {/* Mini Chart - BELOW the number */}
+                            <div 
+                              style={{ maxWidth: '120px', margin: '0 auto', overflow: 'visible' }}
+                              onMouseEnter={() => setShowTooltip(false)}
+                            >
+                              {tracked.shop?.adsHistoryData && tracked.shop.adsHistoryData.length > 1 ? (
+                                <MiniChart 
+                                  data={tracked.shop.adsHistoryData}
+                                  dates={tracked.shop.adsHistoryDates}
+                                  trend={(tracked.shop.adsChange ?? 0) >= 0 ? 'up' : 'down'}
+                                  width={120}
+                                  height={40}
+                                  label="ads actives"
+                                />
+                              ) : (
+                                <div style={{ width: '120px', height: '40px' }}></div>
                               )}
                             </div>
                           </TableCell>
@@ -1002,28 +1015,40 @@ function AnalyzeShopContent() {
                             )}
                           </div>
 
-                          {/* Active Ads */}
-                          <div className="d-flex align-items-center gap-1 bg-light px-2 py-1 rounded">
-                            <span 
-                              style={{ 
-                                width: '6px', 
-                                height: '6px', 
-                                borderRadius: '50%', 
-                                display: 'inline-block',
-                                backgroundColor: (tracked.shop?.growthRate ?? 0) >= 0 ? '#22c55e' : '#ef4444'
-                              }}
-                            ></span>
-                            <span className="fw-600">{tracked.shop?.activeAds || 0}</span>
-                            {tracked.shop?.growthRate !== null && tracked.shop?.growthRate !== undefined && tracked.shop.growthRate !== 0 && (
+                          {/* Active Ads with Chart */}
+                          <div className="d-flex flex-column bg-light px-2 py-1 rounded">
+                            <div className="d-flex align-items-center gap-1">
                               <span 
                                 style={{ 
-                                  fontSize: '10px',
-                                  fontWeight: 500,
-                                  color: tracked.shop.growthRate > 0 ? '#22c55e' : '#ef4444'
+                                  width: '6px', 
+                                  height: '6px', 
+                                  borderRadius: '50%', 
+                                  display: 'inline-block',
+                                  backgroundColor: (tracked.shop?.adsChange ?? 0) >= 0 ? '#22c55e' : '#ef4444'
                                 }}
-                              >
-                                ({tracked.shop.growthRate > 0 ? '+' : ''}{Math.round(tracked.shop.growthRate)}%)
-                              </span>
+                              ></span>
+                              <span className="fw-600">{tracked.shop?.activeAds || 0}</span>
+                              {tracked.shop?.adsChange !== null && tracked.shop?.adsChange !== undefined && tracked.shop.adsChange !== 0 && (
+                                <span 
+                                  style={{ 
+                                    fontSize: '10px',
+                                    fontWeight: 500,
+                                    color: tracked.shop.adsChange > 0 ? '#22c55e' : '#ef4444'
+                                  }}
+                                >
+                                  ({tracked.shop.adsChange > 0 ? '+' : ''}{tracked.shop.adsChange})
+                                </span>
+                              )}
+                            </div>
+                            {tracked.shop?.adsHistoryData && tracked.shop.adsHistoryData.length > 1 && (
+                              <MiniChart 
+                                data={tracked.shop.adsHistoryData}
+                                dates={tracked.shop.adsHistoryDates}
+                                trend={(tracked.shop.adsChange ?? 0) >= 0 ? 'up' : 'down'}
+                                width={80}
+                                height={30}
+                                label="ads actives"
+                              />
                             )}
                           </div>
                         </div>
@@ -1149,6 +1174,15 @@ function AnalyzeShopContent() {
       )}
 
       <style jsx global>{`
+        /* Recharts tooltip styling */
+        .recharts-tooltip-wrapper {
+          z-index: 9999 !important;
+          pointer-events: none !important;
+        }
+        .recharts-wrapper {
+          overflow: visible !important;
+        }
+        
         .bg-warning-light {
           background-color: #fef3c7 !important;
         }
