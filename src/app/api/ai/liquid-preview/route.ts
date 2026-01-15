@@ -1734,7 +1734,7 @@ function generateWysiwygScript(): string {
     }
     /* Prevent scroll chaining to parent */
     * {
-      overscroll-behavior: contain !important;
+      //overscroll-behavior: contain !important;
     }
   \`;
   if (!document.getElementById('wysiwyg-scroll-prevention')) {

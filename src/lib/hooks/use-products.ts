@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useCallback, useRef } from 'react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useCallback } from 'react'
 
 interface Product {
   id: number
@@ -63,167 +64,171 @@ export interface ProductsFilters {
   domains?: string
   themes?: string
   applications?: string
+  socialNetworks?: string
   shopCreationDate?: string
 }
 
-export function useProducts() {
-  const [products, setProducts] = useState<Product[]>([])
-  const [isLoading, setIsLoading] = useState(false)
-  const [isLoadingMore, setIsLoadingMore] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [hasMore, setHasMore] = useState(true)
-  const [pagination, setPagination] = useState({
-    page: 1,
-    perPage: 20,
-    total: 0,
-    totalPages: 0,
-  })
-  
-  // AbortController ref to cancel previous requests
-  const abortControllerRef = useRef<AbortController | null>(null)
-  // Request counter to track the latest request
-  const requestIdRef = useRef(0)
-
-  // Fetch products with filters (replace mode)
-  const fetchProducts = useCallback(async (
-    filters: ProductsFilters = {},
-    page = 1,
-    perPage = 20
-  ) => {
-    // Cancel any pending request
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort()
-    }
-    
-    // Create new AbortController for this request
-    const controller = new AbortController()
-    abortControllerRef.current = controller
-    
-    // Increment request ID to track this request
-    const currentRequestId = ++requestIdRef.current
-    
-    setIsLoading(true)
-    setError(null)
-
-    try {
-      const params = new URLSearchParams()
-      params.set('page', page.toString())
-      params.set('perPage', perPage.toString())
-
-      Object.entries(filters).forEach(([key, value]) => {
-        if (value !== undefined && value !== null && value !== '') {
-          params.set(key, value.toString())
-        }
-      })
-
-      const res = await fetch(`/api/products?${params}`, {
-        signal: controller.signal
-      })
-      
-      // If this is not the latest request, ignore the response
-      if (currentRequestId !== requestIdRef.current) {
-        return null
-      }
-      
-      const data = await res.json()
-
-      if (data.success) {
-        setProducts(data.data)
-        setPagination(data.pagination)
-        setHasMore(data.pagination.page < data.pagination.totalPages)
-        return data
-      } else {
-        throw new Error(data.error)
-      }
-    } catch (err) {
-      // Ignore abort errors
-      if (err instanceof Error && err.name === 'AbortError') {
-        return null
-      }
-      setError(err instanceof Error ? err.message : 'Failed to fetch products')
-      throw err
-    } finally {
-      // Only set loading to false if this is still the latest request
-      if (currentRequestId === requestIdRef.current) {
-        setIsLoading(false)
-      }
-    }
-  }, [])
-
-  // Fetch more products (append mode for infinite scroll)
-  const fetchMoreProducts = useCallback(async (
-    filters: ProductsFilters = {},
-    perPage = 20
-  ) => {
-    if (isLoadingMore || !hasMore) return null
-
-    const nextPage = pagination.page + 1
-    setIsLoadingMore(true)
-    setError(null)
-
-    try {
-      const params = new URLSearchParams()
-      params.set('page', nextPage.toString())
-      params.set('perPage', perPage.toString())
-
-      Object.entries(filters).forEach(([key, value]) => {
-        if (value !== undefined && value !== null && value !== '') {
-          params.set(key, value.toString())
-        }
-      })
-
-      const res = await fetch(`/api/products?${params}`)
-      const data = await res.json()
-
-      if (data.success) {
-        setProducts(prev => [...prev, ...data.data])
-        setPagination(data.pagination)
-        setHasMore(data.pagination.page < data.pagination.totalPages)
-        return data
-      } else {
-        throw new Error(data.error)
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch more products')
-      throw err
-    } finally {
-      setIsLoadingMore(false)
-    }
-  }, [pagination.page, isLoadingMore, hasMore])
-
-  // Toggle product favorite
-  const toggleFavorite = async (productId: number) => {
-    const res = await fetch('/api/products/favorite', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ productId }),
-    })
-
-    const data = await res.json()
-
-    if (!data.success) {
-      throw new Error(data.error)
-    }
-
-    // Update local state
-    setProducts(prev => prev.map(product => 
-      product.id === productId 
-        ? { ...product, isFavorited: data.data.isFavorited }
-        : product
-    ))
-
-    return data
+interface ProductsResponse {
+  success: boolean
+  data: Product[]
+  pagination: {
+    page: number
+    perPage: number
+    total: number
+    totalPages: number
   }
-
-  return {
-    products,
-    pagination,
-    isLoading,
-    isLoadingMore,
-    hasMore,
-    error,
-    fetchProducts,
-    fetchMoreProducts,
-    toggleFavorite,
+  _timings?: {
+    totalMs: number
+    totalSec: string
   }
 }
+
+// API fetcher function
+async function fetchProducts(
+  filters: ProductsFilters,
+  page: number,
+  perPage: number,
+  signal?: AbortSignal
+): Promise<ProductsResponse> {
+  const params = new URLSearchParams()
+  params.set('page', page.toString())
+  params.set('perPage', perPage.toString())
+
+  Object.entries(filters).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== '') {
+      params.set(key, value.toString())
+    }
+  })
+
+  const res = await fetch(`/api/products?${params}`, { signal })
+  
+  if (!res.ok) {
+    throw new Error('Failed to fetch products')
+  }
+  
+  const data = await res.json()
+  
+  if (!data.success) {
+    throw new Error(data.error || 'Failed to fetch products')
+  }
+  
+  return data
+}
+
+// Toggle favorite API
+async function toggleFavoriteApi(productId: number): Promise<{ success: boolean; data: { isFavorited: boolean } }> {
+  const res = await fetch('/api/products/favorite', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ productId }),
+  })
+
+  const data = await res.json()
+
+  if (!data.success) {
+    throw new Error(data.error || 'Failed to toggle favorite')
+  }
+
+  return data
+}
+
+// Generate query key for caching
+function getProductsQueryKey(filters: ProductsFilters, page: number, perPage: number) {
+  return ['products', { filters, page, perPage }] as const
+}
+
+export function useProducts(
+  filters: ProductsFilters = {},
+  page: number = 1,
+  perPage: number = 25
+) {
+  const queryClient = useQueryClient()
+
+  // Main products query with TanStack Query
+  const {
+    data,
+    isLoading,
+    isFetching,
+    error,
+    refetch,
+  } = useQuery({
+    queryKey: getProductsQueryKey(filters, page, perPage),
+    queryFn: ({ signal }) => fetchProducts(filters, page, perPage, signal),
+    // Keep previous data while fetching new page
+    placeholderData: (previousData) => previousData,
+  })
+
+  // Favorite mutation
+  const favoriteMutation = useMutation({
+    mutationFn: toggleFavoriteApi,
+    onSuccess: (result, productId) => {
+      // Update the cache optimistically
+      queryClient.setQueryData(
+        getProductsQueryKey(filters, page, perPage),
+        (old: ProductsResponse | undefined) => {
+          if (!old) return old
+          return {
+            ...old,
+            data: old.data.map(product =>
+              product.id === productId
+                ? { ...product, isFavorited: result.data.isFavorited }
+                : product
+            ),
+          }
+        }
+      )
+    },
+  })
+
+  // Prefetch next page for smoother pagination
+  const prefetchNextPage = useCallback(() => {
+    if (data && page < data.pagination.totalPages) {
+      queryClient.prefetchQuery({
+        queryKey: getProductsQueryKey(filters, page + 1, perPage),
+        queryFn: ({ signal }) => fetchProducts(filters, page + 1, perPage, signal),
+      })
+    }
+  }, [queryClient, filters, page, perPage, data])
+
+  // Prefetch previous page
+  const prefetchPrevPage = useCallback(() => {
+    if (page > 1) {
+      queryClient.prefetchQuery({
+        queryKey: getProductsQueryKey(filters, page - 1, perPage),
+        queryFn: ({ signal }) => fetchProducts(filters, page - 1, perPage, signal),
+      })
+    }
+  }, [queryClient, filters, page, perPage])
+
+  // Invalidate and refetch
+  const invalidateProducts = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ['products'] })
+  }, [queryClient])
+
+  return {
+    // Data
+    products: data?.data ?? [],
+    pagination: data?.pagination ?? { page: 1, perPage: 25, total: 0, totalPages: 0 },
+    timings: data?._timings,
+    
+    // Loading states
+    isLoading, // First load
+    isFetching, // Any fetch (including background)
+    
+    // Error
+    error: error instanceof Error ? error.message : null,
+    
+    // Actions
+    refetch,
+    toggleFavorite: favoriteMutation.mutate,
+    isTogglingFavorite: favoriteMutation.isPending,
+    
+    // Prefetch for smooth pagination
+    prefetchNextPage,
+    prefetchPrevPage,
+    invalidateProducts,
+  }
+}
+
+// Export types
+export type { Product, ProductsResponse }

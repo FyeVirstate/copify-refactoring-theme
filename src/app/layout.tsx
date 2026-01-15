@@ -5,6 +5,7 @@ import "./globals.css";
 import "@/styles/custom.scss";
 import "flag-icons/css/flag-icons.css";
 import AuthProvider from "@/providers/session-provider";
+import QueryProvider from "@/providers/query-provider";
 import BootstrapClient from "@/components/BootstrapClient";
 import { ToastProvider } from "@/components/ui/toast";
 
@@ -64,10 +65,12 @@ export default function RootLayout({
         suppressHydrationWarning
       >
         <AuthProvider>
-          <ToastProvider>
-            <BootstrapClient />
-            {children}
-          </ToastProvider>
+          <QueryProvider>
+            <ToastProvider>
+              <BootstrapClient />
+              {children}
+            </ToastProvider>
+          </QueryProvider>
         </AuthProvider>
       </body>
     </html>

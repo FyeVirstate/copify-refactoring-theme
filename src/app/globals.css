@@ -534,3 +534,164 @@ body {
   border: 0;
 }
 
+/* Custom Select Button - Dropdown Trigger */
+.custom-select-btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 14px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-sub);
+  background: white;
+  border: 1px solid var(--stroke-sub);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-height: 40px;
+}
+
+.custom-select-btn:hover {
+  border-color: var(--blue-copyfy);
+  background: var(--bg-primary-accent);
+}
+
+.custom-select-btn:focus {
+  outline: none;
+  border-color: var(--blue-copyfy);
+  box-shadow: 0 0 0 3px rgba(12, 108, 251, 0.12);
+}
+
+.custom-select-btn i.ri-arrow-down-s-line {
+  color: var(--text-soft);
+  font-size: 16px;
+  transition: transform 0.2s ease;
+}
+
+.custom-select-btn:hover i.ri-arrow-down-s-line {
+  color: var(--blue-copyfy);
+}
+
+[data-state="open"] > .custom-select-btn {
+  border-color: var(--blue-copyfy);
+  background: var(--bg-primary-accent);
+}
+
+[data-state="open"] > .custom-select-btn i.ri-arrow-down-s-line {
+  transform: rotate(180deg);
+  color: var(--blue-copyfy);
+}
+
+/* Sort Order Toggle Button */
+.sort-order-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border: 1px solid var(--stroke-sub);
+  border-radius: 6px;
+  background: white;
+  color: var(--text-sub);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.sort-order-btn:hover {
+  background: var(--bg-primary-accent);
+  border-color: var(--blue-copyfy);
+  color: var(--blue-copyfy);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(12, 108, 251, 0.15);
+}
+
+.sort-order-btn.active {
+  background: var(--blue-copyfy);
+  border-color: var(--blue-copyfy);
+  color: white;
+}
+
+.sort-order-btn.active:hover {
+  background: #0a5cd9;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(12, 108, 251, 0.25);
+}
+
+.sort-order-btn i {
+  transition: transform 0.2s ease;
+}
+
+.sort-order-btn:hover i {
+  transform: scale(1.15);
+}
+
+/* Sort Dropdown Menu */
+.sort-dropdown-menu {
+  min-width: 240px !important;
+  padding: 6px !important;
+}
+
+.sort-dropdown-item {
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  padding: 10px 12px !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  color: var(--text-sub) !important;
+  border-radius: 6px !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease !important;
+}
+
+.sort-dropdown-item:hover {
+  background: var(--blue-copyfy) !important;
+  color: white !important;
+}
+
+.sort-dropdown-item:hover .sort-item-icon,
+.sort-dropdown-item:hover .sort-item-label,
+.sort-dropdown-item:hover .sort-item-check {
+  color: white !important;
+}
+
+.sort-dropdown-item.active {
+  background: var(--bg-primary-accent) !important;
+  color: var(--blue-copyfy) !important;
+}
+
+.sort-dropdown-item.active .sort-item-icon,
+.sort-dropdown-item.active .sort-item-label {
+  color: var(--blue-copyfy) !important;
+}
+
+.sort-dropdown-item.active:hover {
+  background: var(--blue-copyfy) !important;
+}
+
+.sort-dropdown-item.active:hover .sort-item-icon,
+.sort-dropdown-item.active:hover .sort-item-label,
+.sort-dropdown-item.active:hover .sort-item-check {
+  color: white !important;
+}
+
+.sort-item-icon {
+  font-size: 16px;
+  color: var(--text-soft);
+  transition: color 0.15s ease;
+}
+
+.sort-item-label {
+  flex: 1;
+  transition: color 0.15s ease;
+}
+
+.sort-item-check {
+  margin-left: auto;
+  font-size: 14px;
+  color: var(--blue-copyfy);
+  transition: color 0.15s ease;
+}
+

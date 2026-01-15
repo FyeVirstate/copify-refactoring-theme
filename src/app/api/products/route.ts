@@ -35,11 +35,31 @@ interface ProductRow {
 }
 
 export async function GET(request: NextRequest) {
+  // ============================================
+  // TIMING LOGS
+  // ============================================
+  const timings = {
+    start: Date.now(),
+    auth: 0,
+    parseParams: 0,
+    categoryLookup: 0,
+    mainQuery: 0,
+    countQuery: 0,
+    transform: 0,
+    total: 0,
+  }
+  
+  console.log('\n[Products API] ========== REQUEST START ==========')
+  console.log(`[Products API] Time: ${new Date().toISOString()}`)
+
   if (!prisma) {
     return NextResponse.json({ error: 'Database not available' }, { status: 500 })
   }
 
+  const authStart = Date.now()
   const session = await auth()
+  timings.auth = Date.now() - authStart
+  console.log(`[Products API] ⏱️  Auth: ${timings.auth}ms (${(timings.auth/1000).toFixed(2)}s)`)
   
   if (!session?.user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -71,6 +91,7 @@ export async function GET(request: NextRequest) {
   const minActiveAds = searchParams.get('minActiveAds')
   const maxActiveAds = searchParams.get('maxActiveAds')
   const sortBy = searchParams.get('sortBy') || 'recommended'
+  const sortOrder = searchParams.get('sortOrder') || 'desc'
   
   // New filters from shops page
   const minCatalogSize = searchParams.get('minCatalogSize')
@@ -79,103 +100,155 @@ export async function GET(request: NextRequest) {
   const languages = searchParams.get('languages')?.split(',').filter(Boolean) || []
   const domains = searchParams.get('domains')?.split(',').filter(Boolean) || []
   const themes = searchParams.get('themes')?.split(',').filter(Boolean) || []
-  const applications = searchParams.get('applications')?.split(',').filter(Boolean) || []
+  // Support both 'apps' and 'applications' parameter names
+  const applications = (searchParams.get('applications') || searchParams.get('apps'))?.split(',').filter(Boolean) || []
+  const socialNetworks = searchParams.get('socialNetworks')?.split(',').filter(Boolean) || []
   const shopCreationDate = searchParams.get('shopCreationDate') || ''
   const minTrustpilotRating = searchParams.get('minTrustpilotRating')
   const maxTrustpilotRating = searchParams.get('maxTrustpilotRating')
   const minTrustpilotReviews = searchParams.get('minTrustpilotReviews')
   const maxTrustpilotReviews = searchParams.get('maxTrustpilotReviews')
 
+  timings.parseParams = Date.now() - timings.start - timings.auth
+  console.log(`[Products API] ⏱️  Parse Params: ${timings.parseParams}ms`)
+  console.log(`[Products API] 📋 Filters: page=${page}, perPage=${perPage}, sortBy=${sortBy}, search=${search || 'none'}, currency=${currency || 'all'}, country=${country || 'all'}`)
+
   try {
-    // Split conditions into: base (products/shops only) and traffic-based
-    const baseConditions: string[] = []
-    const trafficConditions: string[] = []
+    // ============================================
+    // USING top_products_materialized (FAST - 373k rows vs 44M)
+    // Same filters, just different table source
+    // ============================================
+    const conditions: string[] = []
     const params: any[] = []
     let paramIndex = 1
+    
+    // Check if we need to JOIN with shops table (for pixels, themes, apps, merchant_name)
+    const needsShopsJoin = pixels || themes.length > 0 || applications.length > 0 || search
+    // Check if we need to JOIN with traffic table (for social networks filter)
+    const needsTrafficJoin = socialNetworks.length > 0
 
     // ============================================
-    // BASE FILTERS ON PRODUCTS/SHOPS TABLES (FAST)
+    // BASE FILTERS (like Laravel)
     // ============================================
     
+    // Base filters from Laravel materialized view
+    conditions.push(`m.price >= 0.5`)
+    conditions.push(`m.estimated_monthly > 0`)
+    conditions.push(`m.estimated_monthly < 100000000`)
+    
+    // Revenue/traffic ratio filter (from Laravel)
+    conditions.push(`(
+      m.last_month_visits <= 0
+      OR (m.last_month_visits > 0 AND m.last_month_visits <= 21474836 AND m.estimated_monthly <= (m.last_month_visits * 100))
+      OR (m.last_month_visits > 21474836 AND m.estimated_monthly <= 2147483600)
+    )`)
+    
     // 1. Exclude shipping protection products
-    baseConditions.push(`p.title != 'Shipping Protection'`)
+    conditions.push(`m.title != 'Shipping Protection'`)
 
-    // Active ads filter (on shops table - indexed)
+    // Active ads filter (now on materialized view)
     if (minActiveAds) {
-      baseConditions.push(`s.active_ads >= $${paramIndex}`)
+      conditions.push(`m.active_ads_count >= $${paramIndex}`)
       params.push(parseInt(minActiveAds))
       paramIndex++
     }
     if (maxActiveAds) {
-      baseConditions.push(`s.active_ads <= $${paramIndex}`)
+      conditions.push(`m.active_ads_count <= $${paramIndex}`)
       params.push(parseInt(maxActiveAds))
       paramIndex++
     }
 
-    // Currency filter (on shops table - indexed)
+    // Currency filter (now on materialized view)
     if (currency) {
       const currencies = currency.split(',').map(c => c.trim()).filter(c => c)
       if (currencies.length > 0) {
-        baseConditions.push(`s.currency IN (${currencies.map((_, i) => `$${paramIndex + i}`).join(', ')})`)
+        conditions.push(`m.currency IN (${currencies.map((_, i) => `$${paramIndex + i}`).join(', ')})`)
         params.push(...currencies)
         paramIndex += currencies.length
       }
     }
 
-    // Country filter (on shops table - indexed)
+    // Country filter (now on materialized view)
     if (country) {
       const countries = country.split(',').map(c => c.trim()).filter(c => c)
       if (countries.length > 0) {
-        baseConditions.push(`s.country IN (${countries.map((_, i) => `$${paramIndex + i}`).join(', ')})`)
+        conditions.push(`m.country IN (${countries.map((_, i) => `$${paramIndex + i}`).join(', ')})`)
         params.push(...countries)
         paramIndex += countries.length
       }
     }
 
-    // Origins filter - shop location country (uses same 'country' column)
+    // Origins filter - shop location country
     if (origins.length > 0) {
       const originPlaceholders = origins.map((_, i) => `$${paramIndex + i}`).join(', ')
-      baseConditions.push(`s.country IN (${originPlaceholders})`)
+      conditions.push(`m.country IN (${originPlaceholders})`)
       params.push(...origins)
       paramIndex += origins.length
     }
 
-    // Search filter
+    // Search filter (needs shops join for merchant_name)
     if (search) {
       const searchLower = `%${search.toLowerCase()}%`
-      baseConditions.push(`(
-        LOWER(p.title) LIKE $${paramIndex} OR 
-        LOWER(p.handle) LIKE $${paramIndex} OR 
-        LOWER(s.url) LIKE $${paramIndex} OR
-        LOWER(s.merchant_name) LIKE $${paramIndex}
+      conditions.push(`(
+        LOWER(m.title) ILIKE $${paramIndex} OR 
+        LOWER(m.product_handle) ILIKE $${paramIndex} OR 
+        LOWER(m.shop_url) ILIKE $${paramIndex} OR
+        LOWER(s.merchant_name) ILIKE $${paramIndex}
       )`)
       params.push(searchLower)
       paramIndex++
     }
 
-    // Shop creation date filter
+    // Shop creation date filter (uses whois_at from materialized view)
     if (shopCreationDate && shopCreationDate.includes(' - ')) {
       const [startDate, endDate] = shopCreationDate.split(' - ')
-      baseConditions.push(`s.created_at >= $${paramIndex}`)
+      conditions.push(`m.whois_at >= $${paramIndex}`)
       params.push(new Date(startDate))
       paramIndex++
-      baseConditions.push(`s.created_at <= $${paramIndex}`)
+      conditions.push(`m.whois_at <= $${paramIndex}`)
       params.push(new Date(endDate))
       paramIndex++
     }
 
-    // Pixels filter
+    // Pixels filter (needs shops join)
     if (pixels) {
       const pixelList = pixels.split(',').map(p => p.trim()).filter(p => p)
       if (pixelList.length > 0) {
         const pixelConditions = pixelList.map((_, i) => `s.pixels ILIKE $${paramIndex + i}`).join(' OR ')
-        baseConditions.push(`(${pixelConditions})`)
+        conditions.push(`(${pixelConditions})`)
         params.push(...pixelList.map(p => `%${p}%`))
         paramIndex += pixelList.length
       }
     }
 
-    // Languages filter - uses 'locale' column in database
+    // Social Networks filter (needs traffic join) - filters by traffic source in traffic.social
+    if (socialNetworks.length > 0) {
+      // Map frontend network names to database keys (case-sensitive in JSON)
+      const networkMap: Record<string, string[]> = {
+        'Facebook': ['Facebook', 'Facebook Messenger'],
+        'Instagram': ['Instagram'],
+        'TikTok': ['Tiktok', 'TikTok'],
+        'YouTube': ['Youtube', 'YouTube'],
+        'Pinterest': ['Pinterest'],
+        'Twitter': ['Twitter', 'X-twitter'],
+        'Snapchat': ['Snapchat'],
+        'Reddit': ['Reddit'],
+      }
+      
+      const networkConditions: string[] = []
+      socialNetworks.forEach(network => {
+        const dbKeys = networkMap[network] || [network]
+        // Check if any of the mapped keys exist in traffic.social->'data'
+        const keyConditions = dbKeys.map(key => `t.social::jsonb->'data' ? '${key}'`).join(' OR ')
+        networkConditions.push(`(${keyConditions})`)
+      })
+      
+      if (networkConditions.length > 0) {
+        conditions.push(`(${networkConditions.join(' OR ')})`)
+      }
+    }
+
+    // Languages filter - uses 'locale' column (now on materialized view)
     if (languages.length > 0) {
       const languageMap: Record<string, string[]> = {
         'English': ['en', 'en-US', 'en-GB', 'en-AU', 'en-CA'],
@@ -203,136 +276,126 @@ export async function GET(request: NextRequest) {
       }
       
       if (localeCodes.length > 0) {
-        const langConditions = localeCodes.map((_, i) => `s.locale ILIKE $${paramIndex + i}`).join(' OR ')
-        baseConditions.push(`(${langConditions})`)
+        const langConditions = localeCodes.map((_, i) => `m.locale ILIKE $${paramIndex + i}`).join(' OR ')
+        conditions.push(`(${langConditions})`)
         params.push(...localeCodes.map(l => `${l}%`))
         paramIndex += localeCodes.length
       }
     }
 
-    // Domains filter - search in 'url' column
+    // Domains filter - search in 'shop_url' column
     if (domains.length > 0) {
-      const domainConditions = domains.map((_, i) => `s.url ILIKE $${paramIndex + i}`).join(' OR ')
-      baseConditions.push(`(${domainConditions})`)
+      const domainConditions = domains.map((_, i) => `m.shop_url ILIKE $${paramIndex + i}`).join(' OR ')
+      conditions.push(`(${domainConditions})`)
       params.push(...domains.map(d => `%${d}`))
       paramIndex += domains.length
     }
 
-    // Themes filter - search in 'theme' column
+    // Themes filter (needs shops join)
     if (themes.length > 0) {
       const themeConditions = themes.map((_, i) => `s.theme ILIKE $${paramIndex + i}`).join(' OR ')
-      baseConditions.push(`(${themeConditions})`)
+      conditions.push(`(${themeConditions})`)
       params.push(...themes.map(t => `%${t}%`))
       paramIndex += themes.length
     }
 
-    // Applications filter - search in 'apps' text column
+    // Applications filter (needs shops join)
     if (applications.length > 0) {
       const appConditions = applications.map((_, i) => `s.apps ILIKE $${paramIndex + i}`).join(' OR ')
-      baseConditions.push(`(${appConditions})`)
+      conditions.push(`(${appConditions})`)
       params.push(...applications.map(a => `%${a}%`))
       paramIndex += applications.length
     }
 
-    // Catalog size filter (products_count)
+    // Catalog size filter (products_count is in materialized view)
     if (minCatalogSize) {
-      baseConditions.push(`s.products_count >= $${paramIndex}`)
+      conditions.push(`m.products_count >= $${paramIndex}`)
       params.push(parseInt(minCatalogSize))
       paramIndex++
     }
     if (maxCatalogSize) {
-      baseConditions.push(`s.products_count <= $${paramIndex}`)
+      conditions.push(`m.products_count <= $${paramIndex}`)
       params.push(parseInt(maxCatalogSize))
       paramIndex++
     }
 
-    // Sort-specific filters on shops table
+    // Sort-specific filters
     if (sortBy === 'best_value') {
-      baseConditions.push(`s.active_ads > 0`)
+      conditions.push(`m.active_ads_count > 0`)
     }
 
-    // ============================================
-    // TRAFFIC-BASED FILTERS (applied after CTE join)
-    // ============================================
-    
-    // Base traffic filters - revenue bounds
-    trafficConditions.push(`COALESCE(t.estimated_monthly, 0) > 0`)
-    trafficConditions.push(`COALESCE(t.estimated_monthly, 0) < 100000000`)
-
-    // Price filters - use EXISTS subquery (no join needed)
-    // Base price filter: minimum price >= 0.5
-    baseConditions.push(`EXISTS (SELECT 1 FROM product_variants pv WHERE pv.product_id = p.id AND pv.price >= 0.5)`)
-    
+    // Price filters (price is already in materialized view)
     if (minPrice) {
-      baseConditions.push(`EXISTS (SELECT 1 FROM product_variants pv WHERE pv.product_id = p.id AND pv.price >= $${paramIndex})`)
+      conditions.push(`m.price >= $${paramIndex}`)
       params.push(parseFloat(minPrice))
       paramIndex++
     }
     if (maxPrice) {
-      baseConditions.push(`EXISTS (SELECT 1 FROM product_variants pv WHERE pv.product_id = p.id AND pv.price <= $${paramIndex})`)
+      conditions.push(`m.price <= $${paramIndex}`)
       params.push(parseFloat(maxPrice))
       paramIndex++
     }
 
     // Revenue filter
     if (minRevenue) {
-      trafficConditions.push(`COALESCE(t.estimated_monthly, 0) >= $${paramIndex}`)
+      conditions.push(`m.estimated_monthly >= $${paramIndex}`)
       params.push(parseFloat(minRevenue))
       paramIndex++
     }
     if (maxRevenue) {
-      trafficConditions.push(`COALESCE(t.estimated_monthly, 0) <= $${paramIndex}`)
+      conditions.push(`m.estimated_monthly <= $${paramIndex}`)
       params.push(parseFloat(maxRevenue))
       paramIndex++
     }
 
     // Orders filter
     if (minOrders) {
-      trafficConditions.push(`COALESCE(t.estimated_order, 0) >= $${paramIndex}`)
+      conditions.push(`m.estimated_order >= $${paramIndex}`)
       params.push(parseFloat(minOrders))
       paramIndex++
     }
     if (maxOrders) {
-      trafficConditions.push(`COALESCE(t.estimated_order, 0) <= $${paramIndex}`)
+      conditions.push(`m.estimated_order <= $${paramIndex}`)
       params.push(parseFloat(maxOrders))
       paramIndex++
     }
 
     // Traffic filter
     if (minTraffic) {
-      trafficConditions.push(`COALESCE(t.last_month_visits, 0) >= $${paramIndex}`)
+      conditions.push(`m.last_month_visits >= $${paramIndex}`)
       params.push(parseFloat(minTraffic))
       paramIndex++
     }
     if (maxTraffic) {
-      trafficConditions.push(`COALESCE(t.last_month_visits, 0) <= $${paramIndex}`)
+      conditions.push(`m.last_month_visits <= $${paramIndex}`)
       params.push(parseFloat(maxTraffic))
       paramIndex++
     }
 
     // Traffic growth filter
     if (minTrafficGrowth) {
-      trafficConditions.push(`COALESCE(t.growth_rate, 0) >= $${paramIndex}`)
+      conditions.push(`m.growth_rate >= $${paramIndex}`)
       params.push(parseFloat(minTrafficGrowth))
       paramIndex++
     }
     if (maxTrafficGrowth) {
-      trafficConditions.push(`COALESCE(t.growth_rate, 0) <= $${paramIndex}`)
+      conditions.push(`m.growth_rate <= $${paramIndex}`)
       params.push(parseFloat(maxTrafficGrowth))
       paramIndex++
     }
 
     // Sort-specific traffic filters
     if (sortBy === 'trending_up') {
-      trafficConditions.push(`COALESCE(t.growth_rate, 0) > 0`)
+      conditions.push(`m.growth_rate > 0`)
     }
     if (sortBy === 'most_profitable') {
-      trafficConditions.push(`COALESCE(t.last_month_visits, 0) > 0`)
+      conditions.push(`m.last_month_visits > 0`)
     }
 
     // Category filter - needs async lookup
     let categoryCondition = ''
     if (category) {
+      const categoryLookupStart = Date.now()
       const categoryNames = category.split(',').map(c => c.trim()).filter(c => c)
       if (categoryNames.length > 0) {
         const categories = await prisma.category.findMany({
@@ -352,62 +415,69 @@ export async function GET(request: NextRequest) {
         if (matchingCategoryIds.length > 0) {
           categoryCondition = `AND EXISTS (
             SELECT 1 FROM shop_categories sc 
-            WHERE sc.shop_id = s.id 
+            WHERE sc.shop_id = m.shop_id 
             AND sc.category_id IN (${matchingCategoryIds.join(', ')})
           )`
         }
       }
+      timings.categoryLookup = Date.now() - categoryLookupStart
+      console.log(`[Products API] ⏱️  Category Lookup: ${timings.categoryLookup}ms (${(timings.categoryLookup/1000).toFixed(2)}s)`)
     }
 
-    const baseWhereClause = baseConditions.length > 0 ? `WHERE ${baseConditions.join(' AND ')} ${categoryCondition}` : (categoryCondition ? `WHERE 1=1 ${categoryCondition}` : '')
-    const trafficWhereClause = trafficConditions.length > 0 ? `AND ${trafficConditions.join(' AND ')}` : ''
+    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')} ${categoryCondition}` : (categoryCondition ? `WHERE 1=1 ${categoryCondition}` : '')
 
-    // Build ORDER BY clause - using column names from ranked_products CTE (no table aliases)
+    // Build ORDER BY clause - using column names from materialized view
     const dailySeed = new Date().toISOString().split('T')[0].replace(/-/g, '')
     const seedHash = parseInt(dailySeed) % 1000
+    const order = sortOrder === 'asc' ? 'ASC' : 'DESC'
     
     let orderByClause = ''
     switch (sortBy) {
       case 'recommended':
+        // Same algorithm as Laravel - uses daily seed for variety
         orderByClause = `ORDER BY (
           COALESCE(growth_rate, 0) * 0.3 + 
-          COALESCE(active_ads, 0) * 10000 + 
+          COALESCE(active_ads_count, 0) * 10000 + 
           COALESCE(estimated_order, 0) * 0.1 + 
-          (MOD(ABS(HASHTEXT(handle || '${seedHash}')), 50000))
-        ) DESC`
+          (MOD(ABS(HASHTEXT(product_handle || '${seedHash}')), 50000))
+        ) ${order}`
         break
       case 'most_active_ads':
       case 'live_ads':
       case 'active_ads_count':
-        orderByClause = 'ORDER BY COALESCE(active_ads, 0) DESC'
+        orderByClause = `ORDER BY COALESCE(active_ads_count, 0) ${order}`
         break
       case 'highest_revenue':
       case 'estimated_monthly':
-        orderByClause = 'ORDER BY COALESCE(estimated_monthly, 0) DESC'
+        orderByClause = `ORDER BY COALESCE(estimated_monthly, 0) ${order}`
         break
       case 'most_traffic':
       case 'last_month_visits':
-        orderByClause = 'ORDER BY COALESCE(last_month_visits, 0) DESC'
+        orderByClause = `ORDER BY COALESCE(last_month_visits, 0) ${order}`
         break
       case 'estimated_order':
-        orderByClause = 'ORDER BY COALESCE(estimated_order, 0) DESC'
+        orderByClause = `ORDER BY COALESCE(estimated_order, 0) ${order}`
         break
+      case 'created_at':
       case 'newest_products':
       case 'most_recent':
-        orderByClause = 'ORDER BY created_at DESC'
+        orderByClause = `ORDER BY created_at ${order}`
         break
       case 'best_value':
-        orderByClause = `ORDER BY COALESCE(estimated_monthly, 0)::float / NULLIF(active_ads, 0) DESC NULLS LAST`
+        orderByClause = `ORDER BY COALESCE(estimated_monthly, 0)::float / NULLIF(active_ads_count, 0) ${order} NULLS LAST`
         break
       case 'trending_up':
-        orderByClause = `ORDER BY (COALESCE(growth_rate, 0) * 100 + COALESCE(estimated_order, 0) * 0.5) DESC`
+        orderByClause = `ORDER BY (COALESCE(growth_rate, 0) * 100 + COALESCE(estimated_order, 0) * 0.5) ${order}`
         break
       case 'most_profitable':
-        orderByClause = `ORDER BY COALESCE(estimated_monthly, 0)::float / NULLIF(last_month_visits, 0) DESC NULLS LAST`
+        orderByClause = `ORDER BY COALESCE(estimated_monthly, 0)::float / NULLIF(last_month_visits, 0) ${order} NULLS LAST`
         break
       case 'traffic_growth':
       case 'growth_rate':
-        orderByClause = 'ORDER BY COALESCE(growth_rate, 0) DESC'
+        orderByClause = `ORDER BY COALESCE(growth_rate, 0) ${order}`
+        break
+      case 'price':
+        orderByClause = `ORDER BY COALESCE(price, 0) ${order}`
         break
       case 'lowest_price':
         orderByClause = 'ORDER BY COALESCE(price, 0) ASC'
@@ -416,66 +486,58 @@ export async function GET(request: NextRequest) {
         orderByClause = 'ORDER BY COALESCE(price, 0) DESC'
         break
       default:
-        orderByClause = 'ORDER BY created_at DESC'
+        orderByClause = `ORDER BY created_at ${order}`
     }
 
-    // OPTIMIZED: Main query - use subqueries only for filtered/limited results
+    // Build JOIN clause (only if needed for certain filters)
+    const shopsJoin = needsShopsJoin ? 'LEFT JOIN shops s ON m.shop_id = s.id' : ''
+    const trafficJoin = needsTrafficJoin ? 'LEFT JOIN traffic t ON m.shop_id = t.shop_id' : ''
+
+    // ============================================
+    // OPTIMIZED: Using top_products_materialized (373k rows vs 44M)
+    // Same as Laravel topproductsMaterialized()
+    // ============================================
     const dataQuery = `
-      WITH 
-      -- Only compute latest traffic (single DISTINCT ON is efficient with index)
-      latest_traffic AS (
-        SELECT DISTINCT ON (shop_id) 
-          shop_id,
-          estimated_monthly,
-          estimated_order,
-          last_month_visits,
-          growth_rate
-        FROM traffic
-        ORDER BY shop_id, created_at DESC
-      ),
-      -- Filter products first, then rank by shop
-      filtered_products AS (
-        SELECT 
-          p.id,
-          p.title,
-          p.handle,
-          p.shop_id,
-          p.created_at,
-          s.url as shop_url,
-          s.merchant_name,
-          s.currency,
-          s.country,
-          s.active_ads,
-          t.estimated_monthly,
-          t.estimated_order,
-          t.last_month_visits,
-          t.growth_rate,
-          ROW_NUMBER() OVER (PARTITION BY s.id ORDER BY p.created_at DESC) as rn
-        FROM products p
-        INNER JOIN shops s ON p.shop_id = s.id
-        LEFT JOIN latest_traffic t ON t.shop_id = s.id
-        ${baseWhereClause}
-        ${trafficWhereClause}
-      ),
-      -- Only get unique products per shop
-      unique_products AS (
-        SELECT * FROM filtered_products WHERE rn = 1
-        ${orderByClause}
-        LIMIT ${perPage} OFFSET ${offset}
-      )
-      -- Now fetch price and image only for the limited results
       SELECT 
-        up.id, up.title, up.handle, up.shop_id, 
-        (SELECT MIN(price) FROM product_variants WHERE product_id = up.id) as price,
-        (SELECT src FROM product_images WHERE product_id = up.id ORDER BY position ASC LIMIT 1) as img_src,
-        up.shop_url, up.merchant_name, up.currency, up.country, up.active_ads, 
-        up.estimated_order, up.last_month_visits, up.estimated_monthly, up.growth_rate, up.created_at
-      FROM unique_products up
+        id,
+        title,
+        product_handle as handle,
+        shop_id,
+        price,
+        img_src,
+        shop_url,
+        ${needsShopsJoin ? 'merchant_name' : 'NULL::text as merchant_name'},
+        currency,
+        country,
+        active_ads_count as active_ads,
+        estimated_order,
+        last_month_visits,
+        estimated_monthly,
+        growth_rate,
+        created_at
+      FROM (
+        SELECT DISTINCT ON (m.product_handle) 
+          m.id, m.title, m.product_handle, m.shop_id, m.price, m.img_src, 
+          m.shop_url, m.currency, m.country, m.active_ads_count, 
+          m.estimated_order, m.last_month_visits, m.estimated_monthly, 
+          m.growth_rate, m.created_at, m.updated_at
+          ${needsShopsJoin ? ', s.merchant_name' : ''}
+        FROM top_products_materialized m
+        ${shopsJoin}
+        ${trafficJoin}
+        ${whereClause}
+        ORDER BY m.product_handle, m.updated_at DESC
+      ) as unique_products
       ${orderByClause}
+      LIMIT ${perPage} OFFSET ${offset}
     `
 
     // Execute main query first
+    const mainQueryStart = Date.now()
+    console.log(`[Products API] 🔍 Executing main query (top_products_materialized)...`)
     const productsResult = await prisma.$queryRawUnsafe<ProductRow[]>(dataQuery, ...params)
+    timings.mainQuery = Date.now() - mainQueryStart
+    console.log(`[Products API] ⏱️  Main Query: ${timings.mainQuery}ms (${(timings.mainQuery/1000).toFixed(2)}s) - ${productsResult.length} results`)
 
     // If no results on first page, don't bother counting - it's 0
     let total: number
@@ -486,41 +548,38 @@ export async function GET(request: NextRequest) {
       total = productsResult.length
     } else {
       // Generate cache key for count - include params values for accurate caching
-      const cacheKey = JSON.stringify({ baseConditions, trafficConditions, categoryCondition, sortBy, params })
+      const cacheKey = JSON.stringify({ conditions, categoryCondition, sortBy, params })
       const cached = countCache.get(cacheKey)
       
       // Get count - use cache if available
       if (cached && Date.now() - cached.timestamp < COUNT_CACHE_TTL) {
         total = cached.count
+        console.log(`[Products API] 📦 Count from cache: ${total}`)
       } else {
-        // Count query uses the same structure as data query
+        // Count query using same materialized view
+        const countQueryStart = Date.now()
+        console.log(`[Products API] 🔢 Executing count query...`)
         const countQuery = `
-          WITH 
-          latest_traffic AS (
-            SELECT DISTINCT ON (shop_id) shop_id, estimated_monthly, estimated_order, last_month_visits, growth_rate
-            FROM traffic
-            ORDER BY shop_id, created_at DESC
-          ),
-          filtered_products AS (
-            SELECT p.id, s.id as sid,
-              ROW_NUMBER() OVER (PARTITION BY s.id ORDER BY p.created_at DESC) as rn
-            FROM products p
-            INNER JOIN shops s ON p.shop_id = s.id
-            LEFT JOIN latest_traffic t ON t.shop_id = s.id
-            ${baseWhereClause}
-            ${trafficWhereClause}
-          )
-          SELECT COUNT(*)::int as count
-          FROM filtered_products
-          WHERE rn = 1
+          SELECT COUNT(*) as count
+          FROM (
+            SELECT DISTINCT ON (m.product_handle) m.id
+            FROM top_products_materialized m
+            ${shopsJoin}
+            ${trafficJoin}
+            ${whereClause}
+            ORDER BY m.product_handle, m.updated_at DESC
+          ) as unique_products
         `
-        const countResult = await prisma.$queryRawUnsafe<{count: number}[]>(countQuery, ...params)
-        total = countResult[0]?.count || 0
+        const countResult = await prisma.$queryRawUnsafe<{count: bigint}[]>(countQuery, ...params)
+        timings.countQuery = Date.now() - countQueryStart
+        total = Number(countResult[0]?.count || 0)
         countCache.set(cacheKey, { count: total, timestamp: Date.now() })
+        console.log(`[Products API] ⏱️  Count Query: ${timings.countQuery}ms (${(timings.countQuery/1000).toFixed(2)}s) - Total: ${total}`)
       }
     }
 
     // Transform data to match expected format
+    const transformStart = Date.now()
     const data = productsResult.map(product => ({
       id: Number(product.id),
       productId: Number(product.id),
@@ -550,7 +609,23 @@ export async function GET(request: NextRequest) {
       createdAt: product.created_at,
     }))
 
-    return NextResponse.json({
+    timings.transform = Date.now() - transformStart
+    timings.total = Date.now() - timings.start
+    
+    // Final timing summary
+    console.log(`[Products API] ⏱️  Transform: ${timings.transform}ms`)
+    console.log(`[Products API] ========== TIMING SUMMARY ==========`)
+    console.log(`[Products API] Auth:          ${timings.auth}ms (${(timings.auth/1000).toFixed(2)}s)`)
+    console.log(`[Products API] Category:      ${timings.categoryLookup}ms (${(timings.categoryLookup/1000).toFixed(2)}s)`)
+    console.log(`[Products API] Main Query:    ${timings.mainQuery}ms (${(timings.mainQuery/1000).toFixed(2)}s)`)
+    console.log(`[Products API] Count Query:   ${timings.countQuery}ms (${(timings.countQuery/1000).toFixed(2)}s)`)
+    console.log(`[Products API] Transform:     ${timings.transform}ms (${(timings.transform/1000).toFixed(2)}s)`)
+    console.log(`[Products API] ──────────────────────────────────`)
+    console.log(`[Products API] TOTAL:         ${timings.total}ms (${(timings.total/1000).toFixed(2)}s)`)
+    console.log(`[Products API] ========== REQUEST END ==========\n`)
+
+    // Create response with caching headers
+    const response = NextResponse.json({
       success: true,
       data,
       pagination: {
@@ -558,15 +633,38 @@ export async function GET(request: NextRequest) {
         perPage,
         total,
         totalPages: Math.ceil(total / perPage),
+      },
+      _timings: {
+        authMs: timings.auth,
+        categoryLookupMs: timings.categoryLookup,
+        mainQueryMs: timings.mainQuery,
+        countQueryMs: timings.countQuery,
+        transformMs: timings.transform,
+        totalMs: timings.total,
+        totalSec: (timings.total/1000).toFixed(2),
       }
     })
+    
+    // Add caching headers for better performance
+    // private: user-specific data (auth required)
+    // max-age=30: cache for 30 seconds
+    // stale-while-revalidate=60: serve stale while fetching fresh for 60s
+    response.headers.set('Cache-Control', 'private, max-age=30, stale-while-revalidate=60')
+    
+    return response
 
   } catch (error) {
-    console.error('Failed to fetch products:', error)
+    timings.total = Date.now() - timings.start
+    console.error(`[Products API] ❌ ERROR after ${timings.total}ms (${(timings.total/1000).toFixed(2)}s):`, error)
+    console.log(`[Products API] ========== REQUEST FAILED ==========\n`)
     return NextResponse.json({
       success: false,
       error: 'Failed to fetch products',
-      details: error instanceof Error ? error.message : 'Unknown error'
+      details: error instanceof Error ? error.message : 'Unknown error',
+      _timings: {
+        totalMs: timings.total,
+        totalSec: (timings.total/1000).toFixed(2),
+      }
     }, { status: 500 })
   }
 }

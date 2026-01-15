@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef, Suspense } from "react";
+import { useState, useEffect, useCallback, useMemo, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import DashboardHeader from "@/components/DashboardHeader";
@@ -20,6 +20,12 @@ import {
   DialogContent,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import TutorialModal, { TUTORIAL_CONFIGS } from "@/components/TutorialModal";
 import NicheDropdown from "@/components/NicheDropdown";
 import ProductTableSkeleton from "@/components/ProductTableSkeleton";
@@ -105,19 +111,16 @@ const PRESET_CONFIGS: Record<string, Record<string, any>> = {
   },
 };
 
-// Sort options configuration
+// Sort options configuration - clean French labels
 const SORT_OPTIONS = [
-  { value: "recommended", label: "Recommandé - Classement IA pour les produits à fort potentiel", icon: "🎯" },
-  { value: "estimated_order", label: "Plus De Commandes - Produits avec le plus grand volume de commandes mensuelles", icon: "📦" },
-  { value: "estimated_monthly", label: "Revenus Les Plus Élevés - Boutiques les plus rentables par ventes mensuelles", icon: "💰" },
-  { value: "last_month_visits", label: "Plus De Trafic - Boutiques avec le plus grand nombre de visiteurs", icon: "🚀" },
-  { value: "active_ads_count", label: "Publicités Les Plus Actives - Boutiques avec le plus de campagnes publicitaires", icon: "📢" },
-  { value: "best_value", label: "Meilleur Rapport Qualité-Prix - Produits à hauts revenus avec faible concurrence publicitaire", icon: "💎" },
-  { value: "trending_up", label: "Tendance À La Hausse - Produits montrant une dynamique de vente positive", icon: "📈" },
-  { value: "most_profitable", label: "Plus Rentables - Meilleure conversion revenus par visiteur", icon: "🎯" },
-  { value: "growth_rate", label: "Évolution du trafic - Trié par pourcentage de croissance des visiteurs", icon: "📊" },
-  { value: "lowest_price", label: "Prix Le Plus Bas - Produits triés par prix (bas vers haut)", icon: "💲" },
-  { value: "highest_price", label: "Prix Le Plus Élevé - Produits triés par prix (haut vers bas)", icon: "💎" },
+  { value: "recommended", label: "Pertinence", icon: "ri-sparkling-line" },
+  { value: "estimated_monthly", label: "Chiffre d'affaires", icon: "ri-money-euro-circle-line" },
+  { value: "estimated_order", label: "Commandes", icon: "ri-shopping-cart-line" },
+  { value: "last_month_visits", label: "Trafic", icon: "ri-line-chart-line" },
+  { value: "growth_rate", label: "Croissance", icon: "ri-arrow-up-circle-line" },
+  { value: "active_ads_count", label: "Publicités actives", icon: "ri-advertisement-line" },
+  { value: "price", label: "Prix", icon: "ri-price-tag-3-line" },
+  { value: "created_at", label: "Date d'ajout", icon: "ri-calendar-line" },
 ];
 
 // Toast Alert Component
@@ -268,58 +271,84 @@ function ProductsContent() {
   const [selectedApplications, setSelectedApplications] = useState<string[]>([]);
   const [selectedSocialNetworks, setSelectedSocialNetworks] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState("recommended");
+  const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
 
-  // Use products hook
-  const { products, pagination, isLoading, isLoadingMore, hasMore, error, fetchProducts, fetchMoreProducts } = useProducts();
+  // Pagination state
+  const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState(25);
   
-  // Ref for infinite scroll
-  const loadMoreRef = useRef<HTMLDivElement>(null);
-
-  // Build filters object - matching shops page structure
-  const buildFilters = (): ProductsFilters => {
-    const filters: ProductsFilters = { sortBy };
-    
-    if (appliedSearchText) filters.search = appliedSearchText;
-    if (selectedCountries.length) filters.country = selectedCountries.join(',');
-    if (selectedNiches.length) filters.category = selectedNiches.join(',');
-    if (selectedCurrencies.length) filters.currency = selectedCurrencies.join(',');
-    if (selectedPixels.length) filters.pixels = selectedPixels.join(',');
-    if (selectedOrigins.length) filters.origins = selectedOrigins.join(',');
-    if (selectedLanguages.length) filters.languages = selectedLanguages.join(',');
-    if (selectedDomains.length) filters.domains = selectedDomains.join(',');
-    if (selectedThemes.length) filters.themes = selectedThemes.join(',');
-    if (selectedApplications.length) filters.applications = selectedApplications.join(',');
-    if (shopCreationDate) filters.shopCreationDate = shopCreationDate;
-    if (minRevenue !== undefined) filters.minRevenue = minRevenue;
-    if (maxRevenue !== undefined) filters.maxRevenue = maxRevenue;
-    if (minTraffic !== undefined) filters.minTraffic = minTraffic;
-    if (maxTraffic !== undefined) filters.maxTraffic = maxTraffic;
-    if (minActiveAds !== undefined) filters.minActiveAds = minActiveAds;
-    if (maxActiveAds !== undefined) filters.maxActiveAds = maxActiveAds;
-    if (minTrafficGrowth !== undefined) filters.minTrafficGrowth = minTrafficGrowth;
-    if (maxTrafficGrowth !== undefined) filters.maxTrafficGrowth = maxTrafficGrowth;
-    if (minOrders !== undefined) filters.minOrders = minOrders;
-    if (maxOrders !== undefined) filters.maxOrders = maxOrders;
-    if (minPrice !== undefined) filters.minPrice = minPrice;
-    if (maxPrice !== undefined) filters.maxPrice = maxPrice;
-    if (minCatalogSize !== undefined) filters.minCatalogSize = minCatalogSize;
-    if (maxCatalogSize !== undefined) filters.maxCatalogSize = maxCatalogSize;
-    if (minTrustpilotRating !== undefined) filters.minTrustpilotRating = minTrustpilotRating;
-    if (maxTrustpilotRating !== undefined) filters.maxTrustpilotRating = maxTrustpilotRating;
-    if (minTrustpilotReviews !== undefined) filters.minTrustpilotReviews = minTrustpilotReviews;
-    if (maxTrustpilotReviews !== undefined) filters.maxTrustpilotReviews = maxTrustpilotReviews;
-    
-    return filters;
-  };
-
-  // Handle filter apply - optionally accept override values for immediate updates
-  const handleApplyFilters = (overrideFilters?: Partial<ProductsFilters>) => {
-    const filters = { ...buildFilters(), ...overrideFilters };
-    fetchProducts(filters, 1, 20);
-  };
-
+  // Per page options
+  const PER_PAGE_OPTIONS = [10, 25, 50, 100];
+  
   // Track applied search text (separate from input text)
   const [appliedSearchText, setAppliedSearchText] = useState("");
+
+  // Build filters object - memoized for TanStack Query
+  const filters = useMemo((): ProductsFilters => {
+    const f: ProductsFilters = { sortBy, sortOrder };
+    
+    if (appliedSearchText) f.search = appliedSearchText;
+    if (selectedCountries.length) f.country = selectedCountries.join(',');
+    if (selectedNiches.length) f.category = selectedNiches.join(',');
+    if (selectedCurrencies.length) f.currency = selectedCurrencies.join(',');
+    if (selectedPixels.length) f.pixels = selectedPixels.join(',');
+    if (selectedOrigins.length) f.origins = selectedOrigins.join(',');
+    if (selectedLanguages.length) f.languages = selectedLanguages.join(',');
+    if (selectedDomains.length) f.domains = selectedDomains.join(',');
+    if (selectedThemes.length) f.themes = selectedThemes.join(',');
+    if (selectedApplications.length) f.applications = selectedApplications.join(',');
+    if (selectedSocialNetworks.length) f.socialNetworks = selectedSocialNetworks.join(',');
+    if (shopCreationDate) f.shopCreationDate = shopCreationDate;
+    if (minRevenue !== undefined) f.minRevenue = minRevenue;
+    if (maxRevenue !== undefined) f.maxRevenue = maxRevenue;
+    if (minTraffic !== undefined) f.minTraffic = minTraffic;
+    if (maxTraffic !== undefined) f.maxTraffic = maxTraffic;
+    if (minActiveAds !== undefined) f.minActiveAds = minActiveAds;
+    if (maxActiveAds !== undefined) f.maxActiveAds = maxActiveAds;
+    if (minTrafficGrowth !== undefined) f.minTrafficGrowth = minTrafficGrowth;
+    if (maxTrafficGrowth !== undefined) f.maxTrafficGrowth = maxTrafficGrowth;
+    if (minOrders !== undefined) f.minOrders = minOrders;
+    if (maxOrders !== undefined) f.maxOrders = maxOrders;
+    if (minPrice !== undefined) f.minPrice = minPrice;
+    if (maxPrice !== undefined) f.maxPrice = maxPrice;
+    if (minCatalogSize !== undefined) f.minCatalogSize = minCatalogSize;
+    if (maxCatalogSize !== undefined) f.maxCatalogSize = maxCatalogSize;
+    if (minTrustpilotRating !== undefined) f.minTrustpilotRating = minTrustpilotRating;
+    if (maxTrustpilotRating !== undefined) f.maxTrustpilotRating = maxTrustpilotRating;
+    if (minTrustpilotReviews !== undefined) f.minTrustpilotReviews = minTrustpilotReviews;
+    if (maxTrustpilotReviews !== undefined) f.maxTrustpilotReviews = maxTrustpilotReviews;
+    
+    return f;
+  }, [
+    sortBy, sortOrder, appliedSearchText, selectedCountries, selectedNiches, selectedCurrencies,
+    selectedPixels, selectedOrigins, selectedLanguages, selectedDomains, selectedThemes,
+    selectedApplications, selectedSocialNetworks, shopCreationDate, minRevenue, maxRevenue, minTraffic, maxTraffic,
+    minActiveAds, maxActiveAds, minTrafficGrowth, maxTrafficGrowth, minOrders, maxOrders,
+    minPrice, maxPrice, minCatalogSize, maxCatalogSize, minTrustpilotRating, maxTrustpilotRating,
+    minTrustpilotReviews, maxTrustpilotReviews
+  ]);
+
+  // Use products hook with TanStack Query
+  const { 
+    products, 
+    pagination, 
+    isFetching,
+    error, 
+    toggleFavorite,
+    prefetchNextPage,
+    prefetchPrevPage,
+    invalidateProducts,
+  } = useProducts(filters, page, perPage);
+
+  // Handle filter apply - reset to page 1 and force refetch
+  const handleApplyFilters = useCallback(() => {
+    if (page === 1) {
+      // If already on page 1, invalidate to force refetch with new filters
+      invalidateProducts();
+    } else {
+      setPage(1);
+    }
+  }, [page, invalidateProducts]);
 
   // Build active filters from current state - matching shops page structure
   const buildActiveFilters = (): ActiveFilter[] => {
@@ -469,12 +498,6 @@ function ProductsContent() {
     selectedApplications, selectedSocialNetworks
   ]);
 
-  // Fetch products on mount
-  useEffect(() => {
-    const filters = buildFilters();
-    fetchProducts(filters, 1, 20);
-  }, [sortBy]);
-
   // Fetch tracked shops to know which are already being tracked
   useEffect(() => {
     const fetchTrackedShops = async () => {
@@ -510,150 +533,99 @@ function ProductsContent() {
     fetchUserStats();
   }, []);
 
-  // Infinite scroll effect
+  // Prefetch adjacent pages for smoother pagination
   useEffect(() => {
-    if (!loadMoreRef.current) return;
-    
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting && hasMore && !isLoadingMore && !isLoading) {
-          const filters = buildFilters();
-          fetchMoreProducts(filters, 20);
-        }
-      },
-      { threshold: 0.1 }
-    );
-
-    observer.observe(loadMoreRef.current);
-    
-    return () => observer.disconnect();
-  }, [hasMore, isLoadingMore, isLoading, fetchMoreProducts, buildFilters]);
+    prefetchNextPage();
+    prefetchPrevPage();
+  }, [page, prefetchNextPage, prefetchPrevPage]);
 
   // Handle search
   const handleSearch = () => {
     // Update applied search text to show in filter tags
     setAppliedSearchText(searchText);
-    // Build filters but override with current searchText (since setState is async)
-    const filters = { ...buildFilters(), search: searchText || undefined };
-    fetchProducts(filters, 1, 20);
+    // Trigger refetch
+    if (page === 1) {
+      invalidateProducts();
+    } else {
+      setPage(1);
+    }
   };
 
-  // Remove active filter - matching shops page structure
+  // Remove active filter - updates state and triggers refetch
   const removeFilter = (filterId: string, filterType: string) => {
-    // Helper to build override filters after removal
-    const getOverrideFilters = (): Partial<ProductsFilters> => {
-      const override: Partial<ProductsFilters> = {};
-      
-      if (filterType === 'search' || filterId === 'search') {
-        setSearchText('');
-        setAppliedSearchText('');
-        override.search = undefined;
-      } else if (filterType === 'revenue' || filterId === 'revenue') {
-        setMinRevenue(undefined);
-        setMaxRevenue(undefined);
-        override.minRevenue = undefined;
-        override.maxRevenue = undefined;
-      } else if (filterType === 'traffic' || filterId === 'traffic') {
-        setMinTraffic(undefined);
-        setMaxTraffic(undefined);
-        override.minTraffic = undefined;
-        override.maxTraffic = undefined;
-      } else if (filterType === 'activeAds' || filterId === 'activeAds') {
-        setMinActiveAds(undefined);
-        setMaxActiveAds(undefined);
-        override.minActiveAds = undefined;
-        override.maxActiveAds = undefined;
-      } else if (filterType === 'trafficGrowth' || filterId === 'trafficGrowth') {
-        setMinTrafficGrowth(undefined);
-        setMaxTrafficGrowth(undefined);
-        override.minTrafficGrowth = undefined;
-        override.maxTrafficGrowth = undefined;
-      } else if (filterType === 'orders' || filterId === 'orders') {
-        setMinOrders(undefined);
-        setMaxOrders(undefined);
-        override.minOrders = undefined;
-        override.maxOrders = undefined;
-      } else if (filterType === 'price' || filterId === 'price') {
-        setMinPrice(undefined);
-        setMaxPrice(undefined);
-        override.minPrice = undefined;
-        override.maxPrice = undefined;
-      } else if (filterType === 'catalogSize' || filterId === 'catalogSize') {
-        setMinCatalogSize(undefined);
-        setMaxCatalogSize(undefined);
-        override.minCatalogSize = undefined;
-        override.maxCatalogSize = undefined;
-      } else if (filterType === 'trustpilot' || filterId === 'trustpilot') {
-        setMinTrustpilotRating(undefined);
-        setMaxTrustpilotRating(undefined);
-        setMinTrustpilotReviews(undefined);
-        setMaxTrustpilotReviews(undefined);
-        override.minTrustpilotRating = undefined;
-        override.maxTrustpilotRating = undefined;
-        override.minTrustpilotReviews = undefined;
-        override.maxTrustpilotReviews = undefined;
-      } else if (filterType === 'shopCreationDate' || filterId === 'shopCreationDate') {
-        setShopCreationDate('');
-        override.shopCreationDate = undefined;
-      } else if (filterId.startsWith('currency_')) {
-        const curr = filterId.replace('currency_', '');
-        const newCurrencies = selectedCurrencies.filter(c => c !== curr);
-        setSelectedCurrencies(newCurrencies);
-        override.currency = newCurrencies.length ? newCurrencies.join(',') : undefined;
-      } else if (filterId.startsWith('country_')) {
-        const country = filterId.replace('country_', '');
-        const newCountries = selectedCountries.filter(c => c !== country);
-        setSelectedCountries(newCountries);
-        override.country = newCountries.length ? newCountries.join(',') : undefined;
-      } else if (filterId.startsWith('niche_')) {
-        const niche = filterId.replace('niche_', '');
-        const newNiches = selectedNiches.filter(n => n !== niche);
-        setSelectedNiches(newNiches);
-        override.category = newNiches.length ? newNiches.join(',') : undefined;
-      } else if (filterId.startsWith('pixel_')) {
-        const pixel = filterId.replace('pixel_', '');
-        const newPixels = selectedPixels.filter(p => p !== pixel);
-        setSelectedPixels(newPixels);
-        override.pixels = newPixels.length ? newPixels.join(',') : undefined;
-      } else if (filterId.startsWith('origin_')) {
-        const origin = filterId.replace('origin_', '');
-        const newOrigins = selectedOrigins.filter(o => o !== origin);
-        setSelectedOrigins(newOrigins);
-        override.origins = newOrigins.length ? newOrigins.join(',') : undefined;
-      } else if (filterId.startsWith('language_')) {
-        const lang = filterId.replace('language_', '');
-        const newLangs = selectedLanguages.filter(l => l !== lang);
-        setSelectedLanguages(newLangs);
-        override.languages = newLangs.length ? newLangs.join(',') : undefined;
-      } else if (filterId.startsWith('domain_')) {
-        const domain = filterId.replace('domain_', '');
-        const newDomains = selectedDomains.filter(d => d !== domain);
-        setSelectedDomains(newDomains);
-        override.domains = newDomains.length ? newDomains.join(',') : undefined;
-      } else if (filterId.startsWith('theme_')) {
-        const theme = filterId.replace('theme_', '');
-        const newThemes = selectedThemes.filter(t => t !== theme);
-        setSelectedThemes(newThemes);
-        override.themes = newThemes.length ? newThemes.join(',') : undefined;
-      } else if (filterId.startsWith('app_')) {
-        const app = filterId.replace('app_', '');
-        const newApps = selectedApplications.filter(a => a !== app);
-        setSelectedApplications(newApps);
-        override.applications = newApps.length ? newApps.join(',') : undefined;
-      } else if (filterId.startsWith('social_')) {
-        const network = filterId.replace('social_', '');
-        const newNetworks = selectedSocialNetworks.filter(n => n !== network);
-        setSelectedSocialNetworks(newNetworks);
-      }
-      
-      return override;
-    };
+    // Update state based on filter type
+    if (filterType === 'search' || filterId === 'search') {
+      setSearchText('');
+      setAppliedSearchText('');
+    } else if (filterType === 'revenue' || filterId === 'revenue') {
+      setMinRevenue(undefined);
+      setMaxRevenue(undefined);
+    } else if (filterType === 'traffic' || filterId === 'traffic') {
+      setMinTraffic(undefined);
+      setMaxTraffic(undefined);
+    } else if (filterType === 'activeAds' || filterId === 'activeAds') {
+      setMinActiveAds(undefined);
+      setMaxActiveAds(undefined);
+    } else if (filterType === 'trafficGrowth' || filterId === 'trafficGrowth') {
+      setMinTrafficGrowth(undefined);
+      setMaxTrafficGrowth(undefined);
+    } else if (filterType === 'orders' || filterId === 'orders') {
+      setMinOrders(undefined);
+      setMaxOrders(undefined);
+    } else if (filterType === 'price' || filterId === 'price') {
+      setMinPrice(undefined);
+      setMaxPrice(undefined);
+    } else if (filterType === 'catalogSize' || filterId === 'catalogSize') {
+      setMinCatalogSize(undefined);
+      setMaxCatalogSize(undefined);
+    } else if (filterType === 'trustpilot' || filterId === 'trustpilot') {
+      setMinTrustpilotRating(undefined);
+      setMaxTrustpilotRating(undefined);
+      setMinTrustpilotReviews(undefined);
+      setMaxTrustpilotReviews(undefined);
+    } else if (filterType === 'shopCreationDate' || filterId === 'shopCreationDate') {
+      setShopCreationDate('');
+    } else if (filterId.startsWith('currency_')) {
+      const curr = filterId.replace('currency_', '');
+      setSelectedCurrencies(prev => prev.filter(c => c !== curr));
+    } else if (filterId.startsWith('country_')) {
+      const country = filterId.replace('country_', '');
+      setSelectedCountries(prev => prev.filter(c => c !== country));
+    } else if (filterId.startsWith('niche_')) {
+      const niche = filterId.replace('niche_', '');
+      setSelectedNiches(prev => prev.filter(n => n !== niche));
+    } else if (filterId.startsWith('pixel_')) {
+      const pixel = filterId.replace('pixel_', '');
+      setSelectedPixels(prev => prev.filter(p => p !== pixel));
+    } else if (filterId.startsWith('origin_')) {
+      const origin = filterId.replace('origin_', '');
+      setSelectedOrigins(prev => prev.filter(o => o !== origin));
+    } else if (filterId.startsWith('language_')) {
+      const lang = filterId.replace('language_', '');
+      setSelectedLanguages(prev => prev.filter(l => l !== lang));
+    } else if (filterId.startsWith('domain_')) {
+      const domain = filterId.replace('domain_', '');
+      setSelectedDomains(prev => prev.filter(d => d !== domain));
+    } else if (filterId.startsWith('theme_')) {
+      const theme = filterId.replace('theme_', '');
+      setSelectedThemes(prev => prev.filter(t => t !== theme));
+    } else if (filterId.startsWith('app_')) {
+      const app = filterId.replace('app_', '');
+      setSelectedApplications(prev => prev.filter(a => a !== app));
+    } else if (filterId.startsWith('social_')) {
+      const network = filterId.replace('social_', '');
+      setSelectedSocialNetworks(prev => prev.filter(n => n !== network));
+    }
     
-    const overrideFilters = getOverrideFilters();
-    handleApplyFilters(overrideFilters);
+    // Trigger refetch - invalidate if on page 1, otherwise reset to page 1
+    if (page === 1) {
+      invalidateProducts();
+    } else {
+      setPage(1);
+    }
   };
 
-  // Reset all filters - matching shops page structure
+  // Reset all filters
   const resetFilters = () => {
     setSearchText("");
     setAppliedSearchText("");
@@ -687,8 +659,14 @@ function ProductsContent() {
     setMinTrustpilotReviews(undefined);
     setMaxTrustpilotReviews(undefined);
     setSortBy("recommended");
+    setSortOrder("desc");
     setActivePreset("");
-    fetchProducts({ sortBy: 'recommended' }, 1, 20);
+    // Force refetch
+    if (page === 1) {
+      invalidateProducts();
+    } else {
+      setPage(1);
+    }
   };
 
   // Handle preset filter - matching shops page auto-apply
@@ -715,7 +693,7 @@ function ProductsContent() {
       setShopCreationDate('');
       
       // Build override filters for direct apply
-      const overrideFilters: Partial<ProductsFilters> = { sortBy };
+      const overrideFilters: Partial<ProductsFilters> = { sortBy, sortOrder };
       
       // Apply preset filters
       const config = PRESET_CONFIGS[preset];
@@ -787,8 +765,12 @@ function ProductsContent() {
       }
       
       setActivePreset(preset);
-      // Apply immediately with override filters
-      handleApplyFilters(overrideFilters);
+      // Trigger refetch
+      if (page === 1) {
+        invalidateProducts();
+      } else {
+        setPage(1);
+      }
     }
   };
 
@@ -807,8 +789,15 @@ function ProductsContent() {
 
   // Handle page change
   const handlePageChange = (newPage: number) => {
-    const filters = buildFilters();
-    fetchProducts(filters, newPage, 20);
+    setPage(newPage);
+    // Scroll to top of table
+    window.scrollTo({ top: 400, behavior: 'smooth' });
+  };
+  
+  // Handle per page change
+  const handlePerPageChange = (newPerPage: number) => {
+    setPerPage(newPerPage);
+    setPage(1); // Reset to page 1 when changing perPage
   };
 
   // Toast helpers
@@ -965,9 +954,9 @@ function ProductsContent() {
               className="btn btn-primary apply-filters-btn !bg-[#0c6cfb] !text-white hover:!bg-[#0c6cfb]" 
               style={{ height: '40px', flexShrink: 0, whiteSpace: 'nowrap' }}
               onClick={handleSearch}
-              disabled={isLoading}
+              disabled={isFetching}
             >
-              {isLoading ? (
+              {isFetching ? (
                 <span className="spinner-border spinner-border-sm me-1" role="status"></span>
               ) : null}
               Rechercher
@@ -1299,8 +1288,8 @@ function ProductsContent() {
           </div>
 
           {/* Results Count and Sort */}
-          <div            className="d-flex align-items-center justify-content-between mb-4 mt-3 gap-3 flex-wrap"
-          >
+          <div className="d-flex align-items-center justify-content-between mb-4 mt-3 gap-3 flex-wrap">
+            {/* Left: Product Count */}
             <div className="d-flex align-items-center gap-3">
               <h3 className="fs-small text-sub mb-0">
                 <span className="py-2 px-3 bg-weak-50 rounded" style={{ lineHeight: '36px' }}>
@@ -1310,23 +1299,89 @@ function ProductsContent() {
               </h3>
             </div>
 
-            <div className="d-flex align-items-center sort-wrapper gap-2">
-              <label htmlFor="sortSelect" className="form-label mb-0 me-2 fw-500 text-sub fs-small" style={{ whiteSpace: 'nowrap' }}>
-                TRIER: 
-              </label>
-              <select 
-                id="sortSelect" 
-                className="form-select fs-small" 
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-                style={{ width: '380px', maxWidth: '100%' }}
-              >
-                {SORT_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.icon} {option.label}
-                  </option>
-                ))}
-              </select>
+            {/* Right: Controls */}
+            <div className="d-flex align-items-center sort-wrapper gap-3 flex-wrap">
+              {/* Per Page Selector - Custom Dropdown */}
+              <div className="d-flex align-items-center gap-2">
+                <span className="fw-500 text-sub fs-small" style={{ whiteSpace: 'nowrap' }}>
+                  AFFICHER:
+                </span>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button 
+                      className="custom-select-btn"
+                      type="button"
+                    >
+                      <span>{perPage}</span>
+                      <i className="ri-arrow-down-s-line"></i>
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="sort-dropdown-menu" style={{ minWidth: '90px' }}>
+                    {PER_PAGE_OPTIONS.map((option) => (
+                      <DropdownMenuItem
+                        key={option}
+                        onClick={() => handlePerPageChange(option)}
+                        className={`sort-dropdown-item ${perPage === option ? 'active' : ''}`}
+                      >
+                        <span className="sort-item-label">{option}</span>
+                        {perPage === option && <i className="ri-check-line sort-item-check"></i>}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+              
+              {/* Sort Selector - Custom Dropdown with Icons */}
+              <div className="d-flex align-items-center gap-2">
+                <span className="fw-500 text-sub fs-small" style={{ whiteSpace: 'nowrap' }}>
+                  TRIER:
+                </span>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button 
+                      className="custom-select-btn"
+                      type="button"
+                      style={{ minWidth: '200px' }}
+                    >
+                      <span className="d-flex align-items-center gap-2">
+                        <i className={SORT_OPTIONS.find(o => o.value === sortBy)?.icon || 'ri-sparkling-line'} style={{ color: 'var(--blue-copyfy)' }}></i>
+                        {SORT_OPTIONS.find(o => o.value === sortBy)?.label || 'Pertinence'}
+                      </span>
+                      <i className="ri-arrow-down-s-line"></i>
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="sort-dropdown-menu">
+                    {SORT_OPTIONS.map((option) => (
+                      <DropdownMenuItem
+                        key={option.value}
+                        onClick={() => { setSortBy(option.value); setPage(1); }}
+                        className={`sort-dropdown-item ${sortBy === option.value ? 'active' : ''}`}
+                      >
+                        <i className={`sort-item-icon ${option.icon}`}></i>
+                        <span className="sort-item-label">{option.label}</span>
+                        {sortBy === option.value && <i className="ri-check-line sort-item-check"></i>}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                
+                {/* Sort Order Toggle Button */}
+                <button
+                  type="button"
+                  className={`sort-order-btn ${sortOrder === 'asc' ? 'active' : ''}`}
+                  onClick={() => { 
+                    setSortOrder(prev => prev === 'desc' ? 'asc' : 'desc'); 
+                    setPage(1); 
+                  }}
+                  title={sortOrder === 'desc' ? 'Ordre décroissant - Cliquer pour croissant' : 'Ordre croissant - Cliquer pour décroissant'}
+                >
+                  {sortOrder === 'desc' ? (
+                    <i className="ri-sort-desc" style={{ fontSize: '16px' }}></i>
+                  ) : (
+                    <i className="ri-sort-asc" style={{ fontSize: '16px' }}></i>
+                  )}
+                </button>
+              </div>
             </div>
           </div>
 
@@ -1340,8 +1395,8 @@ function ProductsContent() {
           {/* Products Table */}
           <div            className="table-view mt-2"
           >
-            {isLoading ? (
-              <ProductTableSkeleton rows={10} />
+            {isFetching ? (
+              <ProductTableSkeleton rows={perPage > 25 ? 25 : perPage} />
             ) : products.length === 0 ? (
               <div className="text-center py-5">
                 <i className="ri-price-tag-3-line fs-1 text-muted mb-3 d-block"></i>
@@ -1611,19 +1666,101 @@ function ProductsContent() {
                   </TableBody>
                 </Table>
 
-                {/* Infinite Scroll Loader - Shows skeleton rows when loading more */}
-                {isLoadingMore && (
-                  <ProductTableSkeleton rows={5} />
+                {/* Pagination */}
+                {pagination.totalPages > 1 && (
+                  <div className="d-flex justify-content-center align-items-center gap-2 py-4 mt-3 border-top">
+                    {/* Previous Button */}
+                    <button
+                      className="btn btn-outline-secondary btn-sm d-flex align-items-center gap-1"
+                      onClick={() => handlePageChange(page - 1)}
+                      disabled={page === 1 || isFetching}
+                      style={{ minWidth: '100px' }}
+                    >
+                      <i className="ri-arrow-left-s-line"></i>
+                      Précédent
+                    </button>
+                    
+                    {/* Page Numbers */}
+                    <div className="d-flex align-items-center gap-1">
+                      {/* First page */}
+                      {page > 3 && (
+                        <>
+                          <button
+                            className="btn btn-outline-secondary btn-sm"
+                            onClick={() => handlePageChange(1)}
+                            disabled={isFetching}
+                            style={{ minWidth: '40px' }}
+                          >
+                            1
+                          </button>
+                          {page > 4 && <span className="px-1 text-muted">...</span>}
+                        </>
+                      )}
+                      
+                      {/* Pages around current */}
+                      {Array.from({ length: Math.min(5, pagination.totalPages) }, (_, i) => {
+                        let pageNum: number;
+                        if (pagination.totalPages <= 5) {
+                          pageNum = i + 1;
+                        } else if (page <= 3) {
+                          pageNum = i + 1;
+                        } else if (page >= pagination.totalPages - 2) {
+                          pageNum = pagination.totalPages - 4 + i;
+                        } else {
+                          pageNum = page - 2 + i;
+                        }
+                        
+                        if (pageNum < 1 || pageNum > pagination.totalPages) return null;
+                        if (pageNum === 1 && page > 3) return null;
+                        if (pageNum === pagination.totalPages && page < pagination.totalPages - 2) return null;
+                        
+                        return (
+                          <button
+                            key={pageNum}
+                            className={`btn btn-sm ${pageNum === page ? 'btn-primary' : 'btn-outline-secondary'}`}
+                            onClick={() => handlePageChange(pageNum)}
+                            disabled={isFetching}
+                            style={{ minWidth: '40px' }}
+                          >
+                            {pageNum}
+                          </button>
+                        );
+                      })}
+                      
+                      {/* Last page */}
+                      {page < pagination.totalPages - 2 && pagination.totalPages > 5 && (
+                        <>
+                          {page < pagination.totalPages - 3 && <span className="px-1 text-muted">...</span>}
+                          <button
+                            className="btn btn-outline-secondary btn-sm"
+                            onClick={() => handlePageChange(pagination.totalPages)}
+                            disabled={isFetching}
+                            style={{ minWidth: '40px' }}
+                          >
+                            {pagination.totalPages}
+                          </button>
+                        </>
+                      )}
+                    </div>
+                    
+                    {/* Next Button */}
+                    <button
+                      className="btn btn-outline-secondary btn-sm d-flex align-items-center gap-1"
+                      onClick={() => handlePageChange(page + 1)}
+                      disabled={page === pagination.totalPages || isFetching}
+                      style={{ minWidth: '100px' }}
+                    >
+                      Suivant
+                      <i className="ri-arrow-right-s-line"></i>
+                    </button>
+                  </div>
                 )}
                 
-                {/* Infinite Scroll Trigger */}
-                <div ref={loadMoreRef} className="d-flex justify-content-center py-3">
-                  {!hasMore && products.length > 0 && (
-                    <span className="text-muted fs-small">
-                      <i className="ri-check-line me-1"></i>
-                      Tous les produits ont été chargés ({pagination.total} produits)
-                    </span>
-                  )}
+                {/* Page Info */}
+                <div className="text-center py-2 text-muted fs-small">
+                  <span>
+                    Page {pagination.page} sur {pagination.totalPages} ({pagination.total.toLocaleString('fr-FR')} produits)
+                  </span>
                 </div>
               </div>
             )}
