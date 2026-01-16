@@ -1243,10 +1243,23 @@ function SubscriptionManagement({
               </button>
             ) : (
               <button 
-                className="btn btn-outline-secondary d-block w-100 fs-14 h-43"
+                className="btn d-block w-100 fs-14 h-43"
                 onClick={handleCancelClick}
                 disabled={isLoading}
-                style={{ color: '#6b7280', borderColor: '#e5e7eb' }}
+                style={{ 
+                  color: '#6b7280', 
+                  borderColor: '#e5e7eb',
+                  backgroundColor: 'transparent',
+                  border: '1px solid #e5e7eb',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = '#f9fafb';
+                  e.currentTarget.style.borderColor = '#d1d5db';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                  e.currentTarget.style.borderColor = '#e5e7eb';
+                }}
               >
                 {isLoading ? (
                   <span className="spinner-border spinner-border-sm me-2" role="status"></span>

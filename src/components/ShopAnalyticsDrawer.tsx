@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { ComposableMap, Geographies, Geography, ZoomableGroup } from "react-simple-maps";
+import AliExpressSearchModal from "@/components/AliExpressSearchModal";
 
 const geoUrl = "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json";
 
@@ -152,6 +153,10 @@ export default function ShopAnalyticsDrawer({ isOpen, onClose, shopId, shopUrl, 
   
   // Website iframe error
   const [iframeError, setIframeError] = useState(false);
+  
+  // AliExpress search modal state
+  const [aliExpressModalOpen, setAliExpressModalOpen] = useState(false);
+  const [selectedProductForAliExpress, setSelectedProductForAliExpress] = useState<{ imageUrl: string; price: number; title: string } | null>(null);
   
   const loadMoreRef = useRef<HTMLDivElement>(null);
 
@@ -744,10 +749,19 @@ export default function ShopAnalyticsDrawer({ isOpen, onClose, shopId, shopUrl, 
                           </div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
                             <span style={{ color: '#0c6cfb', fontWeight: 600, fontSize: 18 }}>{currency}{p.price || 0}</span>
-                            <a href={`https://www.aliexpress.com/wholesale?SearchText=${encodeURIComponent(p.title || '')}`} target="_blank" rel="noopener noreferrer" style={{ border: '1px solid #E5E7EB', borderRadius: 8, background: '#fff', padding: '8px 12px', fontSize: 13, color: '#374151', textDecoration: 'none', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <button 
+                              onClick={() => {
+                                setSelectedProductForAliExpress({
+                                  imageUrl: p.imageUrl || '',
+                                  price: parseFloat(String(p.price)) || 0,
+                                  title: p.title || ''
+                                });
+                                setAliExpressModalOpen(true);
+                              }}
+                              style={{ border: '1px solid #E5E7EB', borderRadius: 8, background: '#fff', padding: '8px 12px', fontSize: 13, color: '#374151', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
                               <img src="/img/icons/aliexpress-icon.png" alt="" style={{ width: 16, height: 16 }} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
                               Trouver sur Aliexpress
-                            </a>
+                            </button>
                           </div>
                         </div>
                       </div>
@@ -1218,6 +1232,18 @@ export default function ShopAnalyticsDrawer({ isOpen, onClose, shopId, shopUrl, 
           ) : null}
         </div>
       </div>
+
+      {/* AliExpress Search Modal */}
+      <AliExpressSearchModal
+        isOpen={aliExpressModalOpen}
+        onClose={() => {
+          setAliExpressModalOpen(false);
+          setSelectedProductForAliExpress(null);
+        }}
+        productImageUrl={selectedProductForAliExpress?.imageUrl || ''}
+        productPrice={selectedProductForAliExpress?.price || 0}
+        productTitle={selectedProductForAliExpress?.title}
+      />
 
       <style jsx>{`
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }

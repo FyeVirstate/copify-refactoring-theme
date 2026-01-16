@@ -5,6 +5,7 @@ import Link from "next/link";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useStats } from "@/contexts/StatsContext";
 import { ComposableMap, Geographies, Geography, ZoomableGroup } from "react-simple-maps";
+import AliExpressSearchModal from "@/components/AliExpressSearchModal";
 
 const geoUrl = "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json";
 
@@ -329,6 +330,10 @@ export default function TrackDetailsPage({ params }: { params: Promise<{ id: str
   const [analyzingShopIds, setAnalyzingShopIds] = useState<Set<number>>(new Set());
   const [trackedShopIds, setTrackedShopIds] = useState<Set<number>>(new Set());
   const [toastAlerts, setToastAlerts] = useState<Array<{ id: number; type: 'success' | 'error' | 'info' | 'limit'; message: string }>>([]);
+  
+  // AliExpress search modal state
+  const [aliExpressModalOpen, setAliExpressModalOpen] = useState(false);
+  const [selectedProductForAliExpress, setSelectedProductForAliExpress] = useState<{ imageUrl: string; price: number; title: string } | null>(null);
   
   // Slider drag handlers
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -1937,10 +1942,15 @@ export default function TrackDetailsPage({ params }: { params: Promise<{ id: str
                       </span>
                       {/* Bouton Trouver sur Aliexpress */}
                       <div className="d-flex justify-content-end ms-3">
-                        <a 
-                          href={`https://www.aliexpress.com/wholesale?SearchText=${encodeURIComponent(p.title || '')}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
+                        <button 
+                          onClick={() => {
+                            setSelectedProductForAliExpress({
+                              imageUrl: p.imageUrl || '',
+                              price: parseFloat(String(p.price)) || 0,
+                              title: p.title || ''
+                            });
+                            setAliExpressModalOpen(true);
+                          }}
                           style={{ 
                             border: '1px solid #E5E7EB', 
                             borderRadius: 8, 
@@ -1952,7 +1962,6 @@ export default function TrackDetailsPage({ params }: { params: Promise<{ id: str
                             padding: '8px 12px',
                             fontSize: 13,
                             color: '#374151',
-                            textDecoration: 'none',
                             whiteSpace: 'nowrap',
                             flexShrink: 0
                           }}
@@ -1964,7 +1973,7 @@ export default function TrackDetailsPage({ params }: { params: Promise<{ id: str
                             onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
                           />
                           Trouver sur Aliexpress
-                        </a>
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -3298,6 +3307,18 @@ export default function TrackDetailsPage({ params }: { params: Promise<{ id: str
 
         </div>
       </div>
+
+      {/* AliExpress Search Modal */}
+      <AliExpressSearchModal
+        isOpen={aliExpressModalOpen}
+        onClose={() => {
+          setAliExpressModalOpen(false);
+          setSelectedProductForAliExpress(null);
+        }}
+        productImageUrl={selectedProductForAliExpress?.imageUrl || ''}
+        productPrice={selectedProductForAliExpress?.price || 0}
+        productTitle={selectedProductForAliExpress?.title}
+      />
 
       <style jsx>{`
         @media (max-width: 1024px) {
