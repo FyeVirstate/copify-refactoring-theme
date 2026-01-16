@@ -201,12 +201,16 @@ export async function GET(request: NextRequest) {
 
     // Shop creation date filter (uses whois_at from materialized view)
     if (shopCreationDate && shopCreationDate.includes(' - ')) {
-      const [startDate, endDate] = shopCreationDate.split(' - ')
-      conditions.push(`m.whois_at >= $${paramIndex}`)
-      params.push(new Date(startDate))
+      const [startDateStr, endDateStr] = shopCreationDate.split(' - ')
+      const startDate = new Date(startDateStr)
+      const endDate = new Date(endDateStr)
+      // Add 1 day to end date to include the whole end day
+      endDate.setDate(endDate.getDate() + 1)
+      conditions.push(`m.whois_at >= $${paramIndex}::timestamp`)
+      params.push(startDate.toISOString())
       paramIndex++
-      conditions.push(`m.whois_at <= $${paramIndex}`)
-      params.push(new Date(endDate))
+      conditions.push(`m.whois_at <= $${paramIndex}::timestamp`)
+      params.push(endDate.toISOString())
       paramIndex++
     }
 
@@ -391,10 +395,9 @@ export async function GET(request: NextRequest) {
     if (sortBy === 'most_profitable') {
       conditions.push(`m.last_month_visits > 0`)
     }
-    if (sortBy === 'top_score') {
-      // Top score requires products with active advertising (minimum 5 ads)
-      conditions.push(`m.active_ads_count >= 5`)
-    }
+    // NOTE: top_score is a SORT, not a FILTER
+    // The scoring algorithm naturally ranks products with more active ads higher
+    // but we don't filter them out - users can still browse ALL products
 
     // Category filter - needs async lookup
     let categoryCondition = ''
@@ -448,23 +451,27 @@ export async function GET(request: NextRequest) {
         ) ${order}`
         break
       case 'top_score':
-        // Custom AI Score algorithm combining multiple business signals
-        // 1. Growth rate - strong indicator of trending products (40%)
-        // 2. Active ads - proves product is being marketed (25%)
-        // 3. Estimated orders - actual sales performance (25%)
-        // 4. Random factor for variety/rotation (10%)
+        // Custom AI Score - DISCOVERY scoring favoring sweet spot shops
         orderByClause = `ORDER BY (
-          -- 1) Growth rate (traffic growth) - strong signal
-          COALESCE(growth_rate, 0) * 0.40
+          -- Sweet spot shops (20-300 ads) get priority over giants
+          CASE 
+            WHEN COALESCE(active_ads_count, 0) BETWEEN 100 AND 300 THEN 500000000
+            WHEN COALESCE(active_ads_count, 0) BETWEEN 50 AND 99 THEN 450000000
+            WHEN COALESCE(active_ads_count, 0) BETWEEN 20 AND 49 THEN 400000000
+            WHEN COALESCE(active_ads_count, 0) BETWEEN 301 AND 500 THEN 350000000
+            WHEN COALESCE(active_ads_count, 0) > 500 THEN 300000000
+            WHEN COALESCE(active_ads_count, 0) BETWEEN 5 AND 19 THEN 200000000
+            ELSE 0
+          END +
           
-          -- 2) Active ads count (log scale to avoid outliers dominating)
-          + LN(1 + COALESCE(active_ads_count, 0)) * 0.25
+          -- Traffic (LOG scale)
+          LN(1 + COALESCE(last_month_visits, 0)) * 1000000 +
           
-          -- 3) Estimated orders (log scale for normalization)
-          + LN(1 + COALESCE(estimated_order, 0)) * 0.25
+          -- Active ads (CAPPED at 300)
+          LN(1 + LEAST(COALESCE(active_ads_count, 0), 300)) * 500000 +
           
-          -- 4) Random factor for rotation (daily + hourly seed)
-          + (MOD(ABS(HASHTEXT(product_handle || '${dailySeed}' || '${hourSeed}')), 1000) / 1000.0) * 0.10
+          -- Random rotation
+          (MOD(ABS(HASHTEXT(product_handle || '${dailySeed}' || '${hourSeed}')), 1000))
         ) ${order}`
         break
       case 'most_active_ads':

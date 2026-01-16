@@ -1780,7 +1780,6 @@ export default function AIShopEditorPage() {
                       >
                         {displayedImages.map((image, idx) => {
                           const isFirstImage = idx === 0;
-                          const isNinthCard = idx === 8 && hasMoreImages && !showAllImages;
                           const isSelected = selectedImages.includes(image);
                           
                           return (
@@ -1798,9 +1797,7 @@ export default function AIShopEditorPage() {
                                 ...(isFirstImage ? { gridColumn: 'span 2', gridRow: 'span 2' } : {})
                               }}
                               onClick={() => {
-                                if (isNinthCard) {
-                                  setShowAllImages(true);
-                                } else if (isSelected) {
+                                if (isSelected) {
                                   setSelectedImages(selectedImages.filter(img => img !== image));
                                 } else {
                                   setSelectedImages([...selectedImages, image]);
@@ -1885,8 +1882,7 @@ export default function AIShopEditorPage() {
                                   </div>
 
                                   {/* Edit with AI Button */}
-                                  {!isNinthCard && (
-                                    <button 
+                                  <button 
                                       type="button"
                                       className="edit-image-ai-btn"
                                       style={{
@@ -1930,73 +1926,38 @@ export default function AIShopEditorPage() {
                                       </svg>
                                       <span>Modifier avec IA</span>
                                     </button>
-                                  )}
-
-                                  {/* View More Overlay on 9th card */}
-                                  {isNinthCard && (
-                                    <div 
-                                      className="view-more-overlay"
-                                      style={{
-                                        position: 'absolute',
-                                        top: 0,
-                                        left: 0,
-                                        right: 0,
-                                        bottom: 0,
-                                        background: 'rgba(0, 0, 0, 0.5)',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        cursor: 'pointer',
-                                        zIndex: 5,
-                                        borderRadius: '8px'
-                                      }}
-                                    >
-                                      <span className="view-more-count" style={{ color: '#fff', fontSize: '24px', fontWeight: 600 }}>
-                                        +{remainingCount}
-                                      </span>
-                                    </div>
-                                  )}
                                 </div>
                               </div>
                             </div>
                           );
                         })}
 
-                        {/* View Less Card */}
-                        {showAllImages && hasMoreImages && (
-                          <div 
-                            className="image-card view-less-card"
+                        </div>
+                      
+                      {/* See more/less images button */}
+                      {hasMoreImages && (
+                        <div className="text-center mt-3">
+                          <button
+                            type="button"
+                            className="btn btn-outline-secondary btn-sm px-4 py-2"
                             style={{
-                              position: 'relative',
-                              aspectRatio: '1',
-                              borderRadius: '12px',
-                              overflow: 'hidden',
-                              minWidth: '130px',
-                              cursor: 'pointer'
+                              borderRadius: '20px',
+                              fontSize: '14px',
+                              fontWeight: 500,
+                              border: '1px solid #e1e4ea',
+                              backgroundColor: '#fff',
+                              color: '#525866',
                             }}
-                            onClick={() => setShowAllImages(false)}
+                            onClick={() => setShowAllImages(!showAllImages)}
                           >
-                            <div 
-                              className="view-less-btn"
-                              style={{
-                                width: '100%',
-                                height: '100%',
-                                display: 'flex',
-                                flexDirection: 'column',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                border: '1px dashed #CACFD8',
-                                borderRadius: '8px',
-                                background: '#F5F7FA',
-                                transition: 'all 0.2s ease'
-                              }}
-                            >
-                              <i className="ri-arrow-up-s-line" style={{ fontSize: '20px', color: '#6b7280' }}></i>
-                              <span style={{ fontSize: '12px', color: '#6b7280' }}>Montrer Moins</span>
-                            </div>
-                          </div>
-                        )}
-                      </div>
+                            <i className={`ri-arrow-${showAllImages ? 'up' : 'down'}-line me-2`}></i>
+                            {showAllImages 
+                              ? 'Voir moins d\'images' 
+                              : `Voir plus d'images (${remainingCount})`
+                            }
+                          </button>
+                        </div>
+                      )}
                     </>
                   );
                 })()}

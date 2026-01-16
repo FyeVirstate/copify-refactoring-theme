@@ -885,6 +885,7 @@ export default function AIShopPage() {
   const [generationHistory, setGenerationHistory] = useState<GeneratedShop[]>([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(true);
   const [generatedProductId, setGeneratedProductId] = useState<number | null>(null);
+  const [showAllImages, setShowAllImages] = useState(false);
 
   // Use global stats context
   const { stats, loading, refreshStats } = useStats();
@@ -2509,85 +2510,105 @@ export default function AIShopPage() {
                 </p>
                 
                 {/* Images Grid with "Modifier avec IA" buttons */}
-                <div className="row g-3" data-image-grid>
-                  {(aiContent.images || []).map((image, idx) => (
-                    <div key={idx} className="col-6 col-md-4 col-lg-3 image-card">
-                      <label className="radio-container d-block position-relative" style={{ cursor: 'pointer' }}>
-                        <input 
-                          type="checkbox" 
-                          className="d-none"
-                          checked={selectedImages.includes(image)}
-                          onChange={() => {
-                            if (selectedImages.includes(image)) {
-                              setSelectedImages(selectedImages.filter(i => i !== image));
-                            } else {
-                              setSelectedImages([...selectedImages, image]);
-                            }
-                          }}
-                        />
-                        <div 
-                          className={`custom-image-radio rounded overflow-hidden border ${selectedImages.includes(image) ? 'border-primary border-2' : ''}`}
-                          style={{ aspectRatio: '1' }}
-                        >
-                          <img 
-                            src={image} 
-                            alt={`Product ${idx + 1}`}
-                            className="w-100 h-100"
-                            style={{ objectFit: 'cover' }}
-                          />
-                          {/* Checkmark */}
-                          {selectedImages.includes(image) && (
-                            <div 
-                              className="position-absolute d-flex align-items-center justify-content-center rounded-circle bg-primary"
-                              style={{ top: '8px', right: '8px', width: '24px', height: '24px' }}
-                            >
-                              <i className="ri-check-line text-white fs-small"></i>
-                            </div>
-                          )}
-                          {/* Edit with AI button */}
+                {(() => {
+                  const allImages = aiContent.images || [];
+                  const INITIAL_IMAGES_COUNT = 10;
+                  const displayedImages = showAllImages ? allImages : allImages.slice(0, INITIAL_IMAGES_COUNT);
+                  const hiddenImagesCount = allImages.length - INITIAL_IMAGES_COUNT;
+                  
+                  return (
+                    <>
+                      <div className="row g-3" data-image-grid>
+                        {displayedImages.map((image, idx) => (
+                          <div key={idx} className="col-6 col-md-4 col-lg-3 image-card">
+                            <label className="radio-container d-block position-relative" style={{ cursor: 'pointer' }}>
+                              <input 
+                                type="checkbox" 
+                                className="d-none"
+                                checked={selectedImages.includes(image)}
+                                onChange={() => {
+                                  if (selectedImages.includes(image)) {
+                                    setSelectedImages(selectedImages.filter(i => i !== image));
+                                  } else {
+                                    setSelectedImages([...selectedImages, image]);
+                                  }
+                                }}
+                              />
+                              <div 
+                                className={`custom-image-radio rounded overflow-hidden border ${selectedImages.includes(image) ? 'border-primary border-2' : ''}`}
+                                style={{ aspectRatio: '1' }}
+                              >
+                                <img 
+                                  src={image} 
+                                  alt={`Product ${idx + 1}`}
+                                  className="w-100 h-100"
+                                  style={{ objectFit: 'cover' }}
+                                />
+                                {/* Checkmark */}
+                                {selectedImages.includes(image) && (
+                                  <div 
+                                    className="position-absolute d-flex align-items-center justify-content-center rounded-circle bg-primary"
+                                    style={{ top: '8px', right: '8px', width: '24px', height: '24px' }}
+                                  >
+                                    <i className="ri-check-line text-white fs-small"></i>
+                                  </div>
+                                )}
+                                {/* Edit with AI button */}
+                                <button
+                                  type="button"
+                                  className="edit-image-ai-btn position-absolute"
+                                  style={{ 
+                                    bottom: '8px', 
+                                    right: '8px',
+                                    background: 'rgba(14, 18, 27, 0.24)',
+                                    backdropFilter: 'blur(4px)',
+                                    color: '#fff',
+                                    border: 'none',
+                                    borderRadius: '12px',
+                                    padding: '4px 12px',
+                                    fontSize: '12px',
+                                    cursor: 'pointer',
+                                  }}
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    // TODO: Implement AI image editing
+                                    console.log('Edit image with AI:', image);
+                                  }}
+                                >
+                                  <i className="ri-magic-line me-1"></i>
+                                  Modifier avec IA
+                                </button>
+                              </div>
+                            </label>
+                          </div>
+                        ))}
+                      </div>
+                      
+                      {/* See more/less images button */}
+                      {allImages.length > INITIAL_IMAGES_COUNT && (
+                        <div className="text-center mt-3">
                           <button
                             type="button"
-                            className="edit-image-ai-btn position-absolute"
-                            style={{ 
-                              bottom: '8px', 
-                              right: '8px',
-                              background: 'rgba(14, 18, 27, 0.24)',
-                              backdropFilter: 'blur(4px)',
-                              color: '#fff',
-                              border: 'none',
-                              borderRadius: '12px',
-                              padding: '4px 12px',
-                              fontSize: '12px',
-                              cursor: 'pointer',
+                            className="btn btn-outline-secondary btn-sm px-4 py-2"
+                            style={{
+                              borderRadius: '20px',
+                              fontSize: '14px',
+                              fontWeight: 500,
                             }}
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              // TODO: Implement AI image editing
-                              console.log('Edit image with AI:', image);
-                            }}
+                            onClick={() => setShowAllImages(!showAllImages)}
                           >
-                            <i className="ri-magic-line me-1"></i>
-                            Modifier avec IA
+                            <i className={`ri-arrow-${showAllImages ? 'up' : 'down'}-line me-2`}></i>
+                            {showAllImages 
+                              ? 'Voir moins d\'images' 
+                              : `Voir plus d'images (${hiddenImagesCount})`
+                            }
                           </button>
                         </div>
-                      </label>
-                    </div>
-                  ))}
-                  {/* More images indicator */}
-                  {(aiContent.images || []).length > 8 && (
-                    <div className="col-6 col-md-4 col-lg-3">
-                      <div 
-                        className="d-flex align-items-center justify-content-center border rounded bg-light"
-                        style={{ aspectRatio: '1' }}
-                      >
-                        <span className="fs-4 fw-600 text-muted">
-                          +{(aiContent.images || []).length - 8}
-                        </span>
-                      </div>
-                    </div>
-                  )}
-                </div>
+                      )}
+                    </>
+                  );
+                })()}
               </div>
 
               {/* Navigation Buttons */}

@@ -48,10 +48,9 @@ import {
 import TutorialModal, { TUTORIAL_CONFIGS } from "@/components/TutorialModal";
 import ShopAnalyticsDrawer from "@/components/ShopAnalyticsDrawer";
 
-// Sort options for shops
+// Sort options for shops - top_score is now "Pertinence" (DEFAULT)
 const SORT_OPTIONS = [
-  { value: "recommended", label: "Pertinence", icon: "ri-sparkling-line" },
-  { value: "top_score", label: "Score IA (Custom)", icon: "ri-brain-line" },
+  { value: "top_score", label: "Pertinence", icon: "ri-sparkling-line" },
   { value: "estimated_monthly", label: "Chiffre d'affaires", icon: "ri-money-euro-circle-line" },
   { value: "last_month_visits", label: "Trafic", icon: "ri-line-chart-line" },
   { value: "growth_rate", label: "Croissance", icon: "ri-arrow-up-circle-line" },
@@ -288,9 +287,9 @@ export default function ShopsPage() {
   const [selectedApplications, setSelectedApplications] = useState<string[]>([]);
   const [selectedSocialNetworks, setSelectedSocialNetworks] = useState<string[]>([]);
   const [shopCreationDate, setShopCreationDate] = useState<string>("");
-  const [sortBy, setSortBy] = useState("recommended");
+  const [sortBy, setSortBy] = useState("top_score");
   const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
-  const [activePreset, setActivePreset] = useState("recommended");
+  const [activePreset, setActivePreset] = useState("");
   
   // Pagination state
   const [page, setPage] = useState(1);
@@ -493,9 +492,9 @@ export default function ShopsPage() {
     setMaxTrustpilotRating(undefined);
     setMinTrustpilotReviews(undefined);
     setMaxTrustpilotReviews(undefined);
-    setSortBy("recommended");
+    setSortBy("top_score");
     setSortOrder("desc");
-    setActivePreset("recommended");
+    setActivePreset("");
     // Reset to page 1
     if (page === 1) {
       invalidateShops();
@@ -531,16 +530,16 @@ export default function ShopsPage() {
     setMinActiveAds(undefined);
     setMaxActiveAds(undefined);
     
-    let newSortBy = 'recommended';
+    let newSortBy = 'top_score';
     
     switch (preset) {
       case 'us_market':
         setSelectedCountries(['US']);
-        newSortBy = 'recommended';
+        newSortBy = 'top_score';
         break;
       case 'eu_market':
         setSelectedCountries(['FR', 'DE', 'GB', 'IT', 'ES', 'NL', 'BE']);
-        newSortBy = 'recommended';
+        newSortBy = 'top_score';
         break;
       case 'active_ads':
         setMinActiveAds(10);
@@ -556,7 +555,7 @@ export default function ShopsPage() {
       case 'dropshipping':
         setMinProducts(1);
         setMaxProducts(50);
-        newSortBy = 'recommended';
+        newSortBy = 'top_score';
         break;
       case 'traffic_growth':
         setMinTrafficGrowth(50);

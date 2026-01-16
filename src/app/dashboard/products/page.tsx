@@ -112,10 +112,9 @@ const PRESET_CONFIGS: Record<string, Record<string, any>> = {
   },
 };
 
-// Sort options configuration - clean French labels
+// Sort options configuration - top_score is now "Pertinence" (DEFAULT)
 const SORT_OPTIONS = [
-  { value: "recommended", label: "Pertinence", icon: "ri-sparkling-line" },
-  { value: "top_score", label: "Score IA (Custom)", icon: "ri-robot-line" },
+  { value: "top_score", label: "Pertinence", icon: "ri-sparkling-line" },
   { value: "estimated_monthly", label: "Chiffre d'affaires", icon: "ri-money-euro-circle-line" },
   { value: "estimated_order", label: "Commandes", icon: "ri-shopping-cart-line" },
   { value: "last_month_visits", label: "Trafic", icon: "ri-line-chart-line" },
@@ -315,7 +314,7 @@ function ProductsContent() {
   const [selectedThemes, setSelectedThemes] = useState<string[]>([]);
   const [selectedApplications, setSelectedApplications] = useState<string[]>([]);
   const [selectedSocialNetworks, setSelectedSocialNetworks] = useState<string[]>([]);
-  const [sortBy, setSortBy] = useState("recommended");
+  const [sortBy, setSortBy] = useState("top_score");
   const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
 
   // Pagination state
@@ -703,7 +702,7 @@ function ProductsContent() {
     setMaxTrustpilotRating(undefined);
     setMinTrustpilotReviews(undefined);
     setMaxTrustpilotReviews(undefined);
-    setSortBy("recommended");
+    setSortBy("top_score");
     setSortOrder("desc");
     setActivePreset("");
     // Force refetch

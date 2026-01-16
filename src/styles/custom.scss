@@ -6917,3 +6917,32 @@ input.ai-shop-url-input.validation-validating,
   }
 }
 
+// ============================================
+// RECHARTS TOOLTIP FIX - Force tooltip above overflow containers
+// ============================================
+.recharts-wrapper {
+  overflow: visible !important;
+  
+  svg {
+    overflow: visible !important;
+  }
+}
+
+.recharts-tooltip-wrapper {
+  z-index: 99999 !important;
+  pointer-events: none !important;
+  overflow: visible !important;
+}
+
+// Ensure table cells don't clip chart tooltips
+.table-view .recharts-wrapper,
+.table-wrapper .recharts-wrapper,
+table .recharts-wrapper {
+  overflow: visible !important;
+}
+
+// Force table cells containing charts to allow overflow
+td:has(.recharts-wrapper) {
+  overflow: visible !important;
+}
+

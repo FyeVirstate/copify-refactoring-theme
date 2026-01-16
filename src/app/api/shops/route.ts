@@ -92,10 +92,9 @@ export async function GET(request: NextRequest) {
     // Minimum quality filters like Laravel
     shopConditions.push(`s.products_count > 0`)
     
-    // For top_score filter, enforce minimum active ads
-    if (sortBy === 'top_score') {
-      shopConditions.push(`s.active_ads >= 5`)
-    }
+    // NOTE: top_score is a SORT, not a FILTER
+    // The scoring algorithm naturally ranks shops with more active ads higher
+    // but we don't filter them out - users can still browse ALL shops
 
     // Search text - use index if available
     if (searchText) {
@@ -245,12 +244,15 @@ export async function GET(request: NextRequest) {
         const startDate = new Date(dates[0])
         const endDate = new Date(dates[1])
         if (!isNaN(startDate.getTime())) {
-          shopConditions.push(`s.created_at >= $${paramIndex}`)
+          // Use CAST to ensure proper timestamp comparison
+          shopConditions.push(`s.created_at >= $${paramIndex}::timestamp`)
           params.push(startDate.toISOString())
           paramIndex++
         }
         if (!isNaN(endDate.getTime())) {
-          shopConditions.push(`s.created_at <= $${paramIndex}`)
+          // Add 1 day to endDate to include the whole end day
+          endDate.setDate(endDate.getDate() + 1)
+          shopConditions.push(`s.created_at <= $${paramIndex}::timestamp`)
           params.push(endDate.toISOString())
           paramIndex++
         }
@@ -352,7 +354,36 @@ export async function GET(request: NextRequest) {
       paramIndex++
     }
 
-    const shopWhereClause = shopConditions.length > 0 ? `WHERE ${shopConditions.join(' AND ')}` : ''
+    // Category/Niche filter - lookup category names to get IDs
+    let categoryCondition = ''
+    if (categories.length > 0) {
+      console.log(`[Shops API] Category filter requested: ${categories.join(', ')}`)
+      const allCategories = await prisma.category.findMany({
+        select: { id: true, name: true }
+      })
+      
+      const matchingCategoryIds = allCategories
+        .filter(cat => {
+          const nameObj = cat.name as { en?: string; fr?: string } | null
+          return categories.some(name => 
+            nameObj?.en?.toLowerCase().includes(name.toLowerCase()) ||
+            nameObj?.fr?.toLowerCase().includes(name.toLowerCase())
+          )
+        })
+        .map(c => Number(c.id))
+      
+      console.log(`[Shops API] Matching category IDs: ${matchingCategoryIds.join(', ')}`)
+      
+      if (matchingCategoryIds.length > 0) {
+        categoryCondition = `AND EXISTS (
+          SELECT 1 FROM shops_categories sc 
+          WHERE sc.shop_id = s.id 
+          AND sc.category_id IN (${matchingCategoryIds.join(', ')})
+        )`
+      }
+    }
+
+    const shopWhereClause = shopConditions.length > 0 ? `WHERE ${shopConditions.join(' AND ')} ${categoryCondition}` : (categoryCondition ? `WHERE 1=1 ${categoryCondition}` : '')
     const trafficWhereClause = trafficConditions.length > 0 ? `AND ${trafficConditions.join(' AND ')}` : ''
 
     // Build ORDER BY clause based on sortBy and sortOrder
@@ -393,34 +424,29 @@ export async function GET(request: NextRequest) {
         orderByClause = `ORDER BY s.products_count ${order} NULLS LAST`
         break
       case 'top_score':
-        // Score IA Custom - Adapted scoring formula for shops
+        // Score IA Custom - DISCOVERY scoring favoring sweet spot shops
         const dailySeed = new Date().toISOString().split('T')[0]
         const hourSeed = new Date().getHours().toString()
         orderByClause = `ORDER BY (
-          -- 1) Business signals (traffic growth, active ads, estimated orders)
-          COALESCE(t.growth_rate, 0) * 0.25 +
-          LN(1 + COALESCE(s.active_ads, 0)) * 0.22 +
-          LN(1 + COALESCE(t.estimated_order, 0)) * 0.18 +
-          
-          -- 2) Traffic momentum (recent visits)
-          LN(1 + COALESCE(t.last_month_visits, 0)) * 0.12 +
-          
-          -- 3) Bonus "sweet spot" products (10-30 products = ideal store)
+          -- TIER: Sweet spot shops (20-300 ads) get priority over giants
           CASE 
-            WHEN COALESCE(s.products_count, 0) BETWEEN 10 AND 30 THEN 0.12
-            WHEN COALESCE(s.products_count, 0) BETWEEN 5 AND 9 THEN 0.06
-            WHEN COALESCE(s.products_count, 0) BETWEEN 31 AND 50 THEN 0.04
+            WHEN COALESCE(s.active_ads, 0) BETWEEN 100 AND 300 THEN 500000000
+            WHEN COALESCE(s.active_ads, 0) BETWEEN 50 AND 99 THEN 450000000
+            WHEN COALESCE(s.active_ads, 0) BETWEEN 20 AND 49 THEN 400000000
+            WHEN COALESCE(s.active_ads, 0) BETWEEN 301 AND 500 THEN 350000000
+            WHEN COALESCE(s.active_ads, 0) > 500 THEN 300000000
+            WHEN COALESCE(s.active_ads, 0) BETWEEN 5 AND 19 THEN 200000000
             ELSE 0
           END +
           
-          -- 4) Store freshness (newer stores get slight boost, capped)
-          LEAST(
-            0.06,
-            0.06 * EXP(- (EXTRACT(EPOCH FROM (NOW() - COALESCE(s.created_at, NOW()))) / 86400.0) / 90.0)
-          ) +
+          -- Traffic (LOG scale)
+          LN(1 + COALESCE(t.last_month_visits, 0)) * 1000000 +
           
-          -- 5) Random factor for rotation (daily + hourly refresh)
-          (MOD(ABS(HASHTEXT(s.url || '${dailySeed}' || '${hourSeed}')), 1000) / 1000.0) * 0.05
+          -- Active ads (CAPPED at 300)
+          LN(1 + LEAST(COALESCE(s.active_ads, 0), 300)) * 500000 +
+          
+          -- Random rotation
+          (MOD(ABS(HASHTEXT(s.url || '${dailySeed}' || '${hourSeed}')), 1000))
         ) DESC NULLS LAST`
         needsTrafficForSort = true
         break
@@ -439,15 +465,16 @@ export async function GET(request: NextRequest) {
 
     // Generate cache key for count - include params values for accurate caching
     const countParams = [...params] // Copy current params (before adding perPage, offset, userId)
-    const cacheKey = JSON.stringify({ shopConditions, trafficConditions, countParams })
+    const cacheKey = JSON.stringify({ shopConditions, trafficConditions, categoryCondition, countParams })
     const cached = countCache.get(cacheKey)
     let total: number
     
     const offset = (page - 1) * perPage
 
     // Check if we need to join with shops table for specific filters
+    // Category filter needs access to shop_categories table
     const needsShopsJoin = pixels.length > 0 || themes.length > 0 || applications.length > 0 || 
-                           searchText || languages.length > 0 || domains.length > 0
+                           searchText || languages.length > 0 || domains.length > 0 || categories.length > 0
     // Check if we need traffic table for social networks filter
     const needsTrafficJoin = socialNetworks.length > 0
 
@@ -473,14 +500,64 @@ export async function GET(request: NextRequest) {
         .replace(/s\./g, 'm.')
         .replace(/t\./g, 'm.');
       
+      // Build score expression for materialized view (for ORDER BY in outer query)
+      // DISCOVERY scoring - favor "sweet spot" shops (20-300 ads) over giant brands
+      // Giant brands (>500 ads) get PENALIZED - user wants to discover interesting shops
+      let mvScoreExpr = '0'
+      if (sortBy === 'top_score') {
+        const dailySeedMv = new Date().toISOString().split('T')[0]
+        const hourSeedMv = new Date().getHours().toString()
+        mvScoreExpr = `(
+          -- TIER 1: "Sweet spot" shops get HIGHEST priority (20-300 ads = serious but discoverable)
+          -- Giant brands (>500 ads) get LOWER tier - they're already known
+          CASE 
+            WHEN COALESCE(m.active_ads_count, 0) BETWEEN 100 AND 300 THEN 500000000
+            WHEN COALESCE(m.active_ads_count, 0) BETWEEN 50 AND 99 THEN 450000000
+            WHEN COALESCE(m.active_ads_count, 0) BETWEEN 20 AND 49 THEN 400000000
+            WHEN COALESCE(m.active_ads_count, 0) BETWEEN 301 AND 500 THEN 350000000
+            WHEN COALESCE(m.active_ads_count, 0) > 500 THEN 300000000
+            WHEN COALESCE(m.active_ads_count, 0) BETWEEN 5 AND 19 THEN 200000000
+            ELSE 0
+          END +
+          
+          -- TIER 2: Traffic (LOG scale)
+          LN(1 + COALESCE(m.last_month_visits, 0)) * 1000000 +
+          
+          -- TIER 3: Active ads bonus (CAPPED at 300 for sweet spot)
+          LN(1 + LEAST(COALESCE(m.active_ads_count, 0), 300)) * 500000 +
+          
+          -- TIER 4: Random rotation
+          (MOD(ABS(HASHTEXT(m.shop_url || '${dailySeedMv}' || '${hourSeedMv}')), 1000))
+        )`
+      } else if (sortBy === 'recommended') {
+        mvScoreExpr = `(
+          COALESCE(m.growth_rate, 0) * 0.3 + 
+          COALESCE(m.active_ads_count, 0) * 10000 + 
+          COALESCE(m.estimated_order, 0) * 0.1 +
+          (m.id % 1000) * 5
+        )`
+      } else if (sortBy === 'traffic' || sortBy === 'most_traffic' || sortBy === 'last_month_visits') {
+        mvScoreExpr = `COALESCE(m.last_month_visits, 0)`
+      } else if (sortBy === 'revenue' || sortBy === 'highest_revenue' || sortBy === 'estimated_monthly') {
+        mvScoreExpr = `COALESCE(m.estimated_monthly, 0)`
+      } else if (sortBy === 'activeAds' || sortBy === 'most_active_ads' || sortBy === 'active_ads') {
+        mvScoreExpr = `COALESCE(m.active_ads_count, 0)`
+      } else if (sortBy === 'newest' || sortBy === 'most_recent' || sortBy === 'created_at') {
+        mvScoreExpr = `EXTRACT(EPOCH FROM COALESCE(m.whois_at, '1970-01-01'::timestamp))`
+      } else if (sortBy === 'trafficGrowth' || sortBy === 'traffic_growth' || sortBy === 'growth_rate') {
+        mvScoreExpr = `COALESCE(m.growth_rate, 0)`
+      } else if (sortBy === 'productsCount' || sortBy === 'products_count') {
+        mvScoreExpr = `COALESCE(m.products_count, 0)`
+      }
+      
       mainQuery = `
         WITH filtered_shops AS (
-          SELECT m.*
+          SELECT m.*, ${mvScoreExpr} as _score
           FROM top_shops_materialized m
           WHERE 1=1
           ${mvShopConditions.length > 0 ? 'AND ' + mvShopConditions.map(c => mvColumnReplace(c)).join(' AND ') : ''}
           ${mvTrafficConditions.length > 0 ? 'AND ' + mvTrafficConditions.map(c => mvColumnReplace(c)).join(' AND ') : ''}
-          ${mvColumnReplace(orderByClause)}
+          ORDER BY _score ${sortOrder === 'asc' ? 'ASC' : 'DESC'} NULLS LAST
           LIMIT $${paramIndex}
           OFFSET $${paramIndex + 1}
         )
@@ -504,6 +581,7 @@ export async function GET(request: NextRequest) {
           fs.best_product_handle,
           fs.best_product_price,
           fs.best_product_image,
+          fs._score,
           tc.countries as traffic_countries,
           tc.visits,
           tc.dates,
@@ -542,18 +620,22 @@ export async function GET(request: NextRequest) {
         LEFT JOIN LATERAL (
           SELECT jsonb_agg(
             jsonb_build_object(
-              'active_ads_count', h.active_ads_count,
-              'date', h.created_at
+              'active_ads_count', h.avg_ads,
+              'date', h.month_date
             )
           ) as ads_history
           FROM (
-            SELECT active_ads_count, created_at
+            SELECT 
+              ROUND(AVG(active_ads_count))::int as avg_ads,
+              DATE_TRUNC('month', created_at) as month_date
             FROM shops_ads_active_history 
             WHERE shop_id = fs.id 
               AND created_at >= NOW() - INTERVAL '90 days'
-            ORDER BY created_at ASC
+            GROUP BY DATE_TRUNC('month', created_at)
+            ORDER BY month_date ASC
           ) h
         ) ah ON true
+        ORDER BY fs._score ${sortOrder === 'asc' ? 'ASC' : 'DESC'} NULLS LAST
       `
     } else {
       // SLOWER PATH: Need to join with shops/traffic tables for specific filters
@@ -655,16 +737,19 @@ export async function GET(request: NextRequest) {
       LEFT JOIN LATERAL (
         SELECT jsonb_agg(
           jsonb_build_object(
-            'active_ads_count', h.active_ads_count,
-            'date', h.created_at
+            'active_ads_count', h.avg_ads,
+            'date', h.month_date
           )
         ) as ads_history
         FROM (
-          SELECT active_ads_count, created_at
+          SELECT 
+            ROUND(AVG(active_ads_count))::int as avg_ads,
+            DATE_TRUNC('month', created_at) as month_date
           FROM shops_ads_active_history 
           WHERE shop_id = s.id 
             AND created_at >= NOW() - INTERVAL '90 days'
-          ORDER BY created_at ASC
+          GROUP BY DATE_TRUNC('month', created_at)
+          ORDER BY month_date ASC
         ) h
       ) ah ON true
         LEFT JOIN user_shops us ON us.shop_id = s.id AND us.user_id = $${paramIndex + 2}
@@ -679,7 +764,28 @@ export async function GET(request: NextRequest) {
     // Execute main query
     const mainQueryStart = Date.now()
     console.log(`[Shops API] Executing main query...`)
+    console.log(`[Shops API] sortBy=${sortBy}, using fast path=${!needsShopsJoin && !needsTrafficJoin}`)
     const shopsResult = await prisma.$queryRawUnsafe<any[]>(mainQuery, ...params)
+    
+    // DEBUG: Log first 5 results with detailed score breakdown
+    if (sortBy === 'top_score') {
+      console.log(`[Shops API] TOP_SCORE DEBUG - First 5 results:`)
+      shopsResult.slice(0, 5).forEach((shop: any, i: number) => {
+        const activeAds = Number(shop.active_ads) || 0
+        const lastMonthVisits = Number(shop.last_month_visits) || 0
+        
+        // Determine tier (sweet spot scoring)
+        let tier = 'NO TIER'
+        if (activeAds >= 100 && activeAds <= 300) tier = 'SWEET SPOT 100-300 (500M)'
+        else if (activeAds >= 50 && activeAds <= 99) tier = 'GOOD 50-99 (450M)'
+        else if (activeAds >= 20 && activeAds <= 49) tier = 'OK 20-49 (400M)'
+        else if (activeAds > 500) tier = 'TOO BIG >500 (300M)'
+        else if (activeAds > 300) tier = 'BIG 301-500 (350M)'
+        else if (activeAds >= 5) tier = 'SMALL 5-19 (200M)'
+        
+        console.log(`  ${i+1}. ${shop.url} | ads: ${activeAds} | traffic: ${(lastMonthVisits/1000000).toFixed(1)}M | ${tier}`)
+      })
+    }
     timings.mainQuery = Date.now() - mainQueryStart
     console.log(`[Shops API] Main Query: ${timings.mainQuery}ms - ${shopsResult.length} results`)
 

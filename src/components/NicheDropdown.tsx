@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -9,72 +9,57 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 
-interface NicheCategory {
+interface ApiCategory {
+  id: number;
   name: string;
-  subcategories?: string[];
+  shopCount?: number;
+  children?: { id: number; name: string }[];
 }
 
-const nicheCategories: NicheCategory[] = [
-  {
-    name: "Voyage",
-    subcategories: ["Voyage d'affaires", "Voyage en famille", "Voyage solo"]
-  },
-  {
-    name: "Science",
-    subcategories: ["Biologie", "Physique", "Chimie"]
-  },
-  {
-    name: "Santé",
-    subcategories: ["Soins bucco-dentaires", "Santé des femmes", "Santé reproductive"]
-  },
-  {
-    name: "Fumer et vaper",
-  },
-  {
-    name: "Adulte",
-  },
-  {
-    name: "Sécurité et survie",
-    subcategories: ["Équipement de survie", "Sécurité personnelle"]
-  },
-];
+interface NicheCategory {
+  id: number;
+  name: string;
+  subcategories?: { id: number; name: string }[];
+}
 
 interface PresetItem {
   id: string;
   icon: string;
   title: string;
   description: string;
+  // Use category names that match the database (English names)
   niches: string[];
 }
 
+// Presets use English names to match database categories
 const presets: PresetItem[] = [
   {
     id: "permanent",
     icon: "ri-check-double-line",
     title: "Permanent",
     description: "Fonctionne toujours",
-    niches: ["Santé", "Science"],
+    niches: ["Health", "Health & Beauty", "Science"],
   },
   {
     id: "impulse",
     icon: "ri-flashlight-line",
     title: "Achats impulsifs",
     description: "",
-    niches: ["Adulte", "Fumer et vaper"],
+    niches: ["Adult", "Smoking & Vaping"],
   },
   {
     id: "subscription",
     icon: "ri-loop-left-line",
     title: "Adapté aux abonnements",
     description: "",
-    niches: ["Santé", "Science"],
+    niches: ["Health", "Food & Beverages", "Beauty"],
   },
   {
     id: "seasonal",
     icon: "ri-calendar-check-line",
     title: "Gagnants saisonniers",
     description: "",
-    niches: ["Voyage"],
+    niches: ["Travel", "Sports & Outdoors"],
   },
 ];
 
@@ -92,6 +77,48 @@ export default function NicheDropdown({ selectedNiches, onNichesChange, onOpenCh
   const [align, setAlign] = useState<"start" | "end">("start");
   const [isMobile, setIsMobile] = useState(false);
   const [activePreset, setActivePreset] = useState<string | null>(null);
+  const [expandedCategories, setExpandedCategories] = useState<string[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  
+  // Dynamic categories from API
+  const [categories, setCategories] = useState<NicheCategory[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [hasFetched, setHasFetched] = useState(false);
+
+  // Fetch categories from API
+  const fetchCategories = useCallback(async () => {
+    if (hasFetched) return;
+    
+    setLoading(true);
+    try {
+      const response = await fetch('/api/categories');
+      const result = await response.json();
+      
+      if (result.success && result.data) {
+        const mappedCategories: NicheCategory[] = result.data.map((cat: ApiCategory) => ({
+          id: cat.id,
+          name: cat.name,
+          subcategories: cat.children?.map(child => ({
+            id: child.id,
+            name: child.name
+          })) || []
+        }));
+        setCategories(mappedCategories);
+      }
+    } catch (error) {
+      console.error('Failed to fetch categories:', error);
+    } finally {
+      setLoading(false);
+      setHasFetched(true);
+    }
+  }, [hasFetched]);
+
+  // Fetch categories when dropdown opens
+  useEffect(() => {
+    if (isOpen && !hasFetched) {
+      fetchCategories();
+    }
+  }, [isOpen, hasFetched, fetchCategories]);
 
   // Reset preset when selectedNiches is cleared externally
   useEffect(() => {
@@ -106,8 +133,6 @@ export default function NicheDropdown({ selectedNiches, onNichesChange, onOpenCh
       onOpenChange(open);
     }
   };
-  const [expandedCategories, setExpandedCategories] = useState<string[]>([]);
-  const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
     const checkMobile = () => {
@@ -171,8 +196,8 @@ export default function NicheDropdown({ selectedNiches, onNichesChange, onOpenCh
   };
 
   const handleSelectAll = () => {
-    const allNiches = nicheCategories.flatMap(cat => 
-      [cat.name, ...(cat.subcategories || [])]
+    const allNiches = categories.flatMap(cat => 
+      [cat.name, ...(cat.subcategories?.map(s => s.name) || [])]
     );
     onNichesChange(allNiches);
     setActivePreset(null);
@@ -183,9 +208,9 @@ export default function NicheDropdown({ selectedNiches, onNichesChange, onOpenCh
     setActivePreset(null);
   };
 
-  const filteredCategories = nicheCategories.filter((category) =>
+  const filteredCategories = categories.filter((category) =>
     category.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    category.subcategories?.some((sub) => sub.toLowerCase().includes(searchTerm.toLowerCase()))
+    category.subcategories?.some((sub) => sub.name.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   return (
@@ -328,54 +353,65 @@ export default function NicheDropdown({ selectedNiches, onNichesChange, onOpenCh
           className="checkboxes-wrapper p-3 border rounded mb-3" 
           style={{ maxHeight: '200px', overflowY: 'auto', backgroundColor: 'white' }}
         >
-          {filteredCategories.map((category, index) => (
-            <div key={index}>
-              <div className="form-check mb-1 d-flex align-items-start justify-content-between">
-                <div className="d-flex align-items-center">
-                  {category.subcategories && category.subcategories.length > 0 && (
-                    <button
-                      type="button"
-                      className="btn btn-sm mt-0 p-0 me-1"
-                      onClick={() => toggleCategory(category.name)}
-                      style={{ fontSize: '10px', lineHeight: '1', color: '#212529', border: 'none', background: 'none' }}
-                    >
-                      <span style={{ color: '#212529' }}>{expandedCategories.includes(category.name) ? '▼' : '▶'}</span>
-                    </button>
-                  )}
-                  <input
-                    className="form-check-input small-check"
-                    type="checkbox"
-                    id={`niche-${index}`}
-                    checked={selectedNiches.includes(category.name)}
-                    onChange={() => handleNicheToggle(category.name)}
-                  />
-                  <label className="form-check-label fs-small text-dark ms-2" htmlFor={`niche-${index}`}>
-                    {category.name}
-                  </label>
-                </div>
-              </div>
-              
-              {/* Subcategories */}
-              {category.subcategories && expandedCategories.includes(category.name) && (
-                <div className="ms-4 mb-2">
-                  {category.subcategories.map((sub, subIndex) => (
-                    <div key={subIndex} className="form-check mb-1">
-                      <input
-                        className="form-check-input small-check"
-                        type="checkbox"
-                        id={`sub-niche-${index}-${subIndex}`}
-                        checked={selectedNiches.includes(sub)}
-                        onChange={() => handleNicheToggle(sub)}
-                      />
-                      <label className="form-check-label fs-small text-muted" htmlFor={`sub-niche-${index}-${subIndex}`}>
-                        {sub}
-                      </label>
-                    </div>
-                  ))}
-                </div>
-              )}
+          {loading ? (
+            <div className="text-center text-muted py-3">
+              <i className="ri-loader-4-line ri-spin me-2"></i>
+              Chargement des niches...
             </div>
-          ))}
+          ) : filteredCategories.length === 0 ? (
+            <div className="text-center text-muted py-3">
+              Aucune niche trouvée
+            </div>
+          ) : (
+            filteredCategories.map((category) => (
+              <div key={category.id}>
+                <div className="form-check mb-1 d-flex align-items-start justify-content-between">
+                  <div className="d-flex align-items-center">
+                    {category.subcategories && category.subcategories.length > 0 && (
+                      <button
+                        type="button"
+                        className="btn btn-sm mt-0 p-0 me-1"
+                        onClick={() => toggleCategory(category.name)}
+                        style={{ fontSize: '10px', lineHeight: '1', color: '#212529', border: 'none', background: 'none' }}
+                      >
+                        <span style={{ color: '#212529' }}>{expandedCategories.includes(category.name) ? '▼' : '▶'}</span>
+                      </button>
+                    )}
+                    <input
+                      className="form-check-input small-check"
+                      type="checkbox"
+                      id={`niche-${category.id}`}
+                      checked={selectedNiches.includes(category.name)}
+                      onChange={() => handleNicheToggle(category.name)}
+                    />
+                    <label className="form-check-label fs-small text-dark ms-2" htmlFor={`niche-${category.id}`}>
+                      {category.name}
+                    </label>
+                  </div>
+                </div>
+                
+                {/* Subcategories */}
+                {category.subcategories && category.subcategories.length > 0 && expandedCategories.includes(category.name) && (
+                  <div className="ms-4 mb-2">
+                    {category.subcategories.map((sub) => (
+                      <div key={sub.id} className="form-check mb-1">
+                        <input
+                          className="form-check-input small-check"
+                          type="checkbox"
+                          id={`sub-niche-${sub.id}`}
+                          checked={selectedNiches.includes(sub.name)}
+                          onChange={() => handleNicheToggle(sub.name)}
+                        />
+                        <label className="form-check-label fs-small text-muted" htmlFor={`sub-niche-${sub.id}`}>
+                          {sub.name}
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))
+          )}
         </div>
         
         <Button 

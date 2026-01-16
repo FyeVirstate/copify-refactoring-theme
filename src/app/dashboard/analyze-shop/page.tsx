@@ -615,12 +615,12 @@ function AnalyzeShopContent() {
           </div>
 
           {/* Table */}
-          <div className="table-view mt-2" style={{ overflow: 'hidden' }}>
+          <div className="table-view mt-2">
             {/* Desktop Table View - Always show header with skeleton or data */}
             <div 
               ref={tableWrapperRef}
               className="border position-relative d-none d-lg-block" 
-              style={{ borderRadius: '6px', overflow: 'hidden' }}
+              style={{ borderRadius: '6px' }}
             >
               {/* Mouse-following tooltip - fixed position */}
               {showTooltip && !isLoading && (
@@ -831,7 +831,7 @@ function AnalyzeShopContent() {
                           </TableCell>
 
                           {/* Active Ads with Evolution Chart */}
-                          <TableCell className="align-middle py-3 border-b-gray text-center" style={{ overflow: 'hidden' }}>
+                          <TableCell className="align-middle py-3 border-b-gray text-center">
                             <div>
                               <p className="mb-1 d-flex align-items-center justify-content-center gap-1">
                                 <span 
@@ -856,7 +856,7 @@ function AnalyzeShopContent() {
                             </div>
                             {/* Mini Chart */}
                             <div 
-                              style={{ maxWidth: '120px', margin: '0 auto', overflow: 'hidden' }}
+                              style={{ maxWidth: '120px', margin: '0 auto' }}
                               onMouseEnter={() => setShowTooltip(false)}
                             >
                               {tracked.shop?.adsHistoryData && tracked.shop.adsHistoryData.length > 1 ? (
@@ -1336,23 +1336,18 @@ function AnalyzeShopContent() {
       )}
 
       <style jsx global>{`
-        /* Prevent overflow issues in this page */
-        .home-content-wrapper {
-          overflow: hidden;
-        }
-        
-        /* Recharts tooltip styling - contained within page */
+        /* Recharts tooltip styling - ensure visibility */
         .recharts-tooltip-wrapper {
-          z-index: 9999 !important;
+          z-index: 99999 !important;
           pointer-events: none !important;
         }
         .recharts-wrapper {
-          overflow: hidden !important;
+          overflow: visible !important;
         }
         
-        /* Table overflow control */
-        #shopListTable {
-          overflow: hidden;
+        /* Table cells with charts need overflow visible */
+        #shopListTable td {
+          overflow: visible;
         }
         
         .bg-warning-light {

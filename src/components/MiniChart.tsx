@@ -51,8 +51,8 @@ const generateDates = (count: number): string[] => {
   return dates;
 };
 
-// Custom Tooltip component - receives valueLabel and trendColor as custom props
-const CustomChartTooltip = ({ active, payload, valueLabel, trendColor }: { active?: boolean; payload?: any[]; valueLabel?: string; trendColor?: string }) => {
+// Custom Tooltip component
+const CustomChartTooltip = ({ active, payload, valueLabel, trendColor }: { active?: boolean; payload?: readonly any[]; valueLabel?: string; trendColor?: string }) => {
   if (!active || !payload || !payload.length) return null;
   
   const dataPoint = payload[0]?.payload;
@@ -105,13 +105,15 @@ export default function MiniChart({
   
   const strokeColor = color || trendColor;
   
-  const recentData = data.slice(-12);
+  // Only show last 3 months of data
+  const recentData = data.slice(-3);
   
+  // Use REAL dates from database if provided, otherwise generate
   let recentDates: string[];
   if (dates && dates.length > 0) {
-    recentDates = dates.slice(-12);
+    recentDates = dates.slice(-3); // Real dates from DB
   } else {
-    recentDates = generateDates(recentData.length);
+    recentDates = generateDates(recentData.length); // Fallback only
   }
   
   const chartData = recentData.map((value, index) => ({
@@ -129,11 +131,12 @@ export default function MiniChart({
   }
 
   return (
-    <div style={{ width, height, position: 'relative' }}>
+    <div style={{ width, height, position: 'relative', overflow: 'visible' }}>
       <ResponsiveContainer width="100%" height="100%">
         <AreaChart 
           data={chartData} 
           margin={{ top: 2, right: 2, left: 2, bottom: 2 }}
+          style={{ overflow: 'visible' }}
         >
           <defs>
             <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
@@ -147,9 +150,12 @@ export default function MiniChart({
                 <CustomChartTooltip active={active} payload={payload} valueLabel={label} trendColor={strokeColor} />
               )}
               cursor={{ stroke: '#D1D5DB', strokeWidth: 1 }}
-              position={{ y: -50 }}
               allowEscapeViewBox={{ x: true, y: true }}
-              wrapperStyle={{ zIndex: 9999, overflow: 'visible' }}
+              wrapperStyle={{ 
+                zIndex: 99999, 
+                visibility: 'visible',
+                pointerEvents: 'none',
+              }}
             />
           )}
           <Area

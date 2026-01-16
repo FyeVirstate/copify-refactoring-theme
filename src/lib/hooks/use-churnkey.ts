@@ -144,7 +144,7 @@ export function useChurnkey(): UseChurnkeyReturn {
 
   // Show cancellation flow
   const showCancelFlow = useCallback(() => {
-    if (!isReady || !config || !window.churnkey) {
+    if (!isReady || !config || !window.churnkey || typeof window.churnkey.init !== 'function') {
       console.warn('[Churnkey] Not ready or no config')
       return
     }
@@ -186,7 +186,7 @@ export function useChurnkey(): UseChurnkeyReturn {
 
   // Check for paused subscription
   const checkPause = useCallback(() => {
-    if (!isReady || !config || !window.churnkey) {
+    if (!isReady || !config || !window.churnkey || typeof window.churnkey.check !== 'function') {
       return
     }
 
@@ -212,7 +212,7 @@ export function useChurnkey(): UseChurnkeyReturn {
 
   // Check for failed payment
   const checkFailedPayment = useCallback(() => {
-    if (!isReady || !config || !window.churnkey) {
+    if (!isReady || !config || !window.churnkey || typeof window.churnkey.check !== 'function') {
       return
     }
 

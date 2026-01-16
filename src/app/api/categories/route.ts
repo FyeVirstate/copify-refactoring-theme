@@ -14,6 +14,14 @@ type CategoryName = {
   [key: string]: string | undefined
 }
 
+interface CategoryRecord {
+  id: bigint
+  name: unknown
+  parentId: bigint | null
+  createdAt: Date | null
+  updatedAt: Date | null
+}
+
 export async function GET() {
   if (!prisma) {
     return NextResponse.json({
@@ -23,37 +31,52 @@ export async function GET() {
   }
 
   try {
-    const categories = await prisma.category.findMany({
-      where: { parentId: null }, // Only get top-level categories
-      include: {
-        children: true,
-        _count: {
-          select: { shops: true }
+    // Fetch ALL categories (no relations available in schema)
+    const allCategories = await prisma.category.findMany({
+      orderBy: { id: 'asc' }
+    }) as CategoryRecord[]
+
+    // Build parent-child hierarchy manually
+    const parentCategories = allCategories.filter(cat => cat.parentId === null)
+    const childCategoriesMap = new Map<number, CategoryRecord[]>()
+    
+    // Group children by parent ID
+    for (const cat of allCategories) {
+      if (cat.parentId !== null) {
+        const parentIdNum = Number(cat.parentId)
+        if (!childCategoriesMap.has(parentIdNum)) {
+          childCategoriesMap.set(parentIdNum, [])
         }
+        childCategoriesMap.get(parentIdNum)!.push(cat)
+      }
+    }
+
+    // Format response
+    const data = parentCategories.map(cat => {
+      const nameObj = cat.name as CategoryName | null
+      const name = nameObj?.en || nameObj?.fr || 'Unknown'
+      const catId = Number(cat.id)
+      
+      // Get children for this category
+      const children = childCategoriesMap.get(catId) || []
+      
+      return {
+        id: catId,
+        name,
+        children: children.map(child => {
+          const childNameObj = child.name as CategoryName | null
+          const childName = childNameObj?.en || childNameObj?.fr || 'Unknown'
+          return {
+            id: Number(child.id),
+            name: childName,
+          }
+        })
       }
     })
 
     return NextResponse.json({
       success: true,
-      data: categories.map(cat => {
-        // Handle JSON name field (translatable)
-        const nameObj = cat.name as CategoryName | null
-        const name = nameObj?.en || nameObj?.fr || 'Unknown'
-        
-        return {
-          id: Number(cat.id),
-          name,
-          shopCount: cat._count.shops,
-          children: cat.children?.map(child => {
-            const childNameObj = child.name as CategoryName | null
-            const childName = childNameObj?.en || childNameObj?.fr || 'Unknown'
-            return {
-              id: Number(child.id),
-              name: childName,
-            }
-          }) || []
-        }
-      })
+      data
     })
 
   } catch (error) {

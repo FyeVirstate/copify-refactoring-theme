@@ -392,17 +392,10 @@ export async function GET(request: NextRequest) {
       paramIndex++
     }
 
-    // Sort-specific filters for top_score
-    if (sortBy === 'top_score') {
-      // Top score requires shops with active advertising (minimum 5 ads)
-      shopsConditions.push(`COALESCE(s.active_ads, 0) >= 5`)
-      // ONLY active ads (is_active = 1)
-      adsConditions.push(`a.is_active = 1`)
-      // Minimum 10 days running - proven winners, not new untested ads
-      adsConditions.push(`a.start_date <= NOW() - INTERVAL '10 days'`)
-      // Not too old - still relevant (within 6 months)
-      adsConditions.push(`a.start_date >= NOW() - INTERVAL '180 days'`)
-    }
+    // NOTE: top_score is a SORT, not a FILTER
+    // The scoring algorithm naturally ranks better ads higher (active, proven winners, etc.)
+    // but we don't filter them out - users can still browse ALL ads
+    // The algorithm components already handle these signals in the ORDER BY
 
     // Build WHERE clauses
     const adsWhereClause = adsConditions.length > 0 ? `WHERE ${adsConditions.join(' AND ')}` : ''
@@ -463,40 +456,27 @@ export async function GET(request: NextRequest) {
         ) ${order} NULLS LAST`
         break
       case 'top_score':
-        // Custom AI Score algorithm for winning ads
-        // 1. Winner signals: active_ads (log), estimated_order (log), growth_rate
-        // 2. Freshness: how recently the ad was seen
-        // 3. Stability: ads running for ~14 days = winner pattern
-        // 4. Random factor for rotation
+        // Custom AI Score - DISCOVERY scoring favoring sweet spot shops
         orderByClause = `ORDER BY (
-          -- 1) Winner signals (log scale to avoid outliers dominating)
-          LN(1 + COALESCE(fa.shop_active_ads, 0)) * 0.28
-          + LN(1 + COALESCE(fa.estimated_order, 0)) * 0.22
-          + COALESCE(fa.growth_rate, 0) * 0.15
+          -- Sweet spot shops (20-300 ads) get priority over giants
+          CASE 
+            WHEN fa.is_active = 1 AND COALESCE(fa.shop_active_ads, 0) BETWEEN 100 AND 300 THEN 500000000
+            WHEN fa.is_active = 1 AND COALESCE(fa.shop_active_ads, 0) BETWEEN 50 AND 99 THEN 450000000
+            WHEN fa.is_active = 1 AND COALESCE(fa.shop_active_ads, 0) BETWEEN 20 AND 49 THEN 400000000
+            WHEN fa.is_active = 1 AND COALESCE(fa.shop_active_ads, 0) BETWEEN 301 AND 500 THEN 350000000
+            WHEN fa.is_active = 1 AND COALESCE(fa.shop_active_ads, 0) > 500 THEN 300000000
+            WHEN fa.is_active = 1 AND COALESCE(fa.shop_active_ads, 0) BETWEEN 5 AND 19 THEN 200000000
+            ELSE 0
+          END +
           
-          -- 2) Freshness bonus (more recent = better)
-          + LEAST(
-              0.18,
-              0.18 * EXP(- (EXTRACT(EPOCH FROM (NOW() - COALESCE(fa.end_date, fa.start_date, NOW()))) / 86400.0) / 4.0)
-            )
+          -- Traffic (LOG scale)
+          LN(1 + COALESCE(fa.last_month_visits, 0)) * 1000000 +
           
-          -- 3) Stability bonus: ads running ~14 days = winner-like pattern
-          + (
-              EXP(
-                -POWER(
-                  (
-                    (EXTRACT(EPOCH FROM (NOW() - fa.start_date)) / 86400.0) - 14.0
-                  ) / 10.0,
-                  2
-                )
-              ) * 0.20
-            )
+          -- Active ads (CAPPED at 300)
+          LN(1 + LEAST(COALESCE(fa.shop_active_ads, 0), 300)) * 500000 +
           
-          -- 4) Traffic growth bonus (if available)
-          + GREATEST(COALESCE(fa.growth_rate, 0), 0) * 0.12
-          
-          -- 5) Random factor for rotation (low weight)
-          + (MOD(ABS(HASHTEXT(COALESCE(fa.ad_archive_id::text, fa.id::text) || '${dailySeed}' || '${hourSeed}')), 1000) / 1000.0) * 0.05
+          -- Random rotation
+          (MOD(ABS(HASHTEXT(COALESCE(fa.ad_archive_id::text, fa.id::text) || '${dailySeed}' || '${hourSeed}')), 1000))
         ) ${order} NULLS LAST`
         break
       case 'recommended':
@@ -937,34 +917,25 @@ export async function GET(request: NextRequest) {
       let slowOrderBy = 'ORDER BY a.created_at DESC'
       if (sortBy === 'top_score') {
         slowOrderBy = `ORDER BY (
-          -- 1) Winner signals (log scale to avoid outliers dominating)
-          LN(1 + COALESCE(s.active_ads, 0)) * 0.28
-          + LN(1 + COALESCE(t.estimated_order, 0)) * 0.22
-          + COALESCE(t.growth_rate, 0) * 0.15
+          -- Sweet spot shops (20-300 ads) get priority over giants
+          CASE 
+            WHEN a.is_active = 1 AND COALESCE(s.active_ads, 0) BETWEEN 100 AND 300 THEN 500000000
+            WHEN a.is_active = 1 AND COALESCE(s.active_ads, 0) BETWEEN 50 AND 99 THEN 450000000
+            WHEN a.is_active = 1 AND COALESCE(s.active_ads, 0) BETWEEN 20 AND 49 THEN 400000000
+            WHEN a.is_active = 1 AND COALESCE(s.active_ads, 0) BETWEEN 301 AND 500 THEN 350000000
+            WHEN a.is_active = 1 AND COALESCE(s.active_ads, 0) > 500 THEN 300000000
+            WHEN a.is_active = 1 AND COALESCE(s.active_ads, 0) BETWEEN 5 AND 19 THEN 200000000
+            ELSE 0
+          END +
           
-          -- 2) Freshness bonus (more recent = better)
-          + LEAST(
-              0.18,
-              0.18 * EXP(- (EXTRACT(EPOCH FROM (NOW() - COALESCE(a.end_date, a.start_date, NOW()))) / 86400.0) / 4.0)
-            )
+          -- Traffic (LOG scale)
+          LN(1 + COALESCE(t.last_month_visits, 0)) * 1000000 +
           
-          -- 3) Stability bonus: ads running ~14 days = winner-like pattern
-          + (
-              EXP(
-                -POWER(
-                  (
-                    (EXTRACT(EPOCH FROM (NOW() - a.start_date)) / 86400.0) - 14.0
-                  ) / 10.0,
-                  2
-                )
-              ) * 0.20
-            )
+          -- Active ads (CAPPED at 300)
+          LN(1 + LEAST(COALESCE(s.active_ads, 0), 300)) * 500000 +
           
-          -- 4) Traffic growth bonus (if available)
-          + GREATEST(COALESCE(t.growth_rate, 0), 0) * 0.12
-          
-          -- 5) Random factor for rotation (low weight)
-          + (MOD(ABS(HASHTEXT(COALESCE(a.ad_archive_id::text, a.id::text) || '${dailySeed}' || '${hourSeed}')), 1000) / 1000.0) * 0.05
+          -- Random rotation
+          (MOD(ABS(HASHTEXT(COALESCE(a.ad_archive_id::text, a.id::text) || '${dailySeed}' || '${hourSeed}')), 1000))
         ) DESC NULLS LAST`
       }
       
@@ -1098,32 +1069,13 @@ export async function GET(request: NextRequest) {
     console.log(`[Ads API] First 10 raw shop IDs: ${JSON.stringify(rawShopIds)}`)
 
     // PHP-style deduplication: 1 ad per shop (like Laravel)
-    // + Additional filtering for top_score
+    // NOTE: top_score is just a SORT - no filtering needed
+    // The scoring algorithm naturally ranks better ads higher
     const seenShops = new Set<number>()
     const adsResult: any[] = []
-    const now = new Date()
     
     for (const ad of rawAdsResult) {
       const shopId = ad.shop_id ? Number(ad.shop_id) : 0
-      
-      // For top_score, apply strict JavaScript filtering as safety net
-      if (sortBy === 'top_score') {
-        // Must be active
-        if (ad.is_active !== 1) continue
-        
-        // Must have start_date
-        if (!ad.start_date) continue
-        
-        // Calculate days active
-        const startDate = new Date(ad.start_date)
-        const daysActive = Math.ceil((now.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24))
-        
-        // Must be at least 10 days old
-        if (daysActive < 10) continue
-        
-        // Shop must have at least 5 active ads
-        if (!ad.shop_active_ads || ad.shop_active_ads < 5) continue
-      }
       
       if (!seenShops.has(shopId)) {
         adsResult.push(ad)
