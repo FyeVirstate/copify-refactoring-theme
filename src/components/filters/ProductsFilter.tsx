@@ -60,6 +60,23 @@ export default function ProductsFilter({
   }, [externalMaxCatalog]);
 
   const handlePresetClick = (presetId: string) => {
+    // Toggle off if same preset is clicked again
+    if (activePreset === presetId) {
+      setActivePreset(null);
+      setMinPriceStr("");
+      setMaxPriceStr("");
+      setMinCatalogStr("");
+      setMaxCatalogStr("");
+      if (onMinPriceChange) onMinPriceChange(undefined);
+      if (onMaxPriceChange) onMaxPriceChange(undefined);
+      if (onMinCatalogSizeChange) onMinCatalogSizeChange(undefined);
+      if (onMaxCatalogSizeChange) onMaxCatalogSizeChange(undefined);
+      if (onApply) {
+        onApply({ minPrice: undefined, maxPrice: undefined, minProducts: undefined, maxProducts: undefined });
+      }
+      return;
+    }
+    
     setActivePreset(presetId);
     
     let newMinPrice: number | undefined;

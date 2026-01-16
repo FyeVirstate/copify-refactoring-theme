@@ -69,6 +69,16 @@ export default function LanguageFilter({
   }, [selectedLanguages]);
 
   const handlePresetClick = (presetId: string) => {
+    // Toggle off if same preset is clicked again
+    if (activePreset === presetId) {
+      setActivePreset(null);
+      onLanguagesChange([]);
+      if (onApply) {
+        onApply({ languages: '' });
+      }
+      return;
+    }
+    
     let newLanguages: string[] = [];
     
     switch (presetId) {

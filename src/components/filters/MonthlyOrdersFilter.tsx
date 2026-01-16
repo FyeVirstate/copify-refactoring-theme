@@ -32,27 +32,39 @@ function MonthlyOrdersFilterContent({
   onMinOrdersChange,
   onMaxOrdersChange,
   onApply,
-}: Omit<MonthlyOrdersFilterProps, 'onOpenChange' | 'isActive'>) {
+  activePreset,
+  setActivePreset,
+}: Omit<MonthlyOrdersFilterProps, 'onOpenChange' | 'isActive'> & {
+  activePreset: string | null;
+  setActivePreset: (preset: string | null) => void;
+}) {
   const [minOrdersStr, setMinOrdersStr] = useState(externalMin?.toString() || "");
   const [maxOrdersStr, setMaxOrdersStr] = useState(externalMax?.toString() || "");
-  const [activePreset, setActivePreset] = useState<string | null>(null);
   const dropdownContext = useFilterDropdown();
 
   useEffect(() => {
     setMinOrdersStr(externalMin?.toString() || "");
-    if (externalMin === undefined) {
-      setActivePreset(null);
-    }
   }, [externalMin]);
   
   useEffect(() => {
     setMaxOrdersStr(externalMax?.toString() || "");
-    if (externalMax === undefined && externalMin === undefined) {
-      setActivePreset(null);
-    }
-  }, [externalMax, externalMin]);
+  }, [externalMax]);
 
   const handlePresetClick = (presetId: string) => {
+    // Toggle off if same preset is clicked again
+    if (activePreset === presetId) {
+      setActivePreset(null);
+      setMinOrdersStr("");
+      setMaxOrdersStr("");
+      if (onMinOrdersChange) onMinOrdersChange(undefined);
+      if (onMaxOrdersChange) onMaxOrdersChange(undefined);
+      if (onApply) {
+        onApply({ minOrders: undefined, maxOrders: undefined });
+      }
+      dropdownContext?.closeDropdown();
+      return;
+    }
+    
     setActivePreset(presetId);
     
     let newMin: number | undefined;
@@ -143,6 +155,7 @@ function MonthlyOrdersFilterContent({
         onPresetClick={handlePresetClick}
         activePreset={activePreset}
         columns={2}
+        closeOnSelect={false}
       />
       
       <div className="border-t border-gray-200 dark:border-gray-700 my-3" />
@@ -173,6 +186,16 @@ export default function MonthlyOrdersFilter({
 }: MonthlyOrdersFilterProps) {
   const isMobile = useIsMobile();
   const hasValue = externalMin !== undefined || externalMax !== undefined;
+  
+  // Lift activePreset state up to persist across dropdown open/close
+  const [activePreset, setActivePreset] = useState<string | null>(null);
+
+  // Reset preset when values are cleared externally
+  useEffect(() => {
+    if (externalMin === undefined && externalMax === undefined) {
+      setActivePreset(null);
+    }
+  }, [externalMin, externalMax]);
 
   return (
     <FilterDropdown
@@ -189,6 +212,8 @@ export default function MonthlyOrdersFilter({
         onMinOrdersChange={onMinOrdersChange}
         onMaxOrdersChange={onMaxOrdersChange}
         onApply={onApply}
+        activePreset={activePreset}
+        setActivePreset={setActivePreset}
       />
     </FilterDropdown>
   );

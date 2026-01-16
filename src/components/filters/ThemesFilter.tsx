@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import FilterDropdown, { FilterApplyButton } from "./FilterDropdown";
 import FilterPresetGrid from "./FilterPresetGrid";
 import FilterCheckboxList from "./FilterCheckboxList";
@@ -13,31 +13,24 @@ interface ThemesFilterProps {
   isActive?: boolean;
 }
 
-const allThemes = [
+interface ThemeItem {
+  id: string;
+  label: string;
+  count?: number;
+}
+
+// Fallback themes in case API fails
+const fallbackThemes: ThemeItem[] = [
   { id: "Dawn", label: "Dawn" },
   { id: "Debut", label: "Debut" },
   { id: "Impulse", label: "Impulse" },
   { id: "Prestige", label: "Prestige" },
-  { id: "Trademark", label: "Trademark" },
-  { id: "Rise", label: "Rise" },
-  { id: "Refresh", label: "Refresh" },
   { id: "Sense", label: "Sense" },
   { id: "Craft", label: "Craft" },
-  { id: "Crave", label: "Crave" },
-  { id: "Colorblock", label: "Colorblock" },
-  { id: "Ride", label: "Ride" },
-  { id: "Taste", label: "Taste" },
-  { id: "Studio", label: "Studio" },
-  { id: "Publisher", label: "Publisher" },
+  { id: "Refresh", label: "Refresh" },
   { id: "Symmetry", label: "Symmetry" },
   { id: "Minimal", label: "Minimal" },
   { id: "Brooklyn", label: "Brooklyn" },
-  { id: "Narrative", label: "Narrative" },
-  { id: "Venture", label: "Venture" },
-  { id: "Supply", label: "Supply" },
-  { id: "Simple", label: "Simple" },
-  { id: "Express", label: "Express" },
-  { id: "Boundless", label: "Boundless" },
 ];
 
 export default function ThemesFilter({ 
@@ -48,6 +41,38 @@ export default function ThemesFilter({
   isActive = false
 }: ThemesFilterProps) {
   const [activePreset, setActivePreset] = useState<string | null>(null);
+  const [themes, setThemes] = useState<ThemeItem[]>(fallbackThemes);
+  const [loading, setLoading] = useState(false);
+  const [hasFetched, setHasFetched] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
+
+  // Fetch themes from API
+  const fetchThemes = useCallback(async () => {
+    if (hasFetched) return;
+    
+    setLoading(true);
+    try {
+      const response = await fetch('/api/themes');
+      const result = await response.json();
+      
+      if (result.success && result.data) {
+        setThemes(result.data);
+        setHasFetched(true);
+      }
+    } catch (error) {
+      console.error('Failed to fetch themes:', error);
+      // Keep fallback themes on error
+    } finally {
+      setLoading(false);
+    }
+  }, [hasFetched]);
+
+  // Fetch themes when dropdown opens for the first time
+  useEffect(() => {
+    if (isOpen && !hasFetched) {
+      fetchThemes();
+    }
+  }, [isOpen, hasFetched, fetchThemes]);
 
   // Reset preset when selectedThemes is cleared externally
   useEffect(() => {
@@ -57,6 +82,16 @@ export default function ThemesFilter({
   }, [selectedThemes]);
 
   const handlePresetClick = (presetId: string) => {
+    // Toggle off if same preset is clicked again
+    if (activePreset === presetId) {
+      setActivePreset(null);
+      onThemesChange([]);
+      if (onApply) {
+        onApply({ themes: '' });
+      }
+      return;
+    }
+    
     let newThemes: string[] = [];
     
     switch (presetId) {
@@ -92,11 +127,16 @@ export default function ThemesFilter({
     },
   ];
 
+  const handleOpenChange = (open: boolean) => {
+    setIsOpen(open);
+    onOpenChange?.(open);
+  };
+
   return (
     <FilterDropdown
       label="Thèmes"
       icon="ri-color-filter-line"
-      onOpenChange={onOpenChange}
+      onOpenChange={handleOpenChange}
       isActive={isActive || selectedThemes.length > 0}
       badge={selectedThemes.length > 0 ? selectedThemes.length : undefined}
       alignEndAtWidth={1200}
@@ -113,17 +153,24 @@ export default function ThemesFilter({
       
       <div className="border-t border-gray-200 dark:border-gray-700 my-3" />
       
-      <FilterCheckboxList
-        items={allThemes}
-        selectedItems={selectedThemes}
-        onItemsChange={(items) => {
-          setActivePreset(null);
-          onThemesChange(items);
-        }}
-        searchPlaceholder="Rechercher des thèmes..."
-        showIncludeExclude={true}
-        groupName="themeCheckboxes"
-      />
+      {loading ? (
+        <div className="text-center py-4 text-muted">
+          <i className="ri-loader-4-line ri-spin me-2"></i>
+          Chargement des thèmes...
+        </div>
+      ) : (
+        <FilterCheckboxList
+          items={themes}
+          selectedItems={selectedThemes}
+          onItemsChange={(items) => {
+            setActivePreset(null);
+            onThemesChange(items);
+          }}
+          searchPlaceholder="Rechercher des thèmes..."
+          showIncludeExclude={true}
+          groupName="themeCheckboxes"
+        />
+      )}
       
       <FilterApplyButton onClick={() => onApply?.()}>
         Appliquer

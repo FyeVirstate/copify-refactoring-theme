@@ -44,6 +44,19 @@ export default function TrafficGrowthFilter({
   }, [externalMax, externalMin]);
 
   const handlePresetClick = (presetId: string) => {
+    // Toggle off if same preset is clicked again
+    if (activePreset === presetId) {
+      setActivePreset(null);
+      setMinGrowthStr("");
+      setMaxGrowthStr("");
+      if (onMinTrafficGrowthChange) onMinTrafficGrowthChange(undefined);
+      if (onMaxTrafficGrowthChange) onMaxTrafficGrowthChange(undefined);
+      if (onApply) {
+        onApply({ minTrafficGrowth: undefined, maxTrafficGrowth: undefined });
+      }
+      return;
+    }
+    
     setActivePreset(presetId);
     
     let newMin: number | undefined;

@@ -21,29 +21,41 @@ function DailyRevenueFilterContent({
   maxRevenue: externalMax,
   onMinRevenueChange,
   onMaxRevenueChange,
-  onApply, 
-}: Omit<DailyRevenueFilterProps, 'onOpenChange' | 'isActive'>) {
+  onApply,
+  activePreset,
+  setActivePreset,
+}: Omit<DailyRevenueFilterProps, 'onOpenChange' | 'isActive'> & {
+  activePreset: string | null;
+  setActivePreset: (preset: string | null) => void;
+}) {
   const [minRevenueStr, setMinRevenueStr] = useState(externalMin?.toString() || "");
   const [maxRevenueStr, setMaxRevenueStr] = useState(externalMax?.toString() || "");
-  const [activePreset, setActivePreset] = useState<string | null>(null);
   const dropdownContext = useFilterDropdown();
 
-  // Sync with external values and reset preset when values are cleared
+  // Sync with external values
   useEffect(() => {
     setMinRevenueStr(externalMin?.toString() || "");
-    if (externalMin === undefined) {
-      setActivePreset(null);
-    }
   }, [externalMin]);
   
   useEffect(() => {
     setMaxRevenueStr(externalMax?.toString() || "");
-    if (externalMax === undefined && externalMin === undefined) {
-      setActivePreset(null);
-    }
-  }, [externalMax, externalMin]);
+  }, [externalMax]);
 
   const handlePresetClick = (presetId: string) => {
+    // Toggle off if same preset is clicked again
+    if (activePreset === presetId) {
+      setActivePreset(null);
+      setMinRevenueStr("");
+      setMaxRevenueStr("");
+      if (onMinRevenueChange) onMinRevenueChange(undefined);
+      if (onMaxRevenueChange) onMaxRevenueChange(undefined);
+      if (onApply) {
+        onApply({ minRevenue: undefined, maxRevenue: undefined });
+      }
+      dropdownContext?.closeDropdown();
+      return;
+    }
+    
     setActivePreset(presetId);
     
     let newMin: number | undefined;
@@ -135,6 +147,7 @@ function DailyRevenueFilterContent({
         onPresetClick={handlePresetClick}
         activePreset={activePreset}
         columns={2}
+        closeOnSelect={false}
       />
       
       <div className="border-t border-gray-200 dark:border-gray-700 my-3" />
@@ -165,6 +178,16 @@ export default function DailyRevenueFilter({
   isActive 
 }: DailyRevenueFilterProps) {
   const hasValue = externalMin !== undefined || externalMax !== undefined;
+  
+  // Lift activePreset state up to persist across dropdown open/close
+  const [activePreset, setActivePreset] = useState<string | null>(null);
+
+  // Reset preset when values are cleared externally
+  useEffect(() => {
+    if (externalMin === undefined && externalMax === undefined) {
+      setActivePreset(null);
+    }
+  }, [externalMin, externalMax]);
 
   return (
     <FilterDropdown
@@ -181,6 +204,8 @@ export default function DailyRevenueFilter({
         onMinRevenueChange={onMinRevenueChange}
         onMaxRevenueChange={onMaxRevenueChange}
         onApply={onApply}
+        activePreset={activePreset}
+        setActivePreset={setActivePreset}
       />
     </FilterDropdown>
   );

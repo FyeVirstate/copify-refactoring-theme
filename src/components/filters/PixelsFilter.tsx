@@ -44,6 +44,16 @@ export default function PixelsFilter({
   }, [selectedPixels]);
 
   const handlePresetClick = (presetId: string) => {
+    // Toggle off if same preset is clicked again
+    if (activePreset === presetId) {
+      setActivePreset(null);
+      onPixelsChange([]);
+      if (onApply) {
+        onApply({ pixels: '' });
+      }
+      return;
+    }
+    
     let newPixels: string[] = [];
     
     switch (presetId) {

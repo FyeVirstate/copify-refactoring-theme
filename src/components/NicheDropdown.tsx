@@ -185,6 +185,20 @@ export default function NicheDropdown({ selectedNiches, onNichesChange, onOpenCh
   };
 
   const handlePresetClick = (presetId: string, niches: string[]) => {
+    // Toggle off if same preset is clicked again
+    if (activePreset === presetId) {
+      setActivePreset(null);
+      onNichesChange([]);
+      // Auto-apply when preset is deselected
+      if (onApply) {
+        setTimeout(() => {
+          onApply();
+          handleOpenChange(false);
+        }, 150);
+      }
+      return;
+    }
+    
     setActivePreset(presetId);
     onNichesChange(niches);
     
@@ -221,11 +235,30 @@ export default function NicheDropdown({ selectedNiches, onNichesChange, onOpenCh
         <DropdownMenuTrigger asChild>
           <Button 
             ref={triggerRef}
-            className={`btn dropdown-btn dropdown-toggle ${isActive ? 'filter-active' : ''}`}
+            className={`btn dropdown-btn dropdown-toggle ${isActive || selectedNiches.length > 0 ? 'filter-active' : ''}`}
             type="button" 
             variant="outline"
           >
             <i className="dropdown-icon ri-global-line"></i> Niche
+            {selectedNiches.length > 0 && (
+              <span 
+                className="filter-rounded-tag ms-1"
+                style={{
+                  backgroundColor: '#0E121B',
+                  color: 'white',
+                  borderRadius: '10px',
+                  padding: '2px 8px',
+                  fontSize: '11px',
+                  fontWeight: '500',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  minWidth: '20px'
+                }}
+              >
+                {selectedNiches.length}
+              </span>
+            )}
           </Button>
         </DropdownMenuTrigger>
       <DropdownMenuContent

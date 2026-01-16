@@ -108,34 +108,66 @@ export default function FilterCheckboxList({
       </div>
       
       <div 
-        className="checkboxes-wrapper p-3 border rounded" 
+        className="checkboxes-wrapper p-2 border rounded" 
         style={{ 
           maxHeight, 
           overflowY: 'auto',
           backgroundColor: 'white'
         }}
       >
-        {filteredItems.map((item) => (
-          <div key={item.id} className="d-flex justify-content-between align-items-center mb-2">
-            <div className="d-flex align-items-center gap-2">
-              {item.icon && <span>{item.icon}</span>}
-              <span className="fs-small fw-500">{item.label}</span>
-            </div>
-            <div className="d-flex">
-              <div className="form-check me-3">
-            <input
-                  className={`form-check-input small-check ${groupName ? `group-${groupName}` : ''}`}
-              type="checkbox"
-                  id={`${groupName || 'checkbox'}-${item.id}`}
-              checked={selectedItems.includes(item.id)}
-              onChange={() => handleToggle(item.id)}
-            />
+        {filteredItems.map((item) => {
+          const isSelected = selectedItems.includes(item.id);
+          return (
+            <div 
+              key={item.id} 
+              className="d-flex justify-content-between align-items-center"
+              onClick={() => handleToggle(item.id)}
+              style={{
+                padding: '8px 12px',
+                marginBottom: '2px',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                backgroundColor: isSelected ? '#F0F5FF' : 'transparent',
+                transition: 'background-color 0.15s ease',
+              }}
+              onMouseEnter={(e) => {
+                if (!isSelected) {
+                  e.currentTarget.style.backgroundColor = '#F5F7FA';
+                }
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = isSelected ? '#F0F5FF' : 'transparent';
+              }}
+            >
+              <div className="d-flex align-items-center gap-2">
+                {item.icon && <span style={{ flexShrink: 0 }}>{item.icon}</span>}
+                <span 
+                  className="fs-small fw-500" 
+                  style={{ 
+                    color: isSelected ? '#0E121B' : '#525866',
+                    userSelect: 'none'
+                  }}
+                >
+                  {item.label}
+                </span>
+              </div>
+              <div className="d-flex" onClick={(e) => e.stopPropagation()}>
+                <div className="form-check">
+                  <input
+                    className={`form-check-input small-check ${groupName ? `group-${groupName}` : ''}`}
+                    type="checkbox"
+                    id={`${groupName || 'checkbox'}-${item.id}`}
+                    checked={isSelected}
+                    onChange={() => handleToggle(item.id)}
+                    style={{ cursor: 'pointer' }}
+                  />
+                </div>
               </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
         {filteredItems.length === 0 && (
-          <p className="text-muted fs-small text-center mb-0">Aucun résultat trouvé</p>
+          <p className="text-muted fs-small text-center mb-0 py-2">Aucun résultat trouvé</p>
         )}
       </div>
     </div>

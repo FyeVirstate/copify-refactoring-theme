@@ -100,6 +100,17 @@ export default function ShopCreationFilter({
   };
 
   const handlePresetClick = (preset: string) => {
+    // Toggle off if same preset is clicked again (except for "custom")
+    if (activePreset === preset && preset !== "custom") {
+      setActivePreset(null);
+      setDate(undefined);
+      handleChange(undefined);
+      if (onApply) {
+        onApply({ shopCreationDate: undefined });
+      }
+      return;
+    }
+    
     const today = new Date();
     let range: DateRange | undefined;
     setActivePreset(preset);
@@ -130,6 +141,12 @@ export default function ShopCreationFilter({
       // Auto-apply when preset is selected - pass value directly to avoid timing issues
       if (onApply) {
         onApply({ shopCreationDate: formatted });
+      }
+      
+      // Close dropdown after preset selection (except for custom)
+      if (preset !== "custom") {
+        setIsOpen(false);
+        onOpenChange?.(false);
       }
     }
   };

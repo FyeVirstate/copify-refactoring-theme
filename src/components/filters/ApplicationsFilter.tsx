@@ -56,19 +56,16 @@ function ApplicationsFilterContent({
   selectedApplications, 
   onApplicationsChange,
   onApply,
-}: Omit<ApplicationsFilterProps, 'onOpenChange' | 'isActive'>) {
-  const [activePreset, setActivePreset] = useState<string | null>(null);
+  activePreset,
+  setActivePreset,
+}: Omit<ApplicationsFilterProps, 'onOpenChange' | 'isActive'> & {
+  activePreset: string | null;
+  setActivePreset: (preset: string | null) => void;
+}) {
   const [applications, setApplications] = useState<{ id: string; label: string; icon?: React.ReactNode }[]>(fallbackApplications);
   const [appsData, setAppsData] = useState<AppData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const dropdownContext = useFilterDropdown();
-
-  // Reset preset when selectedApplications is cleared externally
-  useEffect(() => {
-    if (selectedApplications.length === 0) {
-      setActivePreset(null);
-    }
-  }, [selectedApplications]);
 
   // Fetch apps from the API
   useEffect(() => {
@@ -110,6 +107,17 @@ function ApplicationsFilterContent({
   }, []);
 
   const handlePresetClick = (presetId: string) => {
+    // Toggle off if same preset is clicked again
+    if (activePreset === presetId) {
+      setActivePreset(null);
+      onApplicationsChange([]);
+      if (onApply) {
+        onApply({ apps: '' });
+      }
+      dropdownContext?.closeDropdown();
+      return;
+    }
+    
     const categories = PRESET_CATEGORIES[presetId as keyof typeof PRESET_CATEGORIES] || [];
     
     const matchingApps = appsData.filter((app) =>
@@ -182,6 +190,7 @@ function ApplicationsFilterContent({
         onPresetClick={handlePresetClick}
         activePreset={activePreset}
         columns={2}
+        closeOnSelect={false}
       />
 
       <div className="border-t border-gray-200 dark:border-gray-700 my-3" />
@@ -217,6 +226,16 @@ export default function ApplicationsFilter({
   onApply,
   isActive = false
 }: ApplicationsFilterProps) {
+  // Lift activePreset state up to persist across dropdown open/close
+  const [activePreset, setActivePreset] = useState<string | null>(null);
+
+  // Reset preset when selectedApplications is cleared externally
+  useEffect(() => {
+    if (selectedApplications.length === 0) {
+      setActivePreset(null);
+    }
+  }, [selectedApplications]);
+
   return (
     <FilterDropdown
       label="Applications"
@@ -229,6 +248,8 @@ export default function ApplicationsFilter({
         selectedApplications={selectedApplications}
         onApplicationsChange={onApplicationsChange}
         onApply={onApply}
+        activePreset={activePreset}
+        setActivePreset={setActivePreset}
       />
     </FilterDropdown>
   );

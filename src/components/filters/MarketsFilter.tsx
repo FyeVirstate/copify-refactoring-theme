@@ -73,6 +73,16 @@ export default function MarketsFilter({
   }, [selectedCountries]);
 
   const handlePresetClick = (presetId: string) => {
+    // Toggle off if same preset is clicked again
+    if (activePreset === presetId) {
+      setActivePreset(null);
+      onCountriesChange([]);
+      if (onApply) {
+        onApply({ country: '' });
+      }
+      return;
+    }
+    
     let newCountries: string[] = [];
     
     switch (presetId) {

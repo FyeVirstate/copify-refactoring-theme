@@ -60,6 +60,23 @@ export default function TrustpilotFilter({
   }, [externalMaxReviews]);
 
   const handlePresetClick = (presetId: string) => {
+    // Toggle off if same preset is clicked again
+    if (activePreset === presetId) {
+      setActivePreset(null);
+      setMinRatingStr("");
+      setMaxRatingStr("");
+      setMinReviewsStr("");
+      setMaxReviewsStr("");
+      if (onMinRatingChange) onMinRatingChange(undefined);
+      if (onMaxRatingChange) onMaxRatingChange(undefined);
+      if (onMinReviewsChange) onMinReviewsChange(undefined);
+      if (onMaxReviewsChange) onMaxReviewsChange(undefined);
+      if (onApply) {
+        onApply({ minTrustpilotRating: undefined, maxTrustpilotRating: undefined, minTrustpilotReviews: undefined, maxTrustpilotReviews: undefined });
+      }
+      return;
+    }
+    
     setActivePreset(presetId);
     
     let newMinRating: number | undefined;

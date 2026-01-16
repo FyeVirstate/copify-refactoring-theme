@@ -21,27 +21,39 @@ function MonthlyVisitsFilterContent({
   onMinTrafficChange,
   onMaxTrafficChange,
   onApply,
-}: Omit<MonthlyVisitsFilterProps, 'onOpenChange' | 'isActive'>) {
+  activePreset,
+  setActivePreset,
+}: Omit<MonthlyVisitsFilterProps, 'onOpenChange' | 'isActive'> & {
+  activePreset: string | null;
+  setActivePreset: (preset: string | null) => void;
+}) {
   const [minVisitsStr, setMinVisitsStr] = useState(externalMin?.toString() || "");
   const [maxVisitsStr, setMaxVisitsStr] = useState(externalMax?.toString() || "");
-  const [activePreset, setActivePreset] = useState<string | null>(null);
   const dropdownContext = useFilterDropdown();
 
   useEffect(() => {
     setMinVisitsStr(externalMin?.toString() || "");
-    if (externalMin === undefined) {
-      setActivePreset(null);
-    }
   }, [externalMin]);
   
   useEffect(() => {
     setMaxVisitsStr(externalMax?.toString() || "");
-    if (externalMax === undefined && externalMin === undefined) {
-      setActivePreset(null);
-    }
-  }, [externalMax, externalMin]);
+  }, [externalMax]);
 
   const handlePresetClick = (presetId: string) => {
+    // Toggle off if same preset is clicked again
+    if (activePreset === presetId) {
+      setActivePreset(null);
+      setMinVisitsStr("");
+      setMaxVisitsStr("");
+      if (onMinTrafficChange) onMinTrafficChange(undefined);
+      if (onMaxTrafficChange) onMaxTrafficChange(undefined);
+      if (onApply) {
+        onApply({ minTraffic: undefined, maxTraffic: undefined });
+      }
+      dropdownContext?.closeDropdown();
+      return;
+    }
+    
     setActivePreset(presetId);
     
     let newMin: number | undefined;
@@ -132,6 +144,7 @@ function MonthlyVisitsFilterContent({
         onPresetClick={handlePresetClick}
         activePreset={activePreset}
         columns={2}
+        closeOnSelect={false}
       />
       
       <div className="border-t border-gray-200 dark:border-gray-700 my-3" />
@@ -161,6 +174,16 @@ export default function MonthlyVisitsFilter({
   isActive 
 }: MonthlyVisitsFilterProps) {
   const hasValue = externalMin !== undefined || externalMax !== undefined;
+  
+  // Lift activePreset state up to persist across dropdown open/close
+  const [activePreset, setActivePreset] = useState<string | null>(null);
+
+  // Reset preset when values are cleared externally
+  useEffect(() => {
+    if (externalMin === undefined && externalMax === undefined) {
+      setActivePreset(null);
+    }
+  }, [externalMin, externalMax]);
 
   return (
     <FilterDropdown
@@ -177,6 +200,8 @@ export default function MonthlyVisitsFilter({
         onMinTrafficChange={onMinTrafficChange}
         onMaxTrafficChange={onMaxTrafficChange}
         onApply={onApply}
+        activePreset={activePreset}
+        setActivePreset={setActivePreset}
       />
     </FilterDropdown>
   );

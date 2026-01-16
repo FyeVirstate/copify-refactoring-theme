@@ -21,27 +21,39 @@ function ActiveAdsFilterContent({
   onMinActiveAdsChange,
   onMaxActiveAdsChange,
   onApply,
-}: Omit<ActiveAdsFilterProps, 'onOpenChange' | 'isActive'>) {
+  activePreset,
+  setActivePreset,
+}: Omit<ActiveAdsFilterProps, 'onOpenChange' | 'isActive'> & {
+  activePreset: string | null;
+  setActivePreset: (preset: string | null) => void;
+}) {
   const [minAdsStr, setMinAdsStr] = useState(externalMin?.toString() || "");
   const [maxAdsStr, setMaxAdsStr] = useState(externalMax?.toString() || "");
-  const [activePreset, setActivePreset] = useState<string | null>(null);
   const dropdownContext = useFilterDropdown();
 
   useEffect(() => {
     setMinAdsStr(externalMin?.toString() || "");
-    if (externalMin === undefined) {
-      setActivePreset(null);
-    }
   }, [externalMin]);
   
   useEffect(() => {
     setMaxAdsStr(externalMax?.toString() || "");
-    if (externalMax === undefined && externalMin === undefined) {
-      setActivePreset(null);
-    }
-  }, [externalMax, externalMin]);
+  }, [externalMax]);
 
   const handlePresetClick = (presetId: string) => {
+    // Toggle off if same preset is clicked again
+    if (activePreset === presetId) {
+      setActivePreset(null);
+      setMinAdsStr("");
+      setMaxAdsStr("");
+      if (onMinActiveAdsChange) onMinActiveAdsChange(undefined);
+      if (onMaxActiveAdsChange) onMaxActiveAdsChange(undefined);
+      if (onApply) {
+        onApply({ minActiveAds: undefined, maxActiveAds: undefined });
+      }
+      dropdownContext?.closeDropdown();
+      return;
+    }
+    
     setActivePreset(presetId);
     
     let newMin: number | undefined;
@@ -132,6 +144,7 @@ function ActiveAdsFilterContent({
         onPresetClick={handlePresetClick}
         activePreset={activePreset}
         columns={2}
+        closeOnSelect={false}
       />
       
       <div className="border-t border-gray-200 dark:border-gray-700 my-3" />
@@ -161,6 +174,16 @@ export default function ActiveAdsFilter({
   isActive 
 }: ActiveAdsFilterProps) {
   const hasValue = externalMin !== undefined || externalMax !== undefined;
+  
+  // Lift activePreset state up to persist across dropdown open/close
+  const [activePreset, setActivePreset] = useState<string | null>(null);
+
+  // Reset preset when values are cleared externally
+  useEffect(() => {
+    if (externalMin === undefined && externalMax === undefined) {
+      setActivePreset(null);
+    }
+  }, [externalMin, externalMax]);
 
   return (
     <FilterDropdown
@@ -177,6 +200,8 @@ export default function ActiveAdsFilter({
         onMinActiveAdsChange={onMinActiveAdsChange}
         onMaxActiveAdsChange={onMaxActiveAdsChange}
         onApply={onApply}
+        activePreset={activePreset}
+        setActivePreset={setActivePreset}
       />
     </FilterDropdown>
   );

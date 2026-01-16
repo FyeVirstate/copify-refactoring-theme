@@ -64,6 +64,16 @@ export default function OriginFilter({
   }, [selectedOrigins]);
 
   const handlePresetClick = (presetId: string) => {
+    // Toggle off if same preset is clicked again
+    if (activePreset === presetId) {
+      setActivePreset(null);
+      onOriginsChange([]);
+      if (onApply) {
+        onApply({ origins: '' });
+      }
+      return;
+    }
+    
     let newOrigins: string[] = [];
     
     switch (presetId) {
