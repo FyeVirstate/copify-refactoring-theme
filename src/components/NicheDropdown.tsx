@@ -31,14 +31,16 @@ interface PresetItem {
   niches: string[];
 }
 
-// Presets use English names to match database categories
+// Presets use English names to match database categories exactly
+// API categories: Health, Beauty & Fitness, Science, Travel, Adult, Smoking & Vaping, 
+// Pets & Animals, Home & Garden, Consumer Electronics, Apparel, Games, etc.
 const presets: PresetItem[] = [
   {
     id: "permanent",
     icon: "ri-check-double-line",
     title: "Permanent",
     description: "Fonctionne toujours",
-    niches: ["Health", "Health & Beauty", "Science"],
+    niches: ["Health", "Beauty & Fitness", "Science"],
   },
   {
     id: "impulse",
@@ -52,14 +54,14 @@ const presets: PresetItem[] = [
     icon: "ri-loop-left-line",
     title: "Adapté aux abonnements",
     description: "",
-    niches: ["Health", "Food & Beverages", "Beauty"],
+    niches: ["Health", "Beauty & Fitness", "Pets & Animals"],
   },
   {
     id: "seasonal",
     icon: "ri-calendar-check-line",
     title: "Gagnants saisonniers",
     description: "",
-    niches: ["Travel", "Sports & Outdoors"],
+    niches: ["Travel", "Apparel"],
   },
 ];
 

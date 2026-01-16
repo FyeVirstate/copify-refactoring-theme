@@ -349,13 +349,13 @@ export async function GET(request: NextRequest) {
       paramIndex++
     }
     
-    // Categories/Niche filter (via shop_categories join)
+    // Categories/Niche filter (via shops_categories join)
     if (categories.length > 0) {
       const categoryPlaceholders = categories.map((_, i) => `$${paramIndex + i}`).join(', ')
       shopsConditions.push(`EXISTS (
-        SELECT 1 FROM category_shop cs 
-        JOIN categories c ON cs.category_id = c.id 
-        WHERE cs.shop_id = s.id 
+        SELECT 1 FROM shops_categories sc 
+        JOIN categories c ON sc.category_id = c.id 
+        WHERE sc.shop_id = s.id 
         AND (c.id::text IN (${categoryPlaceholders}) OR c.parent_id::text IN (${categoryPlaceholders}))
       )`)
       params.push(...categories, ...categories)

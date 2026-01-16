@@ -421,7 +421,7 @@ export async function GET(request: NextRequest) {
         
         if (matchingCategoryIds.length > 0) {
           categoryCondition = `AND EXISTS (
-            SELECT 1 FROM shop_categories sc 
+            SELECT 1 FROM shops_categories sc 
             WHERE sc.shop_id = m.shop_id 
             AND sc.category_id IN (${matchingCategoryIds.join(', ')})
           )`
