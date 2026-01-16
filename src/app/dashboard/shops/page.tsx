@@ -317,6 +317,111 @@ export default function ShopsPage() {
   const [maxTrustpilotRating, setMaxTrustpilotRating] = useState<number | undefined>();
   const [minTrustpilotReviews, setMinTrustpilotReviews] = useState<number | undefined>();
   const [maxTrustpilotReviews, setMaxTrustpilotReviews] = useState<number | undefined>();
+  
+  // Track if filters have been loaded from storage
+  const [filtersLoaded, setFiltersLoaded] = useState(false);
+  
+  // Load filters from localStorage on mount
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('copyfy_filters_shops');
+      if (stored) {
+        const f = JSON.parse(stored);
+        if (f.selectedCountries) setSelectedCountries(f.selectedCountries);
+        if (f.selectedNiches) setSelectedNiches(f.selectedNiches);
+        if (f.selectedCurrencies) setSelectedCurrencies(f.selectedCurrencies);
+        if (f.selectedPixels) setSelectedPixels(f.selectedPixels);
+        if (f.selectedOrigins) setSelectedOrigins(f.selectedOrigins);
+        if (f.selectedLanguages) setSelectedLanguages(f.selectedLanguages);
+        if (f.selectedDomains) setSelectedDomains(f.selectedDomains);
+        if (f.selectedThemes) setSelectedThemes(f.selectedThemes);
+        if (f.selectedApplications) setSelectedApplications(f.selectedApplications);
+        if (f.selectedSocialNetworks) setSelectedSocialNetworks(f.selectedSocialNetworks);
+        if (f.shopCreationDate) setShopCreationDate(f.shopCreationDate);
+        if (f.sortBy) setSortBy(f.sortBy);
+        if (f.sortOrder) setSortOrder(f.sortOrder);
+        if (f.minRevenue !== undefined) setMinRevenue(f.minRevenue);
+        if (f.maxRevenue !== undefined) setMaxRevenue(f.maxRevenue);
+        if (f.minTraffic !== undefined) setMinTraffic(f.minTraffic);
+        if (f.maxTraffic !== undefined) setMaxTraffic(f.maxTraffic);
+        if (f.minProducts !== undefined) setMinProducts(f.minProducts);
+        if (f.maxProducts !== undefined) setMaxProducts(f.maxProducts);
+        if (f.minActiveAds !== undefined) setMinActiveAds(f.minActiveAds);
+        if (f.maxActiveAds !== undefined) setMaxActiveAds(f.maxActiveAds);
+        if (f.minTrafficGrowth !== undefined) setMinTrafficGrowth(f.minTrafficGrowth);
+        if (f.maxTrafficGrowth !== undefined) setMaxTrafficGrowth(f.maxTrafficGrowth);
+        if (f.minOrders !== undefined) setMinOrders(f.minOrders);
+        if (f.maxOrders !== undefined) setMaxOrders(f.maxOrders);
+        if (f.minPrice !== undefined) setMinPrice(f.minPrice);
+        if (f.maxPrice !== undefined) setMaxPrice(f.maxPrice);
+        if (f.minCatalogSize !== undefined) setMinCatalogSize(f.minCatalogSize);
+        if (f.maxCatalogSize !== undefined) setMaxCatalogSize(f.maxCatalogSize);
+        if (f.minTrustpilotRating !== undefined) setMinTrustpilotRating(f.minTrustpilotRating);
+        if (f.maxTrustpilotRating !== undefined) setMaxTrustpilotRating(f.maxTrustpilotRating);
+        if (f.minTrustpilotReviews !== undefined) setMinTrustpilotReviews(f.minTrustpilotReviews);
+        if (f.maxTrustpilotReviews !== undefined) setMaxTrustpilotReviews(f.maxTrustpilotReviews);
+      }
+    } catch (error) {
+      console.error('Failed to load filters from localStorage:', error);
+    }
+    setFiltersLoaded(true);
+  }, []);
+  
+  // Save filters to localStorage when they change
+  useEffect(() => {
+    if (!filtersLoaded) return; // Don't save until initial load is complete
+    
+    try {
+      const filtersToSave = {
+        selectedCountries,
+        selectedNiches,
+        selectedCurrencies,
+        selectedPixels,
+        selectedOrigins,
+        selectedLanguages,
+        selectedDomains,
+        selectedThemes,
+        selectedApplications,
+        selectedSocialNetworks,
+        shopCreationDate,
+        sortBy,
+        sortOrder,
+        minRevenue,
+        maxRevenue,
+        minTraffic,
+        maxTraffic,
+        minProducts,
+        maxProducts,
+        minActiveAds,
+        maxActiveAds,
+        minTrafficGrowth,
+        maxTrafficGrowth,
+        minOrders,
+        maxOrders,
+        minPrice,
+        maxPrice,
+        minCatalogSize,
+        maxCatalogSize,
+        minTrustpilotRating,
+        maxTrustpilotRating,
+        minTrustpilotReviews,
+        maxTrustpilotReviews,
+      };
+      localStorage.setItem('copyfy_filters_shops', JSON.stringify(filtersToSave));
+    } catch (error) {
+      console.error('Failed to save filters to localStorage:', error);
+    }
+  }, [
+    filtersLoaded,
+    selectedCountries, selectedNiches, selectedCurrencies, selectedPixels,
+    selectedOrigins, selectedLanguages, selectedDomains, selectedThemes,
+    selectedApplications, selectedSocialNetworks, shopCreationDate,
+    sortBy, sortOrder, minRevenue, maxRevenue, minTraffic, maxTraffic,
+    minProducts, maxProducts, minActiveAds, maxActiveAds,
+    minTrafficGrowth, maxTrafficGrowth, minOrders, maxOrders,
+    minPrice, maxPrice, minCatalogSize, maxCatalogSize,
+    minTrustpilotRating, maxTrustpilotRating, minTrustpilotReviews, maxTrustpilotReviews
+  ]);
 
   // Build filters object - memoized for TanStack Query
   const filters = useMemo((): ShopsFilters => {
@@ -495,6 +600,12 @@ export default function ShopsPage() {
     setSortBy("top_score");
     setSortOrder("desc");
     setActivePreset("");
+    // Clear localStorage
+    try {
+      localStorage.removeItem('copyfy_filters_shops');
+    } catch (error) {
+      console.error('Failed to clear filters from localStorage:', error);
+    }
     // Reset to page 1
     if (page === 1) {
       invalidateShops();

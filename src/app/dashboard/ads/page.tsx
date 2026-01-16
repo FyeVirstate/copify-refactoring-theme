@@ -477,7 +477,19 @@ const AdCard = React.memo(function AdCard({ ad, index, isTracked: initialIsTrack
         <div className="d-flex gap-2" style={{ height: '38px' }}>
           {ad.shopId && (
             isTracked ? (
-              <button type="button" onClick={handleTrackClick} className="btn btn-outline-primary flex-grow-1 d-flex align-items-center justify-content-center gap-1" style={{ height: '38px', fontSize: '13px' }}>
+              <button 
+                type="button" 
+                onClick={handleTrackClick} 
+                className="btn flex-grow-1 d-flex align-items-center justify-content-center gap-1" 
+                style={{ 
+                  height: '38px', 
+                  fontSize: '13px',
+                  backgroundColor: '#3b82f6',
+                  color: '#fff',
+                  border: 'none',
+                  fontWeight: 500,
+                }}
+              >
                 <i className="ri-line-chart-line"></i>
                 Voir l&apos;analyse
               </button>
