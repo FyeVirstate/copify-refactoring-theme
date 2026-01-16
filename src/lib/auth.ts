@@ -4,6 +4,7 @@ import bcrypt from "bcryptjs"
 import GoogleProvider from "next-auth/providers/google"
 import CredentialsProvider from "next-auth/providers/credentials"
 import { prisma } from "./prisma"
+import { syncUserToCustomerIo, sendCustomerIoEvent, CustomerIoEvents, buildUserPayload } from "./customerio"
 
 // Check if we're in dev mode and if database is available
 const isDevMode = process.env.NODE_ENV === 'development'
@@ -192,6 +193,20 @@ const providers = [
           data: { lastLogin: new Date() }
         })
 
+        // Sync to Customer.io on login (fire and forget)
+        buildUserPayload({
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          createdAt: user.createdAt,
+          lang: user.lang,
+          lastLogin: new Date(),
+        }).then(payload => {
+          syncUserToCustomerIo(payload).catch(err => {
+            console.error('[Auth] Customer.io sync error:', err);
+          });
+        });
+
         console.log("[Auth] Login successful for user:", user.id)
 
         return {
@@ -283,7 +298,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           // For OAuth users, we set a random password (they'll use OAuth to login)
           const randomPassword = await bcrypt.hash(crypto.randomUUID(), 12)
           
-          await prisma.user.create({
+          const newUser = await prisma.user.create({
             data: {
               email: user.email!,
               name: user.name!,
@@ -300,12 +315,52 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
               verifyToken: crypto.randomUUID(),
             }
           })
+
+          // Sync new Google user to Customer.io
+          const customerIoPayload = await buildUserPayload({
+            id: newUser.id,
+            email: newUser.email,
+            name: newUser.name,
+            createdAt: newUser.createdAt,
+            lang: newUser.lang,
+            emailVerifiedAt: newUser.emailVerifiedAt,
+          }, {
+            activePlan: { identifier: 'trial', title: 'Free Trial' },
+            generateStoresCount: 0,
+            generateProductsCount: 0,
+          });
+          
+          // Fire and forget - don't block OAuth flow
+          syncUserToCustomerIo(customerIoPayload).catch(err => {
+            console.error('[Auth] Customer.io sync error:', err);
+          });
+
+          // Send free_trial event
+          sendCustomerIoEvent(Number(newUser.id), CustomerIoEvents.FREE_TRIAL, {
+            plan_name: 'Free Trial',
+          }).catch(err => {
+            console.error('[Auth] Customer.io event error:', err);
+          })
         } else {
           // Update last login
           await prisma.user.update({
             where: { id: existingUser.id },
             data: { lastLogin: new Date() }
           })
+
+          // Sync to Customer.io on Google login (fire and forget)
+          buildUserPayload({
+            id: existingUser.id,
+            email: existingUser.email,
+            name: existingUser.name,
+            createdAt: existingUser.createdAt,
+            lang: existingUser.lang,
+            lastLogin: new Date(),
+          }).then(payload => {
+            syncUserToCustomerIo(payload).catch(err => {
+              console.error('[Auth] Customer.io sync error:', err);
+            });
+          });
         }
       }
 

@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { NextResponse } from "next/server"
+import { syncUserToCustomerIo, buildUserPayload } from "@/lib/customerio"
 
 export async function GET() {
   const session = await auth()
@@ -104,8 +105,23 @@ export async function PATCH(request: Request) {
       name: true,
       email: true,
       lang: true,
+      createdAt: true,
     }
   })
+
+  // Sync to Customer.io if name or lang changed
+  if (name || lang) {
+    const customerIoPayload = await buildUserPayload({
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      createdAt: user.createdAt,
+      lang: user.lang,
+    });
+    syncUserToCustomerIo(customerIoPayload).catch(err => {
+      console.error('[User] Customer.io sync error:', err);
+    });
+  }
 
   return NextResponse.json({
     ...user,

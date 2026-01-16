@@ -499,6 +499,14 @@
 .badge {
   border-radius: 6px;
   
+  // Small badge - matches Laravel badge-sm
+  &.badge-sm {
+    font-size: 11px;
+    font-weight: 500;
+    border-radius: 20px;
+    padding: 2px 8px;
+  }
+  
   &.bg-success-new {
     color: #1daf61;
     background-color: rgba(31, 193, 107, 0.1);
@@ -516,6 +524,17 @@
     font-size: 11px;
     font-weight: 500;
     padding: 2px 8px;
+  }
+  
+  // Light success/danger backgrounds for growth badges - matches Laravel
+  &.bg-light-success {
+    background-color: #DFFFEA !important;
+    color: #16A34A;
+  }
+  
+  &.bg-light-danger {
+    background-color: #FFEEF3 !important;
+    color: #DC2626;
   }
 }
 
@@ -1566,6 +1585,10 @@ select:focus,
 }
 
 // Font sizes
+.fs-xxs {
+  font-size: 10px !important;
+}
+
 .fs-xs {
   font-size: 12px !important;
 }

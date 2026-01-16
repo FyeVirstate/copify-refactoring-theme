@@ -11,6 +11,7 @@ import { prisma } from "@/lib/prisma"
 import { NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
 import bcrypt from "bcryptjs"
+import { syncUserToCustomerIo, buildUserPayload } from "@/lib/customerio"
 
 // GET - Get user settings
 export async function GET() {
@@ -184,8 +185,29 @@ export async function PUT(request: NextRequest) {
         name: true,
         email: true,
         lang: true,
+        createdAt: true,
+        lastLogin: true,
+        shopifyDomain: true,
+        shopifySetupCompleted: true,
       }
     })
+
+    // Sync updated profile to Customer.io (if name or lang changed)
+    if (validated.name || validated.lang) {
+      const customerIoPayload = await buildUserPayload({
+        id: updatedUser.id,
+        email: updatedUser.email,
+        name: updatedUser.name,
+        createdAt: updatedUser.createdAt,
+        lang: updatedUser.lang,
+        lastLogin: updatedUser.lastLogin,
+        shopifyDomain: updatedUser.shopifyDomain,
+        shopifySetupCompleted: updatedUser.shopifySetupCompleted,
+      });
+      syncUserToCustomerIo(customerIoPayload).catch(err => {
+        console.error('[Settings] Customer.io sync error:', err);
+      });
+    }
 
     return NextResponse.json({
       success: true,

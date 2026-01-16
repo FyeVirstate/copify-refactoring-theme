@@ -1566,7 +1566,7 @@ export default function AIShopEditorPage() {
                 onClick={() => router.push('/dashboard/ai-shop')}
                 style={{ opacity: 0.7, cursor: 'pointer' }}
               >
-                <i className="ri-link nav-icon me-2"></i><span className="nav-text fs-small">1. Charger</span>
+                <i className="ri-link nav-icon me-2"></i><span className="nav-text fs-small">1. Importer</span>
               </button>
             </li>
             <i className="ri-arrow-right-s-line mx-1" style={{ color: '#99a0ae' }}></i>

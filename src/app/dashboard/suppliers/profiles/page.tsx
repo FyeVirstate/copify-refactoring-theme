@@ -70,7 +70,7 @@ const suppliers: SupplierProfile[] = [
 
 function SupplierCard({ supplier }: { supplier: SupplierProfile }) {
   return (
-    <div className="border-gray p-4 rounded-15 bg-white">
+    <div className="border-gray p-4 rounded-15 bg-white" style={{ flex: 1 }}>
       <h5 className="fs-15 mb-4">
         <span className="text-dark">Profil</span>
       </h5>
@@ -204,11 +204,15 @@ export default function SupplierProfilesPage() {
 
       <div className="bg-white home-content-wrapper">
         <div className="p-2 w-max-width-xl mx-auto">
-          <div className="row m-0 p-lg-4 p-md-3 pt-lg-0">
+          <div 
+            className="row m-0 p-lg-4 p-md-3 pt-lg-0 profile"
+            style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem', alignItems: 'stretch' }}
+          >
             {suppliers.map((supplier, index) => (
               <div 
                 key={supplier.id}
-                className={`col-lg-6 col-md-6 ${index === 0 ? 'ps-lg-0 pe-lg-2 ps-md-0 pe-md-2' : 'pe-lg-0 ps-lg-2 pe-md-0 ps-md-2'} px-0 ${index > 0 ? 'mt-lg-0 mt-md-0 mt-4' : ''}`}
+                className={`${index === 0 ? 'pe-lg-2 pe-md-2' : 'ps-lg-2 ps-md-2'} px-0 ${index > 0 ? 'mt-lg-0 mt-md-0 mt-4' : ''}`}
+                style={{ display: 'flex', marginTop: "0px !important"}}
               >
                 <SupplierCard supplier={supplier} />
               </div>

@@ -10,6 +10,7 @@ import { prisma } from "@/lib/prisma"
 import { NextRequest, NextResponse } from "next/server"
 import { exchangeCodeForToken } from "@/lib/services/shopify"
 import { cookies } from "next/headers"
+import { syncUserToCustomerIo, sendCustomerIoEvent, CustomerIoEvents, buildUserPayload } from "@/lib/customerio"
 
 export async function GET(request: NextRequest) {
   if (!prisma) {
@@ -151,9 +152,34 @@ export async function GET(request: NextRequest) {
             data: {
               shopifyDomain: shopDomain,
               shopifyAccessToken: tokenData.access_token,
+              shopifyDomainLinkedAt: new Date(),
             }
           })
           console.log(`User ${userId} set primary Shopify connection: ${shopDomain}`)
+
+          // Track Shopify connection in Customer.io
+          const userNumericId = Number(userId);
+          
+          // Send shopify_connected event
+          sendCustomerIoEvent(userNumericId, CustomerIoEvents.SHOPIFY_CONNECTED, {
+            shopify_domain: shopDomain,
+          }).catch(err => {
+            console.error('[Shopify] Customer.io event error:', err);
+          });
+
+          // Sync user with updated Shopify data
+          const customerIoPayload = await buildUserPayload({
+            id: userId,
+            email: user.email,
+            name: user.name,
+            createdAt: user.createdAt,
+            lang: user.lang,
+            shopifyDomain: shopDomain,
+            shopifyDomainLinkedAt: new Date(),
+          });
+          syncUserToCustomerIo(customerIoPayload).catch(err => {
+            console.error('[Shopify] Customer.io sync error:', err);
+          });
         }
       }
     }

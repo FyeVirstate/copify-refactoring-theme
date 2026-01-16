@@ -159,12 +159,62 @@ npm run start    # Serveur de production
 npm run lint     # Vérification du code
 ```
 
+## ⚙️ Variables d'Environnement
+
+Créez un fichier `.env.local` à la racine du projet avec les variables suivantes:
+
+```bash
+# Base de données
+DATABASE_URL="postgresql://..."
+
+# Authentification
+NEXTAUTH_SECRET="your-secret-key"
+NEXTAUTH_URL="http://localhost:3000"
+
+# Google OAuth (optionnel)
+GOOGLE_CLIENT_ID="your-google-client-id"
+GOOGLE_CLIENT_SECRET="your-google-client-secret"
+
+# Stripe (Paiement)
+STRIPE_SECRET_KEY="sk_live_..."
+STRIPE_WEBHOOK_SECRET="whsec_..."
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY="pk_live_..."
+
+# Churnkey (Gestion des annulations)
+# Obtenir sur https://app.churnkey.co/settings/developer
+CHURNKEY_KEY="your-churnkey-hmac-key"          # HMAC key pour authentification
+CHURNKEY_STATUS="live"                          # "live" ou "test"
+NEXT_PUBLIC_CHURNKEY_APP_ID="your-app-id"       # App ID Churnkey (ex: 3t28ew8c6)
+
+# Customer.io (Optionnel - tracking/emails)
+CUSTOMER_IO_SITE_ID="your-site-id"
+CUSTOMER_IO_API_KEY="your-api-key"
+
+# Shopify (Intégration Shopify)
+SHOPIFY_CLIENT_ID="your-shopify-client-id"
+SHOPIFY_CLIENT_SECRET="your-shopify-client-secret"
+SHOPIFY_SCOPES="read_products,write_products,read_orders"
+```
+
+### Configuration Churnkey
+
+Churnkey est utilisé pour:
+- **Intercepter les annulations** avec un flow de rétention
+- **Gérer les paiements échoués** avec une wall de récupération
+- **Détecter les pauses d'abonnement**
+
+1. Connectez-vous à [Churnkey Dashboard](https://app.churnkey.co)
+2. Allez dans Settings > Developer
+3. Copiez votre **HMAC Key** → `CHURNKEY_KEY`
+4. Copiez votre **App ID** → `NEXT_PUBLIC_CHURNKEY_APP_ID`
+5. Définissez `CHURNKEY_STATUS` sur `test` pour les tests
+
 ## 🌟 Améliorations Futures
 
-- [ ] Authentification complète (JWT, sessions)
+- [x] Authentification complète (JWT, sessions)
 - [ ] Intégration API Python (IA)
-- [ ] Système de paiement (Stripe)
-- [ ] Gestion des abonnements
+- [x] Système de paiement (Stripe)
+- [x] Gestion des abonnements (Churnkey)
 - [ ] Notifications en temps réel
 - [ ] Mode sombre
 - [ ] Internationalisation (i18n)

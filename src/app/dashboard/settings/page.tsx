@@ -6,9 +6,10 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useSettings } from "@/lib/hooks/use-settings";
 import { useShopify } from "@/lib/hooks/use-shopify";
+import { useChurnkeyContext } from "@/components/ChurnkeyProvider";
 import { cn } from "@/lib/utils";
 
-type Tab = "profile" | "password" | "tarification" | "shopify";
+type Tab = "profile" | "password" | "subscription" | "tarification" | "shopify";
 
 const LANGUAGES = [
   { code: "fr", name: "Français", flag: "🇫🇷" },
@@ -32,7 +33,7 @@ export default function SettingsPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState<string | null>(null);
-  const [showPlans, setShowPlans] = useState(false);
+  // showPlans state removed - plans are now always visible
   const [billingPeriod, setBillingPeriod] = useState<"monthly" | "quarterly" | "annual">("monthly");
   const [langDropdownOpen, setLangDropdownOpen] = useState(false);
 
@@ -162,6 +163,16 @@ export default function SettingsPage() {
                 <i className="ri-key-2-line"></i>
                 Mot de passe
               </button>
+              {settings?.subscription && (
+                <button
+                  type="button"
+                  className={cn("nav-link px-4 py-2 d-flex align-items-center gap-2", activeTab === "subscription" && "active")}
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); setActiveTab("subscription"); }}
+                >
+                  <i className="ri-contract-line"></i>
+                  Gérer l&apos;abonnement
+                </button>
+              )}
               <button
                 type="button"
                 className={cn("nav-link px-4 py-2 d-flex align-items-center gap-2", activeTab === "tarification" && "active")}
@@ -344,82 +355,76 @@ export default function SettingsPage() {
             </div>
           )}
 
+          {/* Subscription Management Tab */}
+          {activeTab === "subscription" && settings?.subscription && (
+            <SubscriptionManagement 
+              subscription={settings.subscription} 
+              onError={setSaveError}
+              onSuccess={setSaveSuccess}
+            />
+          )}
+
           {/* Tarification Tab */}
           {activeTab === "tarification" && (
             <div>
-              {/* Black Friday Banner */}
-              <BlackFridayBanner currentPlan={settings?.subscription?.planIdentifier} />
-
-              {/* Show/Hide Plans Toggle */}
-              <div className="text-center mb-4">
-                <button 
-                  type="button" 
-                  className="btn btn-outline-secondary rounded-pill px-4 py-2"
-                  onClick={() => setShowPlans(!showPlans)}
-                >
-                  <span>{showPlans ? "Masquer les autres plans" : "Voir les autres plans"}</span>
-                  <i className={cn("ms-2", showPlans ? "ri-arrow-up-s-line" : "ri-arrow-down-s-line")}></i>
-                </button>
-              </div>
-
-              {/* Plans Container */}
-              {showPlans && (
-                <div className="plan-container">
-                  {/* Billing Period Toggle */}
-                  <div className="d-flex justify-content-center mt-4 mb-4">
-                    <div className="btn-switch-wrapper d-flex align-items-center bg-light">
-                      <button
-                        type="button"
-                        className={cn("btn btn-switch px-3 py-2", billingPeriod === "monthly" && "active")}
-                        onClick={() => setBillingPeriod("monthly")}
-                      >
-                        Mensuel
-                      </button>
-                      <button
-                        type="button"
-                        className={cn("btn btn-switch px-3 py-2", billingPeriod === "quarterly" && "active")}
-                        onClick={() => setBillingPeriod("quarterly")}
-                      >
-                        Trimestriel
-                        <span className={cn("badge ms-2", billingPeriod === "quarterly" ? "" : "bg-info-light")}>3mo</span>
-                      </button>
-                      <button
-                        type="button"
-                        className={cn("btn btn-switch px-3 py-2", billingPeriod === "annual" && "active")}
-                        onClick={() => setBillingPeriod("annual")}
-                      >
-                        Annuel
-                        <span className={cn("badge ms-2", billingPeriod === "annual" ? "" : "bg-success-light")}>40%</span>
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Pricing Cards */}
-                  <PricingCards 
-                    billingPeriod={billingPeriod} 
-                    currentPlan={settings?.subscription?.planIdentifier}
-                  />
-
-                  {/* Trust Badges */}
-                  <div className="d-flex justify-content-center align-items-center gap-4 flex-wrap mt-4">
-                    <img src="/img/trust-pilot.png" alt="Trustpilot" style={{ height: 40 }} />
-                    <div className="d-flex align-items-center gap-2 border rounded-3 p-2">
-                      <div className="d-flex">
-                        {[1, 2, 3].map((i) => (
-                          <div 
-                            key={i}
-                            className="rounded-circle bg-secondary border border-white" 
-                            style={{ width: 26, height: 26, marginLeft: i > 1 ? -8 : 0 }}
-                          ></div>
-                        ))}
-                      </div>
-                      <span className="small">
-                        <strong className="text-primary">+279</strong> E-Commerçants ont rejoint Copyfy cette semaine
-                      </span>
-                    </div>
+              {/* Plans Container - Always visible */}
+              <div className="plan-container">
+                {/* Billing Period Toggle */}
+                <div className="d-flex justify-content-center mt-4 mb-4">
+                  <div className="btn-switch-wrapper d-flex align-items-center bg-light">
+                    <button
+                      type="button"
+                      className={cn("btn btn-switch px-3 py-2", billingPeriod === "monthly" && "active")}
+                      onClick={() => setBillingPeriod("monthly")}
+                    >
+                      Mensuel
+                    </button>
+                    <button
+                      type="button"
+                      className={cn("btn btn-switch px-3 py-2", billingPeriod === "quarterly" && "active")}
+                      onClick={() => setBillingPeriod("quarterly")}
+                    >
+                      Trimestriel
+                      <span className={cn("badge ms-2", billingPeriod === "quarterly" ? "" : "bg-info-light")}>3mo</span>
+                    </button>
+                    <button
+                      type="button"
+                      className={cn("btn btn-switch px-3 py-2", billingPeriod === "annual" && "active")}
+                      onClick={() => setBillingPeriod("annual")}
+                    >
+                      Annuel
+                      <span className={cn("badge ms-2", billingPeriod === "annual" ? "" : "bg-success-light")}>40%</span>
+                    </button>
                   </div>
                 </div>
-              )}
+
+                {/* Pricing Cards */}
+                <PricingCards 
+                  billingPeriod={billingPeriod} 
+                  currentPlan={settings?.subscription?.planIdentifier}
+                />
+
+                {/* Trust Badges */}
+                <div className="d-flex justify-content-center align-items-center gap-4 flex-wrap mt-4">
+                  <img src="/img/trust-pilot.png" alt="Trustpilot" style={{ height: 40 }} />
+                  <div className="d-flex align-items-center gap-2 border rounded-3 p-2">
+                    <div className="d-flex">
+                      {["/img/avatar-1.png", "/img/avatar-2.png", "/img/avatar-3.png"].map((src, i) => (
+                        <img 
+                          key={i}
+                          src={src}
+                          alt="User avatar"
+                          className="rounded-circle border border-white"
+                          style={{ width: 26, height: 26, marginLeft: i > 0 ? -8 : 0, objectFit: 'cover' }}
+                        />
+                      ))}
+                    </div>
+                    <span className="small">
+                      <strong className="text-primary">+279</strong> E-Commerçants ont rejoint Copyfy cette semaine
+                    </span>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
 
@@ -1063,6 +1068,231 @@ function BlackFridayBanner({ currentPlan }: { currentPlan?: string }) {
         }
       `}</style>
     </div>
+  );
+}
+
+// Subscription Management Component - Matches Laravel design exactly
+function SubscriptionManagement({ 
+  subscription, 
+  onError, 
+  onSuccess 
+}: { 
+  subscription: { planName: string; planIdentifier: string; status: string; currentPeriodEnd: string | null };
+  onError: (error: string) => void;
+  onSuccess: (message: string) => void;
+}) {
+  const { showCancelFlow, isReady, hasStripeId, isLoading } = useChurnkeyContext();
+  const [openingPortal, setOpeningPortal] = useState(false);
+  const [subscriptionDetails, setSubscriptionDetails] = useState<{
+    cancelAtPeriodEnd: boolean;
+    currentPeriodEnd: Date | null;
+    nextInvoiceAmount: number | null;
+    currency: string;
+    planPrice: number | null;
+  } | null>(null);
+
+  // Fetch detailed subscription info
+  useEffect(() => {
+    async function fetchSubscriptionDetails() {
+      try {
+        const res = await fetch('/api/billing/subscription');
+        const data = await res.json();
+        if (data.hasSubscription && data.subscription) {
+          setSubscriptionDetails({
+            cancelAtPeriodEnd: data.subscription.cancelAtPeriodEnd,
+            currentPeriodEnd: data.subscription.currentPeriodEnd ? new Date(data.subscription.currentPeriodEnd) : null,
+            nextInvoiceAmount: data.plan?.price || null,
+            currency: 'EUR',
+            planPrice: data.plan?.price || null,
+          });
+        }
+      } catch (err) {
+        console.error('Failed to fetch subscription details:', err);
+      }
+    }
+    fetchSubscriptionDetails();
+  }, []);
+
+  const handleOpenPortal = async () => {
+    setOpeningPortal(true);
+    try {
+      const res = await fetch('/api/billing/portal', { method: 'POST' });
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        throw new Error('Failed to open billing portal');
+      }
+    } catch (err) {
+      onError('Erreur lors de l\'ouverture du portail de facturation');
+    } finally {
+      setOpeningPortal(false);
+    }
+  };
+
+  const handleCancelClick = () => {
+    if (isReady && hasStripeId) {
+      // Use Churnkey cancel flow
+      showCancelFlow();
+    } else {
+      // Fallback to direct API call if Churnkey is not ready
+      if (confirm('Êtes-vous sûr de vouloir annuler votre abonnement? Vous conserverez l\'accès jusqu\'à la fin de la période de facturation.')) {
+        handleDirectCancel();
+      }
+    }
+  };
+
+  const handleDirectCancel = async () => {
+    try {
+      const res = await fetch('/api/billing/subscription', { method: 'DELETE' });
+      const data = await res.json();
+      if (data.success) {
+        onSuccess('Votre abonnement sera annulé à la fin de la période de facturation');
+        window.location.reload();
+      } else {
+        throw new Error(data.error || 'Failed to cancel');
+      }
+    } catch (err) {
+      onError('Erreur lors de l\'annulation. Veuillez contacter le support.');
+    }
+  };
+
+  const handleResumeSubscription = async () => {
+    try {
+      const res = await fetch('/api/billing/subscription', { method: 'PATCH' });
+      const data = await res.json();
+      if (data.success) {
+        onSuccess('Votre abonnement a été réactivé');
+        window.location.reload();
+      } else {
+        throw new Error(data.error || 'Failed to resume');
+      }
+    } catch (err) {
+      onError('Erreur lors de la réactivation. Veuillez contacter le support.');
+    }
+  };
+
+  const getDaysRemaining = () => {
+    if (!subscriptionDetails?.currentPeriodEnd) return null;
+    const now = new Date();
+    const end = subscriptionDetails.currentPeriodEnd;
+    const diff = Math.ceil((end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+    return diff > 0 ? diff : 0;
+  };
+
+  const daysRemaining = getDaysRemaining();
+
+  return (
+    <>
+      {/* Section 1: Votre plan actuel - Matches Laravel design */}
+      <div className="border-gray p-4 rounded-15 bg-white shadow-sm">
+        <h3 className="fs-15 mb-3 fw-semibold">Votre plan actuel</h3>
+        <div className="d-lg-flex d-md-flex align-items-center">
+          {/* Plan Badge */}
+          <div 
+            className="current-img-box d-flex align-items-center justify-content-center"
+            style={{ 
+              border: '2px solid #e5e7eb',
+              borderRadius: '12px',
+              padding: '16px 24px',
+              minWidth: '100px',
+              minHeight: '70px',
+            }}
+          >
+            <span className="fs-15 text-center fw-semibold" style={{ color: '#2563eb' }}>
+              {subscription.planName}
+            </span>
+          </div>
+          
+          {/* Invoice Info */}
+          <div className="ms-lg-4 ms-md-4 mt-lg-0 mt-md-0 mt-3 flex-grow-1">
+            {subscriptionDetails?.cancelAtPeriodEnd ? (
+              <>
+                <h2 className="fs-15 mb-1" style={{ letterSpacing: '0.5px' }}>
+                  Sera annulé dans <span className="text-danger fw-semibold">{daysRemaining} jours</span>.
+                </h2>
+                <p className="fs-15 text-muted mb-1">
+                  Assurez-vous de renouveler pour conserver vos produits et boutiques enregistrés
+                </p>
+              </>
+            ) : (
+              <>
+                <h2 className="fs-15 mb-1" style={{ letterSpacing: '0.5px' }}>
+                  Prochaine facture{' '}
+                  <span className="text-primary fw-semibold">
+                    {subscriptionDetails?.planPrice || '—'} {subscriptionDetails?.currency || 'EUR'}
+                  </span>{' '}
+                  et est dû dans{' '}
+                  <span className="fw-semibold">{daysRemaining ?? '—'} jours</span>.
+                </h2>
+                <p className="fs-15 text-muted mb-1">
+                  Assurez-vous de renouveler pour conserver vos produits et boutiques enregistrés
+                </p>
+              </>
+            )}
+          </div>
+          
+          {/* Cancel/Resume Button */}
+          <div className="d-block ms-auto mt-lg-0 mt-md-0 mt-3">
+            {subscriptionDetails?.cancelAtPeriodEnd ? (
+              <button 
+                className="btn btn-success d-block w-100 fs-14 h-43"
+                onClick={handleResumeSubscription}
+              >
+                Reprendre l&apos;abonnement
+              </button>
+            ) : (
+              <button 
+                className="btn btn-outline-secondary d-block w-100 fs-14 h-43"
+                onClick={handleCancelClick}
+                disabled={isLoading}
+                style={{ color: '#6b7280', borderColor: '#e5e7eb' }}
+              >
+                {isLoading ? (
+                  <span className="spinner-border spinner-border-sm me-2" role="status"></span>
+                ) : null}
+                Annuler mon abonnement
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Section 2: Factures & Carte de crédit - Matches Laravel design exactly */}
+      <div className="border-gray p-4 rounded-15 mt-3 bg-white shadow-sm">
+        {/* Factures */}
+        <div className="mb-4">
+          <h6 className="fw-bold mb-1">Factures</h6>
+          <p className="text-muted small mb-3">Gérez vos factures.</p>
+          <a 
+            href="https://zenvoice.io/p/65f06e571b4c9ca8311f6544" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="btn btn-primary"
+            style={{ display: 'inline-block', width: 'auto' }}
+          >
+            Obtenez vos factures
+          </a>
+        </div>
+
+        {/* Carte de crédit */}
+        <div>
+          <h6 className="fw-bold mb-1">Carte de crédit</h6>
+          <p className="text-muted small mb-3">Gérez vos cartes de crédit.</p>
+          <button 
+            className="btn btn-primary"
+            onClick={handleOpenPortal}
+            disabled={openingPortal}
+            style={{ display: 'inline-block', width: 'auto' }}
+          >
+            {openingPortal ? (
+              <span className="spinner-border spinner-border-sm me-2" role="status"></span>
+            ) : null}
+            Mettez à jour vos cartes de crédit
+          </button>
+        </div>
+      </div>
+    </>
   );
 }
 

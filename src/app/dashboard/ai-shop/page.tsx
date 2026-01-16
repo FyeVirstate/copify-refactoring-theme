@@ -55,8 +55,8 @@ function detectUrlType(url: string): UrlType {
   
   const trimmedUrl = url.trim().toLowerCase();
   
-  // AliExpress pattern
-  const aliexpressRegex = /aliexpress\.com\/item\/(\d+)\.html/i;
+  // AliExpress pattern - supports .com, .us, .ru, .fr and other regional domains
+  const aliexpressRegex = /aliexpress\.[a-z]{2,3}\/item\/(\d+)\.html/i;
   if (aliexpressRegex.test(trimmedUrl)) {
     return 'aliexpress';
   }
@@ -623,15 +623,18 @@ function GenerationLoader({
 
   return (
     <div className="generation-loader position-relative mx-auto" style={{ maxWidth: '600px', marginTop: '60px' }}>
-      {/* Floating spark icon */}
-      <div className="position-absolute floating-spark-icon">
-        <span className="primary-gradient-color-2 sparkling-icon">
-          <i className="ri-sparkling-2-fill"></i>
-        </span>
+      {/* Floating spark icon - centered above title */}
+      <div className="d-flex justify-content-center mb-3">
+        <div className="floating-spark-icon-centered">
+          <span className="primary-gradient-color-2 sparkling-icon">
+            <i className="ri-sparkling-2-fill"></i>
+          </span>
+        </div>
       </div>
 
+      {/* Title - centered below icon */}
       <p 
-        className="mb-3 fw-500 primary-gradient-tri-color"
+        className="mb-3 fw-500 primary-gradient-tri-color text-center"
         style={{
           fontSize: '1.5rem',
           background: 'linear-gradient(90deg, #476CFF, #0C6CFB, #a897ff)',
@@ -643,51 +646,82 @@ function GenerationLoader({
         Génération de votre boutique....
       </p>
 
-      {/* URL Input Display */}
-      <div className="mb-0 w-100">
-        <div className="input-w-left-icon mb-3 position-relative">
-          <span className="position-absolute left-icon" style={{ left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#99a0ae' }}>
-            <i className="ri-link"></i>
-          </span>
+      {/* URL Input Display with favicon */}
+      <div className="mb-3 w-100">
+        <div className="position-relative">
+          {/* Favicon prefix (left side) */}
+          {productUrl && extractDomainFromUrl(productUrl) && (
+            <div 
+              className="position-absolute"
+              style={{
+                left: '12px',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                width: '20px',
+                height: '20px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 10,
+                pointerEvents: 'none'
+              }}
+            >
+              <img 
+                src={getFaviconUrl(productUrl)}
+                alt=""
+                style={{
+                  width: '20px',
+                  height: '20px',
+                  objectFit: 'contain'
+                }}
+                onError={(e) => {
+                  (e.target as HTMLImageElement).style.display = 'none';
+                }}
+              />
+            </div>
+          )}
           <input 
             type="text" 
-            className="form-control" 
-            style={{ paddingLeft: '38px', backgroundColor: '#f6f8fa' }}
+            className="form-control ai-shop-url-input has-favicon" 
+            style={{ backgroundColor: '#f6f8fa', paddingLeft: productUrl && extractDomainFromUrl(productUrl) ? '44px' : '12px' }}
             disabled 
             value={productUrl.length > 60 ? productUrl.substring(0, 60) + '...' : productUrl}
           />
         </div>
       </div>
 
-      {/* Loading Stage Indicator with dots (like Laravel) */}
-      <div className="mb-3">
-        <div className="d-flex align-items-center justify-content-center py-2">
-          <span className="fw-500 text-primary fs-6">
-            {LOADING_STAGES[currentStage - 1]?.text || 'Chargement...'}
-          </span>
-        </div>
-        <div className="d-flex justify-content-center gap-1 mt-2">
-          {LOADING_STAGES.map((stage, index) => (
-            <span 
-              key={stage.id}
-              className={`stage-dot ${currentStage >= stage.id ? 'active' : ''}`}
-              title={stage.text}
-              style={{
-                width: '10px',
-                height: '10px',
-                borderRadius: '50%',
-                background: currentStage >= stage.id 
-                  ? 'linear-gradient(91.46deg, #0c6cfb 1.25%, #a897ff 99.5%)' 
-                  : '#e0e5f0',
-                transition: 'all 0.3s ease',
-              }}
-            />
-          ))}
-        </div>
+      {/* Loading Stage Indicator with percentage on same line */}
+      <div className="d-flex align-items-center justify-content-between mb-2">
+        <span className="fw-500 text-primary fs-6">
+          {LOADING_STAGES[currentStage - 1]?.text || 'Chargement...'}
+        </span>
+        <span className="fw-bold fs-6" style={{ color: '#525866' }}>
+          {Math.round(progress)}%
+        </span>
+      </div>
+
+      {/* Stage Dots */}
+      <div className="d-flex justify-content-center gap-1 mb-3">
+        {LOADING_STAGES.map((stage, index) => (
+          <span 
+            key={stage.id}
+            className={`stage-dot ${currentStage >= stage.id ? 'active' : ''}`}
+            title={stage.text}
+            style={{
+              width: '10px',
+              height: '10px',
+              borderRadius: '50%',
+              background: currentStage >= stage.id 
+                ? 'linear-gradient(91.46deg, #0c6cfb 1.25%, #a897ff 99.5%)' 
+                : '#e0e5f0',
+              transition: 'all 0.3s ease',
+            }}
+          />
+        ))}
       </div>
 
       {/* Progress Bar */}
-      <div className="progress mb-2" style={{ height: '24px', borderRadius: '12px', overflow: 'hidden' }}>
+      <div className="progress mb-3" style={{ height: '24px', borderRadius: '12px', overflow: 'hidden' }}>
         <div 
           className="progress-bar progress-bar-striped progress-bar-animated progress-bar-gradient"
           role="progressbar" 
@@ -702,11 +736,6 @@ function GenerationLoader({
           aria-valuemax={100}
         ></div>
       </div>
-
-      {/* Percentage */}
-      <p className="text-end fw-bold text-sub fs-lg mb-3" style={{ color: '#525866' }}>
-        {Math.round(progress)}%
-      </p>
 
       {/* Skeleton Preview Card (like Laravel loading-placeholder) */}
       <div className="loading-placeholder p-3 d-flex gap-3">
@@ -953,7 +982,8 @@ export default function AIShopPage() {
       
       if (urlType === 'aliexpress') {
         // Validate AliExpress URL format - check if it has .html/.htm
-        const aliRegex = /aliexpress\.com\/item\/(\d+)\.html?/i;
+        // Supports .com, .us, .ru, .fr and other regional domains
+        const aliRegex = /aliexpress\.[a-z]{2,3}\/item\/(\d+)\.html?/i;
         if (aliRegex.test(urlForValidation)) {
           setUrlValidation({
             status: 'valid',
@@ -962,7 +992,7 @@ export default function AIShopPage() {
           });
         } else {
           // Check if it's partially valid (missing .html ending)
-          const partialRegex = /aliexpress\.com\/item\/(\d+)/i;
+          const partialRegex = /aliexpress\.[a-z]{2,3}\/item\/(\d+)/i;
           if (partialRegex.test(urlForValidation)) {
             setUrlValidation({
               status: 'invalid',
@@ -1683,11 +1713,9 @@ export default function AIShopPage() {
         }
         
         /* Generation Loader Styles */
-        .generation-loader .floating-spark-icon {
+        .generation-loader .floating-spark-icon-centered {
           width: 72px;
           height: 72px;
-          top: -58px;
-          right: 80px;
           display: flex;
           align-items: center;
           justify-content: center;
@@ -1695,10 +1723,12 @@ export default function AIShopPage() {
           background: linear-gradient(135deg, #f0f4ff 0%, #e8f0ff 100%);
           box-shadow: 0 12px 27px 0 rgba(53,120,227,.15);
         }
-        .generation-loader .floating-spark-icon .sparkling-icon {
+        .generation-loader .floating-spark-icon-centered .sparkling-icon {
           font-size: 28px;
           text-align: center;
-          line-height: 72px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
           background: linear-gradient(90deg, #476CFF, #0C6CFB);
           -webkit-background-clip: text;
           -webkit-text-fill-color: transparent;
@@ -1894,15 +1924,12 @@ export default function AIShopPage() {
         }
         
         @media only screen and (max-width: 768px) {
-          .generation-loader .floating-spark-icon {
+          .generation-loader .floating-spark-icon-centered {
             width: 60px;
             height: 60px;
-            top: -58px;
-            right: 40px;
           }
-          .generation-loader .floating-spark-icon .sparkling-icon {
+          .generation-loader .floating-spark-icon-centered .sparkling-icon {
             font-size: 24px;
-            line-height: 60px;
           }
           #AIStorePreview {
             width: 100% !important;

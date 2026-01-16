@@ -6,6 +6,8 @@ import { fetchAmazonProduct, extractAmazonAsin, buildAmazonProductUrl } from '@/
 import { generateStoreContent, getLanguageName } from '@/lib/services/store-ai';
 import { FalAIService } from '@/lib/services/fal-ai';
 import { generateColorPalette, ColorPalette } from '@/lib/services/color-palette';
+import { syncUserToCustomerIo, sendCustomerIoEvent, CustomerIoEvents, buildUserPayload } from '@/lib/customerio';
+import { requireActiveSubscription } from '@/lib/subscription-guard';
 
 export const maxDuration = 120; // Allow up to 120 seconds for AI generation + image generation
 
@@ -15,7 +17,8 @@ type UrlType = 'aliexpress' | 'amazon' | 'shopify' | 'unknown';
 function detectUrlType(url: string): UrlType {
   if (!url || typeof url !== 'string') return 'unknown';
   
-  const aliexpressRegex = /aliexpress\.com\/item\/(\d+)\.html/;
+  // Support both aliexpress.com and regional domains (.us, .ru, etc.)
+  const aliexpressRegex = /aliexpress\.[a-z]{2,3}\/item\/(\d+)\.html/i;
   const amazonPatterns = [
     /(?:dp|gp\/product|gp\/aw\/d|gp\/offer-listing|o\/ASIN|product\/detail)\/([A-Z0-9]{10})(?=[\/\?\&#]|$)/i,
     /[?&]asin=([A-Z0-9]{10})(?=[^A-Z0-9]|$)/i,
@@ -133,6 +136,12 @@ async function fetchShopifyProductData(url: string): Promise<{
  */
 export async function POST(request: NextRequest) {
   try {
+    // Check subscription status - block expired users
+    const subscriptionBlock = await requireActiveSubscription();
+    if (subscriptionBlock) {
+      return subscriptionBlock;
+    }
+
     // Check authentication
     const session = await auth();
     if (!session?.user?.id) {
@@ -241,6 +250,15 @@ export async function POST(request: NextRequest) {
       productData = await fetchAliExpressProduct(productId) as unknown as Record<string, unknown>;
       source = 'aliexpress';
       
+      // Log the product data for price debugging
+      console.log('\n[AI STORE] ################################################################');
+      console.log('[AI STORE] Product data received from AliExpress service:');
+      console.log('[AI STORE] productData.price:', (productData as any).price);
+      console.log('[AI STORE] productData.originalPrice:', (productData as any).originalPrice);
+      console.log('[AI STORE] productData.currency:', (productData as any).currency);
+      console.log('[AI STORE] This price will be passed to generateStoreContent()');
+      console.log('[AI STORE] ################################################################\n');
+      
     } else if (urlType === 'amazon') {
       // Extract Amazon ASIN
       const asin = extractAmazonAsin(productUrl);
@@ -335,6 +353,57 @@ export async function POST(request: NextRequest) {
     });
 
     console.log(`[AI Store] Saved generated product ${generatedProduct.id}`);
+
+    // Track store creation in Customer.io (like Laravel GenerateStoreObserver)
+    const userNumericId = Number(userId);
+    
+    // Get count of stores for this user
+    const storesCount = await prisma.generate_products.count({
+      where: { user_id: userId }
+    });
+
+    // Get user created_at for timing calculation
+    const currentUser = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { createdAt: true, email: true, name: true, lang: true }
+    });
+
+    if (storesCount === 1 && currentUser?.createdAt) {
+      // This is the first store - send timing event
+      const hoursDiff = Math.floor(
+        (Date.now() - currentUser.createdAt.getTime()) / (1000 * 60 * 60)
+      );
+
+      const eventName = hoursDiff <= 48 
+        ? CustomerIoEvents.STORE_WITHIN_48H 
+        : CustomerIoEvents.STORE_AFTER_48H;
+
+      sendCustomerIoEvent(userNumericId, eventName, {
+        hours_to_store: hoursDiff,
+        store_count: 1,
+        store_id: Number(generatedProduct.id),
+        store_name: aiContent.title,
+      }).catch(err => {
+        console.error('[AI Store] Customer.io event error:', err);
+      });
+    }
+
+    // Always sync user data when a store is created
+    if (currentUser) {
+      const customerIoPayload = await buildUserPayload({
+        id: userId,
+        email: currentUser.email,
+        name: currentUser.name,
+        createdAt: currentUser.createdAt,
+        lang: currentUser.lang,
+      }, {
+        generateStoresCount: storesCount,
+        firstStoreCreatedAt: storesCount === 1 ? new Date() : undefined,
+      });
+      syncUserToCustomerIo(customerIoPayload).catch(err => {
+        console.error('[AI Store] Customer.io sync error:', err);
+      });
+    }
 
     // Step 4: Generate AI images with FAL AI (like Laravel GenerateAIImagesJob)
     let aiGeneratedImages: Array<{

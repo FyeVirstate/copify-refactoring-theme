@@ -3,15 +3,30 @@
 import { useState, useEffect } from "react";
 import Sidebar from "@/components/Sidebar";
 import Link from "next/link";
-import { StatsProvider } from "@/contexts/StatsContext";
+import { StatsProvider, useStats } from "@/contexts/StatsContext";
+import { ChurnkeyProvider } from "@/components/ChurnkeyProvider";
+import { useUser } from "@/lib/hooks/use-user";
+import { SubscriptionExpiredModal } from "@/components/SubscriptionExpiredModal";
 
-export default function DashboardLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+// Inner layout component that can use the StatsContext
+function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const { activePlan, isOnTrial } = useUser();
+  const { stats, loading: statsLoading } = useStats();
+
+  // Determine if subscription is expired
+  const isExpired = !statsLoading && (
+    activePlan?.identifier === 'expired' || 
+    stats?.plan?.isExpired === true
+  );
+
+  // Determine modal type
+  const getModalType = (): 'trial_ended' | 'subscription_ended' | 'payment_failed' => {
+    // For now, default to trial_ended
+    // You can enhance this logic based on subscription history
+    return 'trial_ended';
+  };
 
   useEffect(() => {
     // Load collapsed state from localStorage on mount
@@ -32,7 +47,10 @@ export default function DashboardLayout({
   };
 
   return (
-    <StatsProvider>
+    <>
+      {/* Subscription Expired Modal */}
+      {isExpired && <SubscriptionExpiredModal type={getModalType()} />}
+      
       <div className="dashboard-root">
         {/* Mobile Nav */}
         <div className="mobile-nav d-lg-none d-flex align-items-center justify-content-between bg-dark p-4">
@@ -95,6 +113,21 @@ export default function DashboardLayout({
           </div>
         </div>
       </div>
+    </>
+  );
+}
+
+// Main layout component with providers
+export default function DashboardLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <StatsProvider>
+      <ChurnkeyProvider>
+        <DashboardLayoutInner>{children}</DashboardLayoutInner>
+      </ChurnkeyProvider>
     </StatsProvider>
   );
 }

@@ -1198,26 +1198,14 @@ export default function TrackDetailsPage({ params }: { params: Promise<{ id: str
                       padding: '8px 0', 
                       border: 'none', 
                       background: 'none', 
-                      borderBottom: activeChartTab === 'sales' ? '2px solid #0EA5E9' : '2px solid transparent',
+                      borderBottom: activeChartTab === 'sales' ? '2px solid #0C6CFB' : '2px solid transparent',
                       fontWeight: 500, 
                       fontSize: 14, 
                       cursor: 'pointer', 
                       color: activeChartTab === 'sales' ? '#111827' : '#6B7280'
                     }}
                   >
-                    <span style={{ 
-                      width: 16, 
-                      height: 16, 
-                      border: `2px solid ${activeChartTab === 'sales' ? '#0EA5E9' : '#D1D5DB'}`,
-                      borderRadius: '50%',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center'
-                    }}>
-                      {activeChartTab === 'sales' && (
-                        <span style={{ width: 8, height: 8, background: '#0EA5E9', borderRadius: '50%' }} />
-                      )}
-                    </span>
+                    <i className="ri-money-dollar-circle-line" style={{ fontSize: 18, color: activeChartTab === 'sales' ? '#0C6CFB' : '#9CA3AF' }}></i>
                     Ventes mensuelles estimées
                   </button>
                   <button 
@@ -1229,50 +1217,50 @@ export default function TrackDetailsPage({ params }: { params: Promise<{ id: str
                       padding: '8px 0', 
                       border: 'none', 
                       background: 'none', 
-                      borderBottom: activeChartTab === 'traffic' ? '2px solid #0EA5E9' : '2px solid transparent',
+                      borderBottom: activeChartTab === 'traffic' ? '2px solid #0C6CFB' : '2px solid transparent',
                       fontWeight: 500, 
                       fontSize: 14, 
                       cursor: 'pointer', 
                       color: activeChartTab === 'traffic' ? '#111827' : '#6B7280'
                     }}
                   >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={activeChartTab === 'traffic' ? '#0EA5E9' : '#9CA3AF'} strokeWidth="2">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={activeChartTab === 'traffic' ? '#0C6CFB' : '#9CA3AF'} strokeWidth="2">
                       <polyline points="22,12 18,12 15,21 9,3 6,12 2,12" />
                     </svg>
                     Trafic estimé sur les derniers mois
                   </button>
                 </div>
 
-                {/* Growth badges */}
-                <div style={{ display: 'flex', justifyContent: 'center', gap: 24, marginBottom: 16 }}>
-                  <span style={{ fontSize: 12, color: '#6B7280' }}>
+                {/* Growth badges - matches Laravel fs-xxs + badge-sm */}
+                <div style={{ display: 'flex', justifyContent: 'center', gap: 12, marginBottom: 12 }}>
+                  <span style={{ fontSize: 10, color: '#6B7280', fontWeight: 500, textTransform: 'uppercase' }}>
                     LE 3 DERNIERS MOIS 
                     <span style={{ 
-                      background: Number(shopDetails.metrics.threeMonthGrowth) >= 0 ? '#DCFCE7' : '#FEE2E2', 
+                      background: Number(shopDetails.metrics.threeMonthGrowth) >= 0 ? '#DFFFEA' : '#FFEEF3', 
                       color: Number(shopDetails.metrics.threeMonthGrowth) >= 0 ? '#16A34A' : '#DC2626', 
-                      padding: '3px 10px', 
-                      borderRadius: 12, 
-                      fontSize: 12,
+                      padding: '2px 8px', 
+                      borderRadius: 20, 
+                      fontSize: 11,
                       fontWeight: 500,
-                      marginLeft: 8
+                      marginLeft: 6
                     }}>{Number(shopDetails.metrics.threeMonthGrowth) >= 0 ? '+' : ''}{shopDetails.metrics.threeMonthGrowth}%</span>
                   </span>
-                  <span style={{ fontSize: 12, color: '#6B7280' }}>
+                  <span style={{ fontSize: 10, color: '#6B7280', fontWeight: 500, textTransform: 'uppercase' }}>
                     LE MOIS DERNIER 
                     <span style={{ 
-                      background: Number(shopDetails.metrics.visitsGrowth) >= 0 ? '#DCFCE7' : '#FEE2E2', 
+                      background: Number(shopDetails.metrics.visitsGrowth) >= 0 ? '#DFFFEA' : '#FFEEF3', 
                       color: Number(shopDetails.metrics.visitsGrowth) >= 0 ? '#16A34A' : '#DC2626', 
-                      padding: '3px 10px', 
-                      borderRadius: 12, 
-                      fontSize: 12,
+                      padding: '2px 8px', 
+                      borderRadius: 20, 
+                      fontSize: 11,
                       fontWeight: 500,
-                      marginLeft: 8
+                      marginLeft: 6
                     }}>{Number(shopDetails.metrics.visitsGrowth) >= 0 ? '+' : ''}{shopDetails.metrics.visitsGrowth}%</span>
                   </span>
                 </div>
 
-                {/* Chart */}
-                <div style={{ height: 260 }}>
+                {/* Chart - matches Laravel canvas height="200" */}
+                <div style={{ height: 200 }}>
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={chartData} margin={{ top: 10, right: 20, left: 10, bottom: 0 }}>
                       <defs>
@@ -1286,7 +1274,15 @@ export default function TrackDetailsPage({ params }: { params: Promise<{ id: str
                         dataKey="month" 
                         tick={{ fontSize: 11, fill: '#9CA3AF' }} 
                         axisLine={false} 
-                        tickLine={false} 
+                        tickLine={false}
+                        tickFormatter={(value) => {
+                          try {
+                            const date = new Date(value);
+                            return date.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+                          } catch {
+                            return value;
+                          }
+                        }}
                       />
                       <YAxis 
                         tick={{ fontSize: 11, fill: '#9CA3AF' }} 
@@ -1332,7 +1328,7 @@ export default function TrackDetailsPage({ params }: { params: Promise<{ id: str
                         padding: '8px 16px', 
                         border: 'none', 
                         background: 'none', 
-                        borderBottom: activeTrafficSourceTab === 'sources' ? '2px solid #0EA5E9' : '2px solid transparent',
+                        borderBottom: activeTrafficSourceTab === 'sources' ? '2px solid #0C6CFB' : '2px solid transparent',
                         fontWeight: 500, 
                         fontSize: 14, 
                         cursor: 'pointer', 
@@ -1355,7 +1351,7 @@ export default function TrackDetailsPage({ params }: { params: Promise<{ id: str
                         padding: '8px 16px', 
                         border: 'none', 
                         background: 'none', 
-                        borderBottom: activeTrafficSourceTab === 'social' ? '2px solid #0EA5E9' : '2px solid transparent',
+                        borderBottom: activeTrafficSourceTab === 'social' ? '2px solid #0C6CFB' : '2px solid transparent',
                         fontWeight: 500, 
                         fontSize: 14, 
                         cursor: 'pointer', 
@@ -1662,7 +1658,7 @@ export default function TrackDetailsPage({ params }: { params: Promise<{ id: str
                       href={`https://www.google.com/search?q=${encodeURIComponent((shopDetails.shop.schemaName || shopDetails.shop.theme || '') + ' ' + (shopDetails.shop.schemaVersion || '') + ' shopify theme')}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      style={{ color: '#0EA5E9', textDecoration: 'none', fontSize: 13, fontWeight: 500 }}
+                      style={{ color: '#0C6CFB', textDecoration: 'none', fontSize: 13, fontWeight: 500 }}
                     >
                       {shopDetails.shop.schemaName || shopDetails.shop.theme || 'Unknown'} {shopDetails.shop.schemaVersion || ''}
                     </a>
@@ -1680,7 +1676,7 @@ export default function TrackDetailsPage({ params }: { params: Promise<{ id: str
                             href={`https://www.google.com/search?q=${encodeURIComponent(font + ' font')}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            style={{ color: '#0EA5E9', textDecoration: 'none', fontSize: 13, fontWeight: 500 }}
+                            style={{ color: '#0C6CFB', textDecoration: 'none', fontSize: 13, fontWeight: 500 }}
                           >
                             {font}
                           </a>
@@ -2035,21 +2031,59 @@ export default function TrackDetailsPage({ params }: { params: Promise<{ id: str
                     style={{ color: '#6B7280', fontSize: 14 }}
                   >↗</a>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 6 }}>
-                  <div style={{ width: 80, height: 4, background: '#E5E7EB', borderRadius: 2 }}>
+                {/* Progress bar with proper active/inactive segments */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                  <div style={{ 
+                    display: 'flex', 
+                    width: 120, 
+                    height: 6, 
+                    borderRadius: 3,
+                    overflow: 'hidden',
+                    background: '#E5E7EB'
+                  }}>
+                    {/* Active segment (green) */}
                     <div style={{ 
                       width: `${shopDetails.metrics.allAds && shopDetails.metrics.allAds > 0 
                         ? Math.round((shopDetails.metrics.activeAdsCount / shopDetails.metrics.allAds) * 100) 
                         : 0}%`, 
                       height: '100%', 
-                      background: '#3B82F6', 
-                      borderRadius: 2 
+                      background: '#22C55E',
+                      borderRadius: shopDetails.metrics.inactiveAdsCount === 0 ? 3 : '3px 0 0 3px'
+                    }} />
+                    {/* Inactive segment (gray) */}
+                    <div style={{ 
+                      width: `${shopDetails.metrics.allAds && shopDetails.metrics.allAds > 0 
+                        ? Math.round((shopDetails.metrics.inactiveAdsCount / shopDetails.metrics.allAds) * 100) 
+                        : 0}%`, 
+                      height: '100%', 
+                      background: '#D1D5DB',
+                      borderRadius: shopDetails.metrics.activeAdsCount === 0 ? 3 : '0 3px 3px 0'
                     }} />
                   </div>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 12 }}>
-                  <span><span style={{ color: '#22C55E' }}>●</span> {shopDetails.metrics.activeAdsCount} Actif</span>
-                  <span><span style={{ color: '#9CA3AF' }}>●</span> {shopDetails.metrics.inactiveAdsCount} Inactif</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 16, fontSize: 13 }}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ 
+                      width: 8, 
+                      height: 8, 
+                      borderRadius: '50%', 
+                      background: '#22C55E',
+                      display: 'inline-block'
+                    }}></span>
+                    <span style={{ color: '#374151', fontWeight: 500 }}>{shopDetails.metrics.activeAdsCount}</span>
+                    <span style={{ color: '#6B7280' }}>Actif</span>
+                  </span>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ 
+                      width: 8, 
+                      height: 8, 
+                      borderRadius: '50%', 
+                      background: '#D1D5DB',
+                      display: 'inline-block'
+                    }}></span>
+                    <span style={{ color: '#374151', fontWeight: 500 }}>{shopDetails.metrics.inactiveAdsCount}</span>
+                    <span style={{ color: '#6B7280' }}>Inactif</span>
+                  </span>
                 </div>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -2631,28 +2665,30 @@ export default function TrackDetailsPage({ params }: { params: Promise<{ id: str
           <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: 16, marginTop: 16 }}>
             <div style={{ ...cardStyle, padding: 20, display: 'flex', flexDirection: 'column' }}>
               <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 10, color: '#111827' }}>Évolution du nombre de publicités</div>
-              <div style={{ display: 'flex', justifyContent: 'center', gap: 20, marginBottom: 12 }}>
-                <span style={{ fontSize: 11, color: '#6B7280' }}>
+              <div style={{ display: 'flex', justifyContent: 'center', gap: 12, marginBottom: 12 }}>
+                <span style={{ fontSize: 10, color: '#6B7280', fontWeight: 500, textTransform: 'uppercase' }}>
                   LE 3 DERNIERS MOIS 
                   <span style={{ 
-                    background: Number(shopDetails.metrics.adsThreeMonthGrowth || 0) >= 0 ? '#DCFCE7' : '#FEE2E2', 
+                    background: Number(shopDetails.metrics.adsThreeMonthGrowth || 0) >= 0 ? '#DFFFEA' : '#FFEEF3', 
                     color: Number(shopDetails.metrics.adsThreeMonthGrowth || 0) >= 0 ? '#16A34A' : '#DC2626', 
-                    padding: '3px 8px', 
-                    borderRadius: 10, 
-                    fontSize: 11, 
+                    padding: '2px 8px', 
+                    borderRadius: 20, 
+                    fontSize: 11,
+                    fontWeight: 500,
                     marginLeft: 6 
                   }}>
                     {Number(shopDetails.metrics.adsThreeMonthGrowth || 0) >= 0 ? '+' : ''}{shopDetails.metrics.adsThreeMonthGrowth || 0}%
                   </span>
                 </span>
-                <span style={{ fontSize: 11, color: '#6B7280' }}>
+                <span style={{ fontSize: 10, color: '#6B7280', fontWeight: 500, textTransform: 'uppercase' }}>
                   LE MOIS DERNIER 
                   <span style={{ 
-                    background: Number(shopDetails.metrics.adsLastMonthGrowth || 0) >= 0 ? '#DCFCE7' : '#FEE2E2', 
+                    background: Number(shopDetails.metrics.adsLastMonthGrowth || 0) >= 0 ? '#DFFFEA' : '#FFEEF3', 
                     color: Number(shopDetails.metrics.adsLastMonthGrowth || 0) >= 0 ? '#16A34A' : '#DC2626', 
-                    padding: '3px 8px', 
-                    borderRadius: 10, 
-                    fontSize: 11, 
+                    padding: '2px 8px', 
+                    borderRadius: 20, 
+                    fontSize: 11,
+                    fontWeight: 500,
                     marginLeft: 6 
                   }}>
                     {Number(shopDetails.metrics.adsLastMonthGrowth || 0) >= 0 ? '+' : ''}{shopDetails.metrics.adsLastMonthGrowth || 0}%
@@ -2680,7 +2716,7 @@ export default function TrackDetailsPage({ params }: { params: Promise<{ id: str
                         margin={{ top: 5, right: 5, left: 10, bottom: 0 }}
                       >
                         <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" vertical={false} />
-                        <XAxis dataKey="month" tick={{ fontSize: 10, fill: '#9CA3AF' }} axisLine={false} tickLine={false} />
+                        <XAxis dataKey="month" tick={{ fontSize: 10, fill: '#9CA3AF' }} axisLine={false} tickLine={false} tickFormatter={(value) => { try { const date = new Date(value); if (!isNaN(date.getTime())) return date.toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' }); return value; } catch { return value; } }} />
                         <YAxis tick={{ fontSize: 10, fill: '#9CA3AF' }} axisLine={false} tickLine={false} width={60} tickFormatter={(v) => new Intl.NumberFormat('fr-FR').format(v)} />
                         <Tooltip 
                           formatter={(value, name) => [

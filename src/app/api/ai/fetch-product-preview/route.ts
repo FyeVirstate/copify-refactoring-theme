@@ -8,7 +8,8 @@ type UrlType = 'aliexpress' | 'amazon' | 'shopify' | 'unknown';
 function detectUrlType(url: string): UrlType {
   if (!url || typeof url !== 'string') return 'unknown';
   
-  const aliexpressRegex = /aliexpress\.com\/item\/(\d+)\.html/;
+  // Support both aliexpress.com and regional domains (.us, .ru, .fr, etc.)
+  const aliexpressRegex = /aliexpress\.[a-z]{2,3}\/item\/(\d+)\.html/i;
   const amazonPatterns = [
     /(?:dp|gp\/product|gp\/aw\/d|gp\/offer-listing|o\/ASIN|product\/detail)\/([A-Z0-9]{10})(?=[\/\?\&#]|$)/i,
     /[?&]asin=([A-Z0-9]{10})(?=[^A-Z0-9]|$)/i,
@@ -238,15 +239,17 @@ export async function POST(request: NextRequest) {
           : aliexpressData.title;
       }
       
-      // Log for debugging
-      console.log('[Product Preview] AliExpress data:', {
-        title: aliexpressData.title,
-        hasHtml: !!aliexpressData.description?.html,
-        htmlLength: aliexpressData.description?.html?.length || 0,
-        cleanedLength: descriptionText.length,
-        descriptionPreview: descriptionText.substring(0, 80),
-        usingTitleFallback: !aliexpressData.description?.html || cleanHtmlDescription(aliexpressData.description.html || '').trim().length === 0,
-      });
+      // Log for debugging - COMPREHENSIVE PRICE LOGGING
+      console.log('\n[PRODUCT PREVIEW] ################################################################');
+      console.log('[PRODUCT PREVIEW] AliExpress product fetched successfully');
+      console.log('[PRODUCT PREVIEW] Title:', aliexpressData.title);
+      console.log('[PRODUCT PREVIEW] ===== PRICE DATA =====');
+      console.log('[PRODUCT PREVIEW] price (from AliExpress):', aliexpressData.price);
+      console.log('[PRODUCT PREVIEW] originalPrice:', aliexpressData.originalPrice);
+      console.log('[PRODUCT PREVIEW] currency:', aliexpressData.currency);
+      console.log('[PRODUCT PREVIEW] ========================');
+      console.log('[PRODUCT PREVIEW] This price will be displayed in the preview card');
+      console.log('[PRODUCT PREVIEW] ################################################################\n');
       
       return NextResponse.json({
         success: true,

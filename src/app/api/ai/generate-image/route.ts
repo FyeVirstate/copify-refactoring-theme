@@ -9,6 +9,7 @@ import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { NextRequest, NextResponse } from "next/server"
 import { ReplicateService } from "@/lib/services/replicate"
+import { requireActiveSubscription } from "@/lib/subscription-guard"
 
 // Predefined prompts matching Laravel
 const PROMPTS = {
@@ -18,6 +19,12 @@ const PROMPTS = {
 }
 
 export async function POST(request: NextRequest) {
+  // Check subscription status - block expired users
+  const subscriptionBlock = await requireActiveSubscription()
+  if (subscriptionBlock) {
+    return subscriptionBlock
+  }
+
   const session = await auth()
   
   if (!session?.user) {

@@ -94,8 +94,8 @@ export function useTrack() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // Fetch tracked shops
-  const fetchTrackedShops = useCallback(async (page = 1, perPage = 10) => {
+  // Fetch tracked shops - supports pagination with append mode for infinite scroll
+  const fetchTrackedShops = useCallback(async (page = 1, perPage = 10, append = false) => {
     setIsLoading(true)
     setError(null)
 
@@ -104,7 +104,18 @@ export function useTrack() {
       const data = await res.json()
 
       if (data.success) {
-        setTrackedShops(data.data)
+        if (append && page > 1) {
+          // Append new data to existing tracked shops (for infinite scroll)
+          setTrackedShops(prev => {
+            // Filter out duplicates based on id
+            const existingIds = new Set(prev.map(shop => shop.id))
+            const newShops = data.data.filter((shop: TrackedShop) => !existingIds.has(shop.id))
+            return [...prev, ...newShops]
+          })
+        } else {
+          // Replace all data (for initial load or refresh)
+          setTrackedShops(data.data)
+        }
         setLimits(data.limits)
         return {
           data: data.data,

@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma"
 import { NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
 import bcrypt from "bcryptjs"
+import { syncUserToCustomerIo, sendCustomerIoEvent, CustomerIoEvents, buildUserPayload } from "@/lib/customerio"
 
 const registerSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
@@ -89,6 +90,33 @@ export async function POST(request: NextRequest) {
     })
 
     // TODO: Send verification email
+
+    // Sync user to Customer.io (async, don't block response)
+    const customerIoPayload = await buildUserPayload({
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      createdAt: user.createdAt,
+      lang: user.lang,
+      utmSource: utmSource || null,
+    }, {
+      activePlan: { identifier: 'trial', title: 'Free Trial' },
+      generateStoresCount: 0,
+      generateProductsCount: 0,
+    });
+    
+    // Fire and forget - don't wait for Customer.io
+    syncUserToCustomerIo(customerIoPayload).catch(err => {
+      console.error('[Register] Customer.io sync error:', err);
+    });
+
+    // Send free_trial event
+    sendCustomerIoEvent(Number(user.id), CustomerIoEvents.FREE_TRIAL, {
+      plan_name: 'Free Trial',
+      trial_ends_at: null, // Will be calculated based on createdAt + 7 days
+    }).catch(err => {
+      console.error('[Register] Customer.io event error:', err);
+    });
 
     // Convert BigInt to string for JSON serialization
     return NextResponse.json({

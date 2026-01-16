@@ -11,6 +11,7 @@ export { useSettings } from './use-settings'
 export { useShops } from './use-shops'
 export { useAds } from './use-ads'
 export { useTrack } from './use-track'
+export { useTrackedShops } from './use-tracked-shops'
 export { useTodos } from './use-todos'
 
 // Billing

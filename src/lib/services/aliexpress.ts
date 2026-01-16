@@ -43,12 +43,15 @@ const RAPIDAPI_HOST = 'aliexpress-datahub.p.rapidapi.com';
 
 /**
  * Extract product ID from AliExpress URL
+ * Supports both .com and regional domains (.us, .ru, etc.)
  */
 export function extractProductId(url: string): string | null {
   // Match patterns like:
   // https://www.aliexpress.com/item/1005006123456789.html
   // https://aliexpress.com/item/1005006123456789.html
-  const match = url.match(/aliexpress\.com\/item\/(\d+)\.html/);
+  // https://www.aliexpress.us/item/1005006123456789.html
+  // https://aliexpress.ru/item/1005006123456789.html
+  const match = url.match(/aliexpress\.[a-z]{2,3}\/item\/(\d+)\.html/i);
   return match ? match[1] : null;
 }
 
@@ -65,37 +68,69 @@ export function normalizeImageUrl(url: string): string {
 /**
  * Safely extract price from various formats
  * Handles: "1.99-5.99", "1.99", 1.99, { min: 1.99, max: 5.99 }, etc.
- * For ranges, takes the MAX price (second value) which is typically the real price
+ * For ranges, takes the MIN price (first value) to avoid inflated prices when calculating retail (x3)
  */
-function extractPrice(value: unknown, takeMax: boolean = true): number {
+function extractPrice(value: unknown, takeMin: boolean = true, label: string = 'unknown'): number {
+  console.log(`[PRICE EXTRACT] ===== Extracting price for: ${label} =====`);
+  console.log(`[PRICE EXTRACT] Raw input value:`, value);
+  console.log(`[PRICE EXTRACT] Type of value:`, typeof value);
+  console.log(`[PRICE EXTRACT] Take MIN:`, takeMin);
+  
   if (value === null || value === undefined) {
+    console.log(`[PRICE EXTRACT] Value is null/undefined, returning 0`);
     return 0;
   }
   
   // If it's already a number
   if (typeof value === 'number') {
+    console.log(`[PRICE EXTRACT] Value is already a number: ${value}`);
     return value;
   }
   
   // If it's a string, handle range format "1.99-5.99"
   if (typeof value === 'string') {
+    console.log(`[PRICE EXTRACT] Value is string: "${value}"`);
     const parts = value.split('-');
-    // Take the MAX price (second value) for AliExpress ranges
-    const priceStr = takeMax && parts.length > 1 ? parts[parts.length - 1] : parts[0];
+    console.log(`[PRICE EXTRACT] Split by '-':`, parts);
+    console.log(`[PRICE EXTRACT] Number of parts: ${parts.length}`);
+    
+    // Take the MIN price (first value) for AliExpress ranges to avoid inflated retail prices
+    const priceStr = takeMin ? parts[0] : (parts.length > 1 ? parts[parts.length - 1] : parts[0]);
+    console.log(`[PRICE EXTRACT] Selected price string (takeMin=${takeMin}): "${priceStr}"`);
+    
     const cleaned = priceStr.replace(/[^0-9.]/g, '');
-    return parseFloat(cleaned) || 0;
+    console.log(`[PRICE EXTRACT] Cleaned (numbers only): "${cleaned}"`);
+    
+    const result = parseFloat(cleaned) || 0;
+    console.log(`[PRICE EXTRACT] Final parsed price: ${result}`);
+    return result;
   }
   
   // If it's an object with min/max or amount
   if (typeof value === 'object') {
     const obj = value as Record<string, unknown>;
-    // Prefer max for range objects
-    if (takeMax && 'max' in obj) return extractPrice(obj.max, false);
-    if ('min' in obj) return extractPrice(obj.min, false);
-    if ('amount' in obj) return extractPrice(obj.amount, false);
-    if ('value' in obj) return extractPrice(obj.value, false);
+    console.log(`[PRICE EXTRACT] Value is object:`, JSON.stringify(obj));
+    
+    // Prefer min for range objects to avoid inflated prices
+    if (takeMin && 'min' in obj) {
+      console.log(`[PRICE EXTRACT] Found 'min' property, extracting...`);
+      return extractPrice(obj.min, false, `${label}.min`);
+    }
+    if ('max' in obj) {
+      console.log(`[PRICE EXTRACT] Found 'max' property, extracting...`);
+      return extractPrice(obj.max, false, `${label}.max`);
+    }
+    if ('amount' in obj) {
+      console.log(`[PRICE EXTRACT] Found 'amount' property, extracting...`);
+      return extractPrice(obj.amount, false, `${label}.amount`);
+    }
+    if ('value' in obj) {
+      console.log(`[PRICE EXTRACT] Found 'value' property, extracting...`);
+      return extractPrice(obj.value, false, `${label}.value`);
+    }
   }
   
+  console.log(`[PRICE EXTRACT] No valid price found, returning 0`);
   return 0;
 }
 
@@ -128,12 +163,33 @@ async function fetchFromDataHubApi(productId: string): Promise<AliExpressProduct
 
     const item = data.result.item;
     
-    // Log the raw price data for debugging
-    console.log('DataHub v6 price data:', JSON.stringify({
-      skuDefPrice: item.sku?.def?.price,
-      price: item.price,
-      promotionPrice: item.sku?.def?.promotionPrice,
-    }));
+    // ============ COMPREHENSIVE PRICE LOGGING - DataHub V6 ============
+    console.log('\n[ALIEXPRESS API V6] ========================================');
+    console.log('[ALIEXPRESS API V6] RAW API RESPONSE - All price fields:');
+    console.log('[ALIEXPRESS API V6] item.sku?.def?.price:', item.sku?.def?.price);
+    console.log('[ALIEXPRESS API V6] item.price:', item.price);
+    console.log('[ALIEXPRESS API V6] item.sku?.def?.promotionPrice:', item.sku?.def?.promotionPrice);
+    console.log('[ALIEXPRESS API V6] item.originalPrice:', item.originalPrice);
+    console.log('[ALIEXPRESS API V6] item.currency:', item.currency);
+    console.log('[ALIEXPRESS API V6] Full SKU object:', JSON.stringify(item.sku, null, 2));
+    console.log('[ALIEXPRESS API V6] ========================================\n');
+
+    // Extract prices with detailed logging
+    console.log('[ALIEXPRESS API V6] Now extracting MAIN PRICE...');
+    const mainPrice1 = extractPrice(item.sku?.def?.price, true, 'V6-sku.def.price');
+    const mainPrice2 = extractPrice(item.price, true, 'V6-item.price');
+    const finalMainPrice = mainPrice1 || mainPrice2 || 0;
+    
+    console.log('[ALIEXPRESS API V6] Now extracting ORIGINAL PRICE...');
+    const origPrice1 = extractPrice(item.sku?.def?.promotionPrice, true, 'V6-sku.def.promotionPrice');
+    const origPrice2 = extractPrice(item.originalPrice, true, 'V6-item.originalPrice');
+    const finalOrigPrice = origPrice1 || origPrice2 || 0;
+    
+    console.log('\n[ALIEXPRESS API V6] ===== FINAL PRICES =====');
+    console.log('[ALIEXPRESS API V6] Main Price (will be used for x3 calculation):', finalMainPrice);
+    console.log('[ALIEXPRESS API V6] Original Price (compare at):', finalOrigPrice);
+    console.log('[ALIEXPRESS API V6] Currency:', item.currency || 'USD');
+    console.log('[ALIEXPRESS API V6] ===========================\n');
 
     return {
       title: item.title || 'Product',
@@ -141,14 +197,14 @@ async function fetchFromDataHubApi(productId: string): Promise<AliExpressProduct
         html: item.description?.html || item.descriptionHtml || '',
         images: item.description?.images || item.descriptionImages || [],
       },
-      price: extractPrice(item.sku?.def?.price) || extractPrice(item.price) || 0,
-      originalPrice: extractPrice(item.sku?.def?.promotionPrice) || extractPrice(item.originalPrice) || 0,
+      price: finalMainPrice,
+      originalPrice: finalOrigPrice,
       currency: item.currency || 'USD',
       images: (item.images || []).map(normalizeImageUrl),
       categories: item.categories || [],
       sku: item.sku,
       ratings: {
-        average: extractPrice(item.averageStarRate) || extractPrice(item.rating) || 4.5,
+        average: extractPrice(item.averageStarRate, true, 'V6-rating') || extractPrice(item.rating, true, 'V6-rating2') || 4.5,
         count: parseInt(String(item.totalOrders || item.reviewCount || '0'), 10),
       },
     };
@@ -187,12 +243,31 @@ async function fetchFromDataHubApiV2(productId: string): Promise<AliExpressProdu
 
     const item = data.result.item;
     
-    // Log the raw price data for debugging
-    console.log('DataHub v2 price data:', JSON.stringify({
-      skuDefPrice: item.sku?.def?.price,
-      price: item.price,
-      promotionPrice: item.sku?.def?.promotionPrice,
-    }));
+    // ============ COMPREHENSIVE PRICE LOGGING - DataHub V2 ============
+    console.log('\n[ALIEXPRESS API V2] ========================================');
+    console.log('[ALIEXPRESS API V2] RAW API RESPONSE - All price fields:');
+    console.log('[ALIEXPRESS API V2] item.sku?.def?.price:', item.sku?.def?.price);
+    console.log('[ALIEXPRESS API V2] item.price:', item.price);
+    console.log('[ALIEXPRESS API V2] item.sku?.def?.promotionPrice:', item.sku?.def?.promotionPrice);
+    console.log('[ALIEXPRESS API V2] item.currency:', item.currency);
+    console.log('[ALIEXPRESS API V2] Full SKU object:', JSON.stringify(item.sku, null, 2));
+    console.log('[ALIEXPRESS API V2] ========================================\n');
+
+    // Extract prices with detailed logging
+    console.log('[ALIEXPRESS API V2] Now extracting MAIN PRICE...');
+    const mainPrice1 = extractPrice(item.sku?.def?.price, true, 'V2-sku.def.price');
+    const mainPrice2 = extractPrice(item.price, true, 'V2-item.price');
+    const finalMainPrice = mainPrice1 || mainPrice2 || 0;
+    
+    console.log('[ALIEXPRESS API V2] Now extracting ORIGINAL PRICE...');
+    const origPrice1 = extractPrice(item.sku?.def?.promotionPrice, true, 'V2-sku.def.promotionPrice');
+    const finalOrigPrice = origPrice1 || 0;
+    
+    console.log('\n[ALIEXPRESS API V2] ===== FINAL PRICES =====');
+    console.log('[ALIEXPRESS API V2] Main Price (will be used for x3 calculation):', finalMainPrice);
+    console.log('[ALIEXPRESS API V2] Original Price (compare at):', finalOrigPrice);
+    console.log('[ALIEXPRESS API V2] Currency:', item.currency || 'USD');
+    console.log('[ALIEXPRESS API V2] ===========================\n');
 
     return {
       title: item.title || 'Product',
@@ -200,14 +275,14 @@ async function fetchFromDataHubApiV2(productId: string): Promise<AliExpressProdu
         html: item.description?.html || '',
         images: item.description?.images || [],
       },
-      price: extractPrice(item.sku?.def?.price) || extractPrice(item.price) || 0,
-      originalPrice: extractPrice(item.sku?.def?.promotionPrice) || 0,
+      price: finalMainPrice,
+      originalPrice: finalOrigPrice,
       currency: item.currency || 'USD',
       images: (item.images || []).map(normalizeImageUrl),
       categories: item.categories || [],
       sku: item.sku,
       ratings: {
-        average: extractPrice(item.averageStarRate) || 4.5,
+        average: extractPrice(item.averageStarRate, true, 'V2-rating') || 4.5,
         count: parseInt(String(item.totalOrders || '0'), 10),
       },
     };
@@ -246,12 +321,30 @@ async function fetchFromTrueApi(productId: string): Promise<AliExpressProductDat
 
     const product = data.data;
     
-    // Log the raw price data for debugging
-    console.log('True API price data:', JSON.stringify({
-      sale_price: product.sale_price,
-      price: product.price,
-      original_price: product.original_price,
-    }));
+    // ============ COMPREHENSIVE PRICE LOGGING - True API ============
+    console.log('\n[ALIEXPRESS TRUE API] ========================================');
+    console.log('[ALIEXPRESS TRUE API] RAW API RESPONSE - All price fields:');
+    console.log('[ALIEXPRESS TRUE API] product.sale_price:', product.sale_price);
+    console.log('[ALIEXPRESS TRUE API] product.price:', product.price);
+    console.log('[ALIEXPRESS TRUE API] product.original_price:', product.original_price);
+    console.log('[ALIEXPRESS TRUE API] product.currency:', product.currency);
+    console.log('[ALIEXPRESS TRUE API] ========================================\n');
+
+    // Extract prices with detailed logging
+    console.log('[ALIEXPRESS TRUE API] Now extracting MAIN PRICE...');
+    const mainPrice1 = extractPrice(product.sale_price, true, 'TrueAPI-sale_price');
+    const mainPrice2 = extractPrice(product.price, true, 'TrueAPI-price');
+    const finalMainPrice = mainPrice1 || mainPrice2 || 0;
+    
+    console.log('[ALIEXPRESS TRUE API] Now extracting ORIGINAL PRICE...');
+    const origPrice = extractPrice(product.original_price, true, 'TrueAPI-original_price');
+    const finalOrigPrice = origPrice || 0;
+    
+    console.log('\n[ALIEXPRESS TRUE API] ===== FINAL PRICES =====');
+    console.log('[ALIEXPRESS TRUE API] Main Price (will be used for x3 calculation):', finalMainPrice);
+    console.log('[ALIEXPRESS TRUE API] Original Price (compare at):', finalOrigPrice);
+    console.log('[ALIEXPRESS TRUE API] Currency:', product.currency || 'EUR');
+    console.log('[ALIEXPRESS TRUE API] ===========================\n');
 
     return {
       title: product.title || 'Product',
@@ -259,13 +352,13 @@ async function fetchFromTrueApi(productId: string): Promise<AliExpressProductDat
         html: product.description || '',
         images: product.description_images || [],
       },
-      price: extractPrice(product.sale_price) || extractPrice(product.price) || 0,
-      originalPrice: extractPrice(product.original_price) || 0,
+      price: finalMainPrice,
+      originalPrice: finalOrigPrice,
       currency: product.currency || 'EUR',
       images: (product.images || []).map(normalizeImageUrl),
       categories: product.categories?.map((c: string) => ({ name: c })) || [],
       ratings: {
-        average: extractPrice(product.rating) || 4.5,
+        average: extractPrice(product.rating, true, 'TrueAPI-rating') || 4.5,
         count: parseInt(String(product.reviews_count || '0'), 10),
       },
     };
@@ -280,41 +373,61 @@ async function fetchFromTrueApi(productId: string): Promise<AliExpressProductDat
  * Tries multiple API endpoints with fallbacks
  */
 export async function fetchAliExpressProduct(productIdOrUrl: string): Promise<AliExpressProductData> {
+  console.log('\n[ALIEXPRESS FETCH] ############################################################');
+  console.log('[ALIEXPRESS FETCH] Starting product fetch for:', productIdOrUrl);
+  console.log('[ALIEXPRESS FETCH] ############################################################\n');
+  
   // Extract product ID if URL is provided
+  // Support both .com and regional domains (.us, .ru, etc.)
   let productId = productIdOrUrl;
-  if (productIdOrUrl.includes('aliexpress.com')) {
+  if (/aliexpress\.[a-z]{2,3}\/item\//i.test(productIdOrUrl)) {
     const extractedId = extractProductId(productIdOrUrl);
     if (!extractedId) {
       throw new Error('Invalid AliExpress URL');
     }
     productId = extractedId;
+    console.log('[ALIEXPRESS FETCH] Extracted product ID from URL:', productId);
   }
 
-  console.log('Fetching AliExpress product:', productId);
+  console.log('[ALIEXPRESS FETCH] Product ID:', productId);
 
   // Try primary API
+  console.log('\n[ALIEXPRESS FETCH] Trying DataHub API v6...');
   let result = await fetchFromDataHubApi(productId);
   if (result) {
-    console.log('Successfully fetched from DataHub API v6');
+    console.log('\n[ALIEXPRESS FETCH] ===== FINAL RESULT FROM API V6 =====');
+    console.log('[ALIEXPRESS FETCH] Title:', result.title);
+    console.log('[ALIEXPRESS FETCH] PRICE:', result.price, result.currency);
+    console.log('[ALIEXPRESS FETCH] ORIGINAL PRICE:', result.originalPrice, result.currency);
+    console.log('[ALIEXPRESS FETCH] ========================================\n');
     return result;
   }
 
   // Try fallback API V2
-  console.log('Trying DataHub API v2 fallback...');
+  console.log('\n[ALIEXPRESS FETCH] V6 failed, trying DataHub API v2...');
   result = await fetchFromDataHubApiV2(productId);
   if (result) {
-    console.log('Successfully fetched from DataHub API v2');
+    console.log('\n[ALIEXPRESS FETCH] ===== FINAL RESULT FROM API V2 =====');
+    console.log('[ALIEXPRESS FETCH] Title:', result.title);
+    console.log('[ALIEXPRESS FETCH] PRICE:', result.price, result.currency);
+    console.log('[ALIEXPRESS FETCH] ORIGINAL PRICE:', result.originalPrice, result.currency);
+    console.log('[ALIEXPRESS FETCH] ========================================\n');
     return result;
   }
 
   // Try True API as final fallback
-  console.log('Trying True API fallback...');
+  console.log('\n[ALIEXPRESS FETCH] V2 failed, trying True API...');
   result = await fetchFromTrueApi(productId);
   if (result) {
-    console.log('Successfully fetched from True API');
+    console.log('\n[ALIEXPRESS FETCH] ===== FINAL RESULT FROM TRUE API =====');
+    console.log('[ALIEXPRESS FETCH] Title:', result.title);
+    console.log('[ALIEXPRESS FETCH] PRICE:', result.price, result.currency);
+    console.log('[ALIEXPRESS FETCH] ORIGINAL PRICE:', result.originalPrice, result.currency);
+    console.log('[ALIEXPRESS FETCH] ========================================\n');
     return result;
   }
 
+  console.log('[ALIEXPRESS FETCH] ALL APIs FAILED!');
   throw new Error('Failed to fetch product data from all APIs');
 }
 

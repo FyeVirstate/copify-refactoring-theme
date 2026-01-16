@@ -153,66 +153,103 @@ function ToastAlerts({ alerts, onDismiss, onViewShop }: {
   };
 
   return (
-    <div className="position-fixed" style={{ top: '20px', left: '50%', transform: 'translateX(-50%)', zIndex: 9999, width: '100%', maxWidth: '600px' }}>
-      
-        {alerts.map((alert) => {
-          const alertStyles = getAlertStyles(alert.type);
-          return (
+    <div className="position-fixed" style={{ top: '20px', left: '50%', transform: 'translateX(-50%)', zIndex: 9999, width: 'auto', maxWidth: 'calc(100% - 40px)' }}>
+      {alerts.map((alert) => {
+        const alertStyles = getAlertStyles(alert.type);
+        return (
           <div
             key={alert.id}
-            
-            
-            
-            
-            className="d-flex align-items-center justify-content-between gap-3 mb-2 mx-3"
+            className="mb-2"
             style={{
-              padding: '12px 20px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              padding: '12px 16px',
               borderRadius: '8px',
               boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
               ...alertStyles,
             }}
           >
-            <div className="d-flex align-items-center gap-2">
-              {alert.type === 'success' && (
-                <i className="ri-checkbox-circle-fill" style={{ fontSize: '18px', color: '#fff' }}></i>
-              )}
-              {(alert.type === 'error' || alert.type === 'limit') && (
-                <i className="ri-error-warning-fill" style={{ fontSize: '18px', color: '#fff' }}></i>
-              )}
-              {alert.type === 'info' && (
-                <i className="ri-information-fill" style={{ fontSize: '18px', color: '#212529' }}></i>
-              )}
-              <span style={{ fontSize: '14px', color: alertStyles.color }}>
-                {alert.message}
-              </span>
-            </div>
-            <div className="d-flex align-items-center gap-2">
-              {alert.type === 'success' && alert.shopId && onViewShop && (
-                <button 
-                  className="btn btn-sm" 
-                  style={{ backgroundColor: 'rgba(255,255,255,0.2)', border: 'none', color: '#fff' }}
-                  onClick={() => onViewShop(alert.shopId!)}
-                >
-                  Voir la boutique
-                </button>
-              )}
-              {(alert.type === 'error' || alert.type === 'limit') && (
-                <a href="/dashboard/plans" className="btn btn-sm" style={{ backgroundColor: '#fff', border: 'none', color: '#212529' }}>
-                  Débloquer l&apos;accès complet
-                </a>
-              )}
-              {alert.type !== 'limit' && (
-                <button 
-                  className="btn-close" 
-                  style={{ fontSize: '10px', filter: alert.type === 'info' ? 'none' : 'invert(1)' }}
-                  onClick={() => onDismiss(alert.id)}
-                ></button>
-              )}
-            </div>
+            {/* Icon */}
+            {alert.type === 'success' && (
+              <i className="ri-checkbox-circle-fill" style={{ fontSize: '18px', color: '#fff', flexShrink: 0 }}></i>
+            )}
+            {(alert.type === 'error' || alert.type === 'limit') && (
+              <i className="ri-error-warning-fill" style={{ fontSize: '18px', color: '#fff', flexShrink: 0 }}></i>
+            )}
+            {alert.type === 'info' && (
+              <i className="ri-information-fill" style={{ fontSize: '18px', color: '#212529', flexShrink: 0 }}></i>
+            )}
+            
+            {/* Message */}
+            <span style={{ fontSize: '14px', color: alertStyles.color, flexShrink: 1 }}>
+              {alert.message}
+            </span>
+            
+            {/* Action Button */}
+            {alert.type === 'success' && alert.shopId && onViewShop && (
+              <button 
+                className="btn btn-sm" 
+                style={{ 
+                  backgroundColor: 'rgba(255,255,255,0.2)', 
+                  border: 'none', 
+                  color: '#fff',
+                  whiteSpace: 'nowrap',
+                  flexShrink: 0,
+                  padding: '6px 12px',
+                  borderRadius: '6px',
+                }}
+                onClick={() => onViewShop(alert.shopId!)}
+              >
+                Voir la boutique
+              </button>
+            )}
+            {(alert.type === 'error' || alert.type === 'limit') && (
+              <a 
+                href="/dashboard/plans" 
+                className="btn btn-sm" 
+                style={{ 
+                  backgroundColor: '#fff', 
+                  border: 'none', 
+                  color: '#212529',
+                  whiteSpace: 'nowrap',
+                  flexShrink: 0,
+                  padding: '6px 12px',
+                  borderRadius: '6px',
+                }}
+              >
+                Débloquer l&apos;accès complet
+              </a>
+            )}
+            
+            {/* Close Button */}
+            {alert.type !== 'limit' && (
+              <button 
+                onClick={() => onDismiss(alert.id)}
+                style={{ 
+                  background: 'transparent',
+                  border: 'none',
+                  padding: '4px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                  opacity: 0.7,
+                }}
+              >
+                <i 
+                  className="ri-close-line" 
+                  style={{ 
+                    fontSize: '20px', 
+                    color: alert.type === 'info' ? '#212529' : '#fff',
+                  }}
+                ></i>
+              </button>
+            )}
           </div>
-          );
-        })}
-      
+        );
+      })}
     </div>
   );
 }

@@ -9,6 +9,7 @@
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { NextRequest, NextResponse } from "next/server"
+import { requireActiveSubscription } from "@/lib/subscription-guard"
 
 // GET - Get user's tracked shops
 export async function GET(request: NextRequest) {
@@ -190,6 +191,12 @@ export async function GET(request: NextRequest) {
 
 // POST - Add shop to tracking
 export async function POST(request: NextRequest) {
+  // Check subscription status - block expired users from adding shops
+  const subscriptionBlock = await requireActiveSubscription()
+  if (subscriptionBlock) {
+    return subscriptionBlock
+  }
+
   if (!prisma) {
     return NextResponse.json({ error: 'Database not available' }, { status: 500 })
   }

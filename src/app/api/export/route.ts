@@ -10,6 +10,7 @@ import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
+import { requireActiveSubscription } from "@/lib/subscription-guard"
 
 // Helper to get screenshot URL
 function getScreenshotUrl(shopUrl: string, screenshot: string | null): string {
@@ -176,6 +177,12 @@ const exportSchema = z.object({
 })
 
 export async function POST(request: NextRequest) {
+  // Check subscription status - block expired users
+  const subscriptionBlock = await requireActiveSubscription()
+  if (subscriptionBlock) {
+    return subscriptionBlock
+  }
+
   if (!prisma) {
     return NextResponse.json({ error: 'Database not available' }, { status: 500 })
   }

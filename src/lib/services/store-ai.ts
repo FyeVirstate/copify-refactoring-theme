@@ -220,22 +220,35 @@ function parseAIResponse(response: string): Partial<AIStoreContent> {
  * Examples: 69.90, 49.90, 39.90, 29.90, 19.90, 9.90
  */
 function calculateRetailPrice(basePrice: number): number {
+  console.log('\n[PRICE CALCULATION] ========================================');
+  console.log('[PRICE CALCULATION] calculateRetailPrice() called');
+  console.log('[PRICE CALCULATION] Input base price (from AliExpress):', basePrice);
+  
   // Multiply by 3
   const multiplied = basePrice * 3;
+  console.log('[PRICE CALCULATION] After x3 multiplication:', multiplied);
   
   // Round to nearest price ending in X9.90
   // Price tiers: 9.90, 19.90, 29.90, 39.90, 49.90, 59.90, 69.90, 79.90, 89.90, 99.90, etc.
   const tens = Math.floor(multiplied / 10);
   const remainder = multiplied % 10;
+  console.log('[PRICE CALCULATION] Tens:', tens, '| Remainder:', remainder);
   
+  let result: number;
   // If the price is close to X9.90, round to that tier
   if (remainder >= 5) {
     // Round up to X9.90
-    return (tens + 1) * 10 - 0.10;
+    result = (tens + 1) * 10 - 0.10;
+    console.log('[PRICE CALCULATION] Remainder >= 5, rounding UP to:', result);
   } else {
     // Round down to previous X9.90
-    return tens * 10 - 0.10;
+    result = tens * 10 - 0.10;
+    console.log('[PRICE CALCULATION] Remainder < 5, rounding DOWN to:', result);
   }
+  
+  console.log('[PRICE CALCULATION] FINAL RETAIL PRICE:', result);
+  console.log('[PRICE CALCULATION] ========================================\n');
+  return result;
 }
 
 /**
@@ -243,17 +256,30 @@ function calculateRetailPrice(basePrice: number): number {
  * Also rounds to X9.90 format
  */
 function calculateCompareAtPrice(retailPrice: number): number {
+  console.log('\n[PRICE CALCULATION] ========================================');
+  console.log('[PRICE CALCULATION] calculateCompareAtPrice() called');
+  console.log('[PRICE CALCULATION] Input retail price:', retailPrice);
+  
   const multiplied = retailPrice * 2.5;
+  console.log('[PRICE CALCULATION] After x2.5 multiplication:', multiplied);
   
   // Round to nearest price ending in X9.90
   const tens = Math.floor(multiplied / 10);
   const remainder = multiplied % 10;
+  console.log('[PRICE CALCULATION] Tens:', tens, '| Remainder:', remainder);
   
+  let result: number;
   if (remainder >= 5) {
-    return (tens + 1) * 10 - 0.10;
+    result = (tens + 1) * 10 - 0.10;
+    console.log('[PRICE CALCULATION] Remainder >= 5, rounding UP to:', result);
   } else {
-    return tens * 10 - 0.10;
+    result = tens * 10 - 0.10;
+    console.log('[PRICE CALCULATION] Remainder < 5, rounding DOWN to:', result);
   }
+  
+  console.log('[PRICE CALCULATION] FINAL COMPARE AT PRICE (barré):', result);
+  console.log('[PRICE CALCULATION] ========================================\n');
+  return result;
 }
 
 /**
@@ -288,11 +314,28 @@ export async function generateStoreContent(
   // Calculate retail prices with markup
   // x3 for selling price, ending in X9.90
   // x2.5 for compare at price (barré)
+  console.log('\n[STORE-AI] ################################################################');
+  console.log('[STORE-AI] PRICE CALCULATION STARTING');
+  console.log('[STORE-AI] ################################################################');
+  console.log('[STORE-AI] Product Data received:');
+  console.log('[STORE-AI]   - productData.price:', productData.price);
+  console.log('[STORE-AI]   - productData.originalPrice:', productData.originalPrice);
+  console.log('[STORE-AI]   - productData.currency:', productData.currency);
+  
   const basePrice = productData.price || 0;
+  console.log('\n[STORE-AI] Base price used for calculation:', basePrice);
+  
   const retailPrice = calculateRetailPrice(basePrice);
   const compareAtPrice = calculateCompareAtPrice(retailPrice);
   
-  console.log(`[Price] Base: ${basePrice} → Retail: ${retailPrice} → Compare: ${compareAtPrice}`);
+  console.log('\n[STORE-AI] ################################################################');
+  console.log('[STORE-AI] ===== FINAL PRICE SUMMARY =====');
+  console.log('[STORE-AI] AliExpress Base Price:', basePrice, productData.currency);
+  console.log('[STORE-AI] Retail Price (x3 markup):', retailPrice, '€');
+  console.log('[STORE-AI] Compare At Price (x2.5 of retail):', compareAtPrice, '€');
+  console.log('[STORE-AI] Discount shown to customer:', Math.round((1 - retailPrice/compareAtPrice) * 100) + '%');
+  console.log('[STORE-AI] ===================================');
+  console.log('[STORE-AI] ################################################################\n');
 
   // Build the final content object
   const storeContent: AIStoreContent = {

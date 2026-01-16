@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, Suspense } from "react";
+import { useState, useEffect, useRef, Suspense, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import DashboardHeader from "@/components/DashboardHeader";
@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { useTrack } from "@/lib/hooks/use-track";
+import { useTrackedShops, TrackedShop } from "@/lib/hooks/use-tracked-shops";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -29,6 +29,73 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import MiniChart from "@/components/MiniChart";
+
+// Skeleton row widths for variety
+const SHOP_NAME_WIDTHS = [120, 140, 130, 110, 145, 125, 135, 115, 150, 128];
+const SHOP_URL_WIDTHS = [90, 100, 85, 95, 88, 92, 98, 105, 87, 93];
+
+// Skeleton component for loading - matches table structure
+function TrackedShopsSkeleton({ rows = 5 }: { rows?: number }) {
+  return (
+    <>
+      {Array.from({ length: rows }).map((_, i) => (
+        <TableRow key={i}>
+          {/* Shop Name with Screenshot */}
+          <TableCell className="align-middle border-b-gray py-3">
+            <div className="d-flex align-items-center gap-3">
+              <div className="skeleton-shimmer" style={{ width: '140px', height: '85px', borderRadius: '8px', flexShrink: 0 }}></div>
+              <div className="d-flex align-items-center gap-2">
+                <div className="skeleton-shimmer" style={{ width: '24px', height: '24px', borderRadius: '4px' }}></div>
+                <div>
+                  <div className="skeleton-shimmer" style={{ width: `${SHOP_NAME_WIDTHS[i % 10]}px`, height: '14px', borderRadius: '4px', marginBottom: '6px' }}></div>
+                  <div className="skeleton-shimmer" style={{ width: `${SHOP_URL_WIDTHS[i % 10]}px`, height: '12px', borderRadius: '4px' }}></div>
+                </div>
+              </div>
+            </div>
+          </TableCell>
+          {/* Market Share */}
+          <TableCell className="align-middle py-3 border-b-gray">
+            <div className="d-flex flex-column gap-1">
+              <div className="d-flex align-items-center gap-2">
+                <div className="skeleton-shimmer" style={{ width: '18px', height: '13px', borderRadius: '2px' }}></div>
+                <div className="skeleton-shimmer" style={{ width: '35px', height: '12px', borderRadius: '4px' }}></div>
+              </div>
+              <div className="d-flex align-items-center gap-2">
+                <div className="skeleton-shimmer" style={{ width: '18px', height: '13px', borderRadius: '2px' }}></div>
+                <div className="skeleton-shimmer" style={{ width: '35px', height: '12px', borderRadius: '4px' }}></div>
+              </div>
+              <div className="d-flex align-items-center gap-2">
+                <div className="skeleton-shimmer" style={{ width: '18px', height: '13px', borderRadius: '2px' }}></div>
+                <div className="skeleton-shimmer" style={{ width: '35px', height: '12px', borderRadius: '4px' }}></div>
+              </div>
+            </div>
+          </TableCell>
+          {/* Daily Revenue */}
+          <TableCell className="align-middle py-3 border-b-gray text-center">
+            <div className="d-flex align-items-center justify-content-center gap-1">
+              <div className="skeleton-shimmer" style={{ width: '70px', height: '14px', borderRadius: '4px' }}></div>
+            </div>
+          </TableCell>
+          {/* Monthly Revenue */}
+          <TableCell className="align-middle py-3 border-b-gray text-center">
+            <div className="d-flex align-items-center justify-content-center gap-1">
+              <div className="skeleton-shimmer" style={{ width: '90px', height: '14px', borderRadius: '4px' }}></div>
+            </div>
+          </TableCell>
+          {/* Active Ads with Chart */}
+          <TableCell className="align-middle py-3 border-b-gray text-center">
+            <div className="skeleton-shimmer mx-auto" style={{ width: '50px', height: '14px', borderRadius: '4px', marginBottom: '8px' }}></div>
+            <div className="skeleton-shimmer mx-auto" style={{ width: '120px', height: '40px', borderRadius: '4px' }}></div>
+          </TableCell>
+          {/* Actions */}
+          <TableCell className="align-middle py-3 border-b-gray text-center" style={{ width: '60px' }}>
+            <div className="skeleton-shimmer mx-auto" style={{ width: '20px', height: '20px', borderRadius: '4px' }}></div>
+          </TableCell>
+        </TableRow>
+      ))}
+    </>
+  );
+}
 
 // Alert component for different message types
 function AlertBox({ type, message, onClose }: { 
@@ -66,7 +133,7 @@ function AlertBox({ type, message, onClose }: {
   const style = styles[type];
 
   return (
-    <div      className={`alert-box ${style.bg} ${style.border} d-flex align-items-center justify-content-between px-3 py-2 mb-3`}
+    <div className={`alert-box ${style.bg} ${style.border} d-flex align-items-center justify-content-between px-3 py-2 mb-3`}
       style={{ borderRadius: '8px', borderLeft: '4px solid' }}
     >
       <div className="d-flex align-items-center gap-2">
@@ -107,23 +174,25 @@ function AnalyzeShopContent() {
   const [showShareSuccess, setShowShareSuccess] = useState(false);
 
   // TODO: Get from user session/context - for now simulate trial status
-  // In production, this would come from: auth session, user context, or API
-  const [isOnTrial, setIsOnTrial] = useState(true); // Default to trial for testing
+  const [isOnTrial, setIsOnTrial] = useState(true);
 
+  // Use TanStack Query hook for tracked shops with infinite scroll
+  // Use 50 perPage to load more shops at once (matching user's limit)
   const { 
     trackedShops, 
     limits, 
     isLoading, 
-    fetchTrackedShops, 
+    isFetching,
+    isFetchingNextPage,
+    hasNextPage,
+    fetchNextPage,
     addShop,
-    removeShop 
-  } = useTrack();
+    removeShop,
+    isAddingShop,
+  } = useTrackedShops(50);
 
   // Check user subscription status
   useEffect(() => {
-    // TODO: Replace with actual user subscription check
-    // Example: const user = await getSession(); setIsOnTrial(user?.plan === 'trial');
-    // For now, check if user has limits that suggest trial (e.g., max=3)
     if (limits && limits.max <= 3) {
       setIsOnTrial(true);
     } else if (limits && limits.max > 3) {
@@ -131,10 +200,42 @@ function AnalyzeShopContent() {
     }
   }, [limits]);
 
-  // Fetch tracked shops on mount
+  // Infinite scroll - listen to page scroll
   useEffect(() => {
-    fetchTrackedShops(1, 100); // Fetch up to 100 shops to display all tracked shops
-  }, [fetchTrackedShops]);
+    const handleScroll = () => {
+      // Get the scrollable container (section-two or window)
+      const scrollContainer = document.querySelector('.section-two');
+      if (scrollContainer) {
+        const { scrollTop, scrollHeight, clientHeight } = scrollContainer as HTMLElement;
+        // Load more when user scrolls near the bottom (300px threshold)
+        if (scrollHeight - scrollTop - clientHeight < 300 && hasNextPage && !isFetchingNextPage) {
+          fetchNextPage();
+        }
+      }
+
+      // Also check window scroll for fallback
+      const scrollTop = window.scrollY || document.documentElement.scrollTop;
+      const scrollHeight = document.documentElement.scrollHeight;
+      const clientHeight = window.innerHeight;
+      
+      if (scrollHeight - scrollTop - clientHeight < 300 && hasNextPage && !isFetchingNextPage) {
+        fetchNextPage();
+      }
+    };
+
+    const scrollContainer = document.querySelector('.section-two');
+    if (scrollContainer) {
+      scrollContainer.addEventListener('scroll', handleScroll);
+    }
+    window.addEventListener('scroll', handleScroll);
+
+    return () => {
+      if (scrollContainer) {
+        scrollContainer.removeEventListener('scroll', handleScroll);
+      }
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   // Validate Shopify URL
   const isValidShopifyUrl = (url: string): boolean => {
@@ -195,7 +296,6 @@ function AnalyzeShopContent() {
 
   // Handle remove shop - with permission check
   const handleRemoveShop = async (trackId: number) => {
-    // Check if user has permission to delete (not on trial)
     if (isOnTrial) {
       setAlertMessage({ 
         type: 'subscription', 
@@ -217,21 +317,17 @@ function AnalyzeShopContent() {
     }
   };
 
-  // Mouse tooltip handlers
+  // Mouse tooltip handlers - use clientX/Y for fixed positioning
   const handleMouseMove = (e: React.MouseEvent) => {
-    if (tableWrapperRef.current) {
-      const rect = tableWrapperRef.current.getBoundingClientRect();
-      setMousePosition({
-        x: e.clientX - rect.left - 10,
-        y: e.clientY - rect.top + 30
-      });
-    }
+    setMousePosition({
+      x: e.clientX + 10,
+      y: e.clientY + 20
+    });
   };
 
   // Handle refresh shop
   const handleRefreshShop = async (shopId: number) => {
     setAlertMessage({ type: 'info', message: "Actualisation des données en cours..." });
-    // TODO: Implement actual refresh logic
     setTimeout(() => {
       setAlertMessage({ type: 'info', message: "Données actualisées avec succès." });
       setTimeout(() => setAlertMessage(null), 2000);
@@ -248,11 +344,9 @@ function AnalyzeShopContent() {
   // Share mode handlers
   const handleShareButtonClick = () => {
     if (isShareMode) {
-      // Cancel share mode
       setIsShareMode(false);
       setSelectedShopIds([]);
     } else {
-      // Enter share mode
       setIsShareMode(true);
       setSelectedShopIds([]);
       setShowShareSuccess(false);
@@ -300,7 +394,6 @@ function AnalyzeShopContent() {
     
     try {
       await navigator.clipboard.writeText(shareUrl);
-      // Show brief success feedback
       const btn = document.getElementById('copyLinkBtn');
       if (btn) {
         const originalText = btn.textContent;
@@ -310,7 +403,6 @@ function AnalyzeShopContent() {
         }, 1500);
       }
     } catch (err) {
-      // Fallback for older browsers
       const textArea = document.createElement('textarea');
       textArea.value = shareUrl;
       textArea.style.position = 'fixed';
@@ -347,6 +439,34 @@ function AnalyzeShopContent() {
     ? Math.min((limits.used / limits.max) * 100, 100) 
     : 0;
 
+  // Table header component (reusable)
+  const TableHeaderRow = () => (
+    <TableRow className="border-0 bg-weak-gray border-bottom">
+      {isShareMode && (
+        <TableHead scope="col" className="text-sub fs-small fw-500 border-0 align-middle p-0" style={{ width: '40px' }}>
+          &nbsp;
+        </TableHead>
+      )}
+      <TableHead scope="col" className="text-sub fs-small fw-500 border-0 align-middle">
+        Nom de la boutique
+      </TableHead>
+      <TableHead scope="col" className="text-sub fs-small fw-500 border-0 text-start align-middle">
+        Part de marché
+      </TableHead>
+      <TableHead scope="col" className="text-sub fs-small fw-500 border-0 text-center align-middle">
+        Ventes quotidiennes estimées
+      </TableHead>
+      <TableHead scope="col" className="text-sub fs-small fw-500 border-0 text-center align-middle">
+        Revenu mensuel estimé
+      </TableHead>
+      <TableHead scope="col" className="text-sub fs-small fw-500 border-0 text-center align-middle">
+        Annonces actives <span className="text-light-gray fs-xs d-block">(Évolution du dernier mois)</span>
+      </TableHead>
+      <TableHead scope="col" className="text-sub fs-small fw-500 border-0 text-center align-middle">
+      </TableHead>
+    </TableRow>
+  );
+
   return (
     <>
       <DashboardHeader
@@ -381,11 +501,10 @@ function AnalyzeShopContent() {
             />
           )}
 
-          {/* Input Section - Responsive */}
-          <div            className="mb-4 pb-1 pt-2"
-          >
+          {/* Input Section */}
+          <div className="mb-4 pb-1 pt-2">
             <div className="d-flex gap-3 align-items-center flex-wrap">
-              {/* Search Input - Full width on mobile */}
+              {/* Search Input */}
               <div className="position-relative flex-grow-1" style={{ minWidth: '200px' }}>
                 <i
                   className="ri-global-line position-absolute"
@@ -410,15 +529,15 @@ function AnalyzeShopContent() {
                 />
               </div>
 
-              {/* Analyser Button + Progress - Flex row on mobile */}
+              {/* Analyser Button + Progress */}
               <div className="d-flex gap-3 align-items-center">
                 <Button
                   onClick={handleAnalyze}
                   className="btn btn-primary apply-filters-btn"
                   style={{ whiteSpace: 'nowrap', minWidth: '100px', flexShrink: 0, height: '48px' }}
-                  disabled={isAnalyzing || !shopUrl.trim() || Boolean(limits && limits.remaining === 0)}
+                  disabled={isAnalyzing || isAddingShop || !shopUrl.trim() || Boolean(limits && limits.remaining === 0)}
                 >
-                  {isAnalyzing ? (
+                  {isAnalyzing || isAddingShop ? (
                     <>
                       <span className="spinner-border spinner-border-sm me-2" role="status"></span>
                       Analyse...
@@ -429,10 +548,7 @@ function AnalyzeShopContent() {
                 </Button>
 
                 {/* Boutiques suivies - Progress Circle */}
-                <div 
-                  className="progress-circle d-flex gap-2 flex-row align-items-center" 
-                  style={{ flexShrink: 0 }}
-                >
+                <div className="progress-circle d-flex gap-2 flex-row align-items-center" style={{ flexShrink: 0 }}>
                   <div className="progress-circle-wrapper">
                     <svg width="32px" height="32px">
                       <circle 
@@ -469,107 +585,98 @@ function AnalyzeShopContent() {
           </div>
 
           {/* Sort Section */}
-          <div            className="d-flex justify-content-between align-items-center mb-3"
-          >
+          <div className="d-flex justify-content-between align-items-center mb-3">
             <h2 className="fs-normal fw-600 mb-0">Boutiques suivies</h2>
             <div className="d-flex align-items-center gap-2">
-              <select
-                className="form-select fs-small"
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-                style={{ width: 'auto', minWidth: '180px' }}
-              >
-                <option value="recent">Récemment ajouté</option>
-                <option value="revenue_desc">Revenus décroissants</option>
-                <option value="revenue_asc">Revenus croissants</option>
-              </select>
+              <div className="position-relative">
+                <select
+                  className="form-select fs-small pe-4"
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  style={{ 
+                    width: 'auto', 
+                    minWidth: '180px',
+                    paddingRight: '32px',
+                    appearance: 'none',
+                    WebkitAppearance: 'none',
+                    MozAppearance: 'none',
+                    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E")`,
+                    backgroundRepeat: 'no-repeat',
+                    backgroundPosition: 'right 12px center',
+                    backgroundSize: '12px'
+                  }}
+                >
+                  <option value="recent">Récemment ajouté</option>
+                  <option value="revenue_desc">Revenus décroissants</option>
+                  <option value="revenue_asc">Revenus croissants</option>
+                </select>
+              </div>
             </div>
           </div>
 
           {/* Table */}
-          <div            className="table-view mt-2"
-          >
-            {isLoading ? (
-              <div className="text-center py-5">
-                <div className="spinner-border text-primary" role="status">
-                  <span className="visually-hidden">Chargement...</span>
-                </div>
-                <p className="mt-2 text-muted">Chargement des boutiques...</p>
-              </div>
-            ) : sortedShops.length === 0 ? (
-              <div className="text-center py-5">
-                <i className="ri-store-2-line fs-1 text-muted mb-3 d-block"></i>
-                <h5>Aucune boutique suivie</h5>
-                <p className="text-muted">
-                  Entrez l&apos;URL d&apos;une boutique Shopify ci-dessus pour commencer à la suivre.
-                </p>
-              </div>
-            ) : (
-              <>
-                {/* Desktop Table View */}
-                <div 
-                  ref={tableWrapperRef}
-                  className="border position-relative d-none d-lg-block" 
-                  style={{ borderRadius: '6px', maxHeight: 'calc(100vh - 320px)', overflowY: 'auto', overflowX: 'visible' }}
+          <div className="table-view mt-2" style={{ overflow: 'hidden' }}>
+            {/* Desktop Table View - Always show header with skeleton or data */}
+            <div 
+              ref={tableWrapperRef}
+              className="border position-relative d-none d-lg-block" 
+              style={{ borderRadius: '6px', overflow: 'hidden' }}
+            >
+              {/* Mouse-following tooltip - fixed position */}
+              {showTooltip && !isLoading && (
+                <div
+                  className="mouse-tooltip"
+                  style={{
+                    position: 'fixed',
+                    left: mousePosition.x,
+                    top: mousePosition.y,
+                    pointerEvents: 'none',
+                    background: 'rgba(0,0,0,0.85)',
+                    color: '#fff',
+                    padding: '6px 10px',
+                    borderRadius: '6px',
+                    fontSize: '12px',
+                    fontWeight: 500,
+                    whiteSpace: 'nowrap',
+                    zIndex: 9999,
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+                  }}
                 >
-                  {/* Mouse-following tooltip */}
-                  {showTooltip && (
-                    <div
-                      className="mouse-tooltip"
-                      style={{
-                        position: 'absolute',
-                        left: mousePosition.x,
-                        top: mousePosition.y,
-                        pointerEvents: 'none',
-                        background: 'rgba(0,0,0,0.8)',
-                        color: '#fff',
-                        padding: '6px 8px',
-                        borderRadius: '4px',
-                        fontSize: '13px',
-                        whiteSpace: 'nowrap',
-                        zIndex: 100,
-                      }}
-                    >
-                      Voir l&apos;analyse
-                    </div>
-                  )}
-                  <Table id="shopListTable" className="table mb-0 table-hover" style={{ tableLayout: 'fixed' }}>
-                    <colgroup>
-                      {isShareMode && <col style={{ width: '40px' }} />}
-                      <col style={{ width: isShareMode ? '33%' : '35%' }} />
-                      <col style={{ width: '15%' }} />
-                      <col style={{ width: '15%' }} />
-                      <col style={{ width: '15%' }} />
-                      <col style={{ width: '15%' }} />
-                      <col style={{ width: '5%' }} />
-                    </colgroup>
-                    <TableHeader>
-                      <TableRow className="border-0 bg-weak-gray border-bottom">
-                        {isShareMode && (
-                          <TableHead scope="col" className="text-sub fs-small fw-500 border-0 align-middle p-0" style={{ width: '40px' }}>
-                            &nbsp;
-                          </TableHead>
-                        )}
-                        <TableHead scope="col" className="text-sub fs-small fw-500 border-0 align-middle">
-                          Nom de la boutique
-                        </TableHead>
-                        <TableHead scope="col" className="text-sub fs-small fw-500 border-0 text-start align-middle">
-                          Part de marché
-                        </TableHead>
-                        <TableHead scope="col" className="text-sub fs-small fw-500 border-0 text-center align-middle">
-                          Ventes quotidiennes estimées
-                        </TableHead>
-                        <TableHead scope="col" className="text-sub fs-small fw-500 border-0 text-center align-middle">
-                          Revenu mensuel estimé
-                        </TableHead>
-                        <TableHead scope="col" className="text-sub fs-small fw-500 border-0 text-center align-middle">
-                          Annonces actives <span className="text-light-gray fs-xs d-block">(Évolution du dernier mois)</span>
-                        </TableHead>
-                        <TableHead scope="col" className="text-sub fs-small fw-500 border-0 text-center align-middle">
-                        </TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
+                  Voir l&apos;analyse
+                </div>
+              )}
+              
+              <Table id="shopListTable" className="table mb-0 table-hover" style={{ tableLayout: 'fixed' }}>
+                <colgroup>
+                  {isShareMode && <col style={{ width: '40px' }} />}
+                  <col style={{ width: isShareMode ? '33%' : '35%' }} />
+                  <col style={{ width: '15%' }} />
+                  <col style={{ width: '15%' }} />
+                  <col style={{ width: '15%' }} />
+                  <col style={{ width: '15%' }} />
+                  <col style={{ width: '5%' }} />
+                </colgroup>
+                <TableHeader>
+                  <TableHeaderRow />
+                </TableHeader>
+                <TableBody>
+                  {isLoading ? (
+                    // Show skeleton while loading
+                    <TrackedShopsSkeleton rows={8} />
+                  ) : sortedShops.length === 0 ? (
+                    // Empty state
+                    <TableRow>
+                      <TableCell colSpan={isShareMode ? 7 : 6} className="text-center py-5">
+                        <i className="ri-store-2-line fs-1 text-muted mb-3 d-block"></i>
+                        <h5>Aucune boutique suivie</h5>
+                        <p className="text-muted mb-0">
+                          Entrez l&apos;URL d&apos;une boutique Shopify ci-dessus pour commencer à la suivre.
+                        </p>
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    // Render tracked shops
+                    <>
                       {sortedShops.map((tracked) => (
                         <TableRow
                           key={tracked.id}
@@ -723,9 +830,8 @@ function AnalyzeShopContent() {
                             </div>
                           </TableCell>
 
-                          {/* Active Ads with Evolution Chart - Same design as shops page */}
-                          <TableCell className="align-middle py-3 border-b-gray text-center" style={{ overflow: 'visible', position: 'relative' }}>
-                            {/* Stats */}
+                          {/* Active Ads with Evolution Chart */}
+                          <TableCell className="align-middle py-3 border-b-gray text-center" style={{ overflow: 'hidden' }}>
                             <div>
                               <p className="mb-1 d-flex align-items-center justify-content-center gap-1">
                                 <span 
@@ -748,9 +854,9 @@ function AnalyzeShopContent() {
                                 )}
                               </p>
                             </div>
-                            {/* Mini Chart - BELOW the number */}
+                            {/* Mini Chart */}
                             <div 
-                              style={{ maxWidth: '120px', margin: '0 auto', overflow: 'visible' }}
+                              style={{ maxWidth: '120px', margin: '0 auto', overflow: 'hidden' }}
                               onMouseEnter={() => setShowTooltip(false)}
                             >
                               {tracked.shop?.adsHistoryData && tracked.shop.adsHistoryData.length > 1 ? (
@@ -838,226 +944,282 @@ function AnalyzeShopContent() {
                           </TableCell>
                         </TableRow>
                       ))}
-                    </TableBody>
-                  </Table>
+                      
+                      {/* Loading more indicator inside table */}
+                      {isFetchingNextPage && (
+                        <TrackedShopsSkeleton rows={3} />
+                      )}
+                    </>
+                  )}
+                </TableBody>
+              </Table>
+              
+              {/* End of list indicator */}
+              {!hasNextPage && sortedShops.length > 0 && !isLoading && (
+                <div className="text-center py-3 border-top">
+                  <p className="text-muted mb-0 fs-small">
+                    <i className="ri-check-line me-1"></i>
+                    Toutes les boutiques ont été chargées ({sortedShops.length})
+                  </p>
                 </div>
+              )}
+            </div>
 
-                {/* Mobile Card View */}
-                <div className="d-lg-none" style={{ maxHeight: 'calc(100vh - 320px)', overflowY: 'auto' }}>
-                  <div className="d-flex flex-column gap-3">
-                    {sortedShops.map((tracked) => (
-                      <div 
-                        key={tracked.id}
-                        className={`shop-card border rounded-3 p-3 ${isShareMode && selectedShopIds.includes(tracked.shopId) ? 'selected-card' : ''}`}
-                        style={{ backgroundColor: '#fff', cursor: 'pointer' }}
-                        onClick={(e) => {
-                          if ((e.target as HTMLElement).closest('.action-dropdown') || (e.target as HTMLElement).closest('a')) return;
-                          if (isShareMode) {
-                            handleShopSelect(tracked.shopId);
-                            return;
-                          }
-                          router.push(`/dashboard/track/${tracked.shopId}`);
-                        }}
-                      >
-                        {/* Header: Screenshot + Shop Info */}
-                        <div className="d-flex gap-3 mb-3">
-                          {/* Share Checkbox for Mobile */}
-                          {isShareMode && (
-                            <div className="d-flex align-items-center">
-                              <input
-                                type="checkbox"
-                                className="form-check-input"
-                                checked={selectedShopIds.includes(tracked.shopId)}
-                                onChange={() => handleShopSelect(tracked.shopId)}
-                                onClick={(e) => e.stopPropagation()}
-                                style={{ margin: 0, cursor: 'pointer', width: '20px', height: '20px' }}
-                              />
-                            </div>
-                          )}
-                          {/* Screenshot */}
-                          <div 
-                            style={{ 
-                              width: '100px', 
-                              height: '65px', 
-                              borderRadius: '8px', 
-                              overflow: 'hidden', 
-                              flexShrink: 0, 
-                              border: '1px solid #e5e7eb',
-                              backgroundColor: '#f9fafb'
-                            }}
-                          >
-                            <img
-                              src={tracked.shop?.screenshot 
-                                ? `https://app.copyfy.io/download/products/screenshots/${tracked.shop.screenshot}`
-                                : `https://image.thum.io/get/width/200/crop/130/${tracked.shop?.url}`
-                              }
-                              alt={`${tracked.shop?.name || "Shop"} preview`}
-                              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                              onError={(e) => {
-                                const target = e.target as HTMLImageElement;
-                                if (!target.src.includes('img_not_found')) {
-                                  target.src = "/img_not_found.png";
-                                }
-                              }}
-                            />
-                          </div>
-                          {/* Shop Info */}
-                          <div className="flex-grow-1 d-flex flex-column justify-content-center">
-                            <div className="d-flex align-items-center gap-2 mb-1">
-                              <img 
-                                src={`https://www.google.com/s2/favicons?domain=${tracked.shop?.url}&sz=32`}
-                                alt="Logo"
-                                style={{ width: '20px', height: '20px', borderRadius: '4px' }}
-                                onError={(e) => {
-                                  (e.target as HTMLImageElement).style.display = 'none';
-                                }}
-                              />
-                              <h4 className="fs-small mb-0 fw-600 text-dark text-truncate" style={{ maxWidth: '160px' }}>
-                                {tracked.shop?.name || tracked.shop?.url}
-                              </h4>
-                            </div>
-                            <a 
-                              href={`https://${tracked.shop?.url}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-primary fs-xs text-decoration-none text-truncate d-block"
-                              style={{ maxWidth: '180px' }}
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              {tracked.shop?.url}
-                            </a>
-                          </div>
-                          {/* Action Button */}
-                          <div className="action-dropdown">
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#6b7280" width="20" height="20">
-                                    <circle cx="12" cy="5" r="2"></circle>
-                                    <circle cx="12" cy="12" r="2"></circle>
-                                    <circle cx="12" cy="19" r="2"></circle>
-                                  </svg>
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end" className="w-40">
-                                <DropdownMenuItem onClick={() => handleRefreshShop(tracked.shopId)}>
-                                  <i className="ri-refresh-line me-2"></i>
-                                  Actualiser
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => router.push(`/dashboard/track/${tracked.shopId}`)}>
-                                  <i className="ri-eye-line me-2"></i>
-                                  Voir l&apos;analyse
-                                </DropdownMenuItem>
-                                <DropdownMenuItem asChild>
-                                  <a href={`https://${tracked.shop?.url}`} target="_blank" rel="noopener noreferrer">
-                                    <i className="ri-external-link-line me-2"></i>
-                                    Visiter le site
-                                  </a>
-                                </DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem 
-                                  onClick={() => handleRemoveShop(tracked.id)}
-                                  className="text-danger"
-                                  disabled={isOnTrial}
-                                >
-                                  <i className="ri-delete-bin-line me-2"></i>
-                                  Supprimer
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </div>
-                        </div>
-
-                        {/* Stats Grid */}
-                        <div className="d-flex flex-wrap gap-2" style={{ fontSize: '12px' }}>
-                          {/* Market Share */}
-                          {tracked.shop?.countries && tracked.shop.countries.length > 0 && (
-                            <div className="d-flex align-items-center gap-1 bg-light px-2 py-1 rounded">
-                              {tracked.shop.countries.slice(0, 2).map((country, idx) => (
-                                <div key={idx} className="d-flex align-items-center gap-1">
-                                  <img 
-                                    src={`/flags/${country.code.toLowerCase()}.svg`}
-                                    alt={country.code}
-                                    style={{ width: '14px', height: '10px' }}
-                                    onError={(e) => {
-                                      (e.target as HTMLImageElement).style.display = 'none';
-                                    }}
-                                  />
-                                  <span style={{ color: '#6b7280' }}>({country.value}%)</span>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-
-                          {/* Daily Sales */}
-                          <div className="d-flex align-items-center gap-1 bg-light px-2 py-1 rounded">
-                            <span className="fw-500">
-                              {formatCurrency(tracked.shop?.dailyRevenue, tracked.shop?.currency)}
-                            </span>
-                            {tracked.shop?.growthRate !== null && tracked.shop?.growthRate !== undefined && tracked.shop.growthRate !== 0 && (
-                              <i 
-                                className={`ri-arrow-right-${tracked.shop.growthRate > 0 ? 'up' : 'down'}-line`}
-                                style={{ color: tracked.shop.growthRate > 0 ? '#22c55e' : '#ef4444', fontSize: '12px' }}
-                              ></i>
-                            )}
-                          </div>
-
-                          {/* Monthly Revenue */}
-                          <div className="d-flex align-items-center gap-1 bg-light px-2 py-1 rounded">
-                            <span className="fw-500">
-                              {formatCurrency(tracked.shop?.monthlyRevenue, tracked.shop?.currency)}
-                            </span>
-                            {tracked.shop?.growthRate !== null && tracked.shop?.growthRate !== undefined && tracked.shop.growthRate !== 0 && (
-                              <i 
-                                className={`ri-arrow-right-${tracked.shop.growthRate > 0 ? 'up' : 'down'}-line`}
-                                style={{ color: tracked.shop.growthRate > 0 ? '#22c55e' : '#ef4444', fontSize: '12px' }}
-                              ></i>
-                            )}
-                          </div>
-
-                          {/* Active Ads with Chart */}
-                          <div className="d-flex flex-column bg-light px-2 py-1 rounded">
-                            <div className="d-flex align-items-center gap-1">
-                              <span 
-                                style={{ 
-                                  width: '6px', 
-                                  height: '6px', 
-                                  borderRadius: '50%', 
-                                  display: 'inline-block',
-                                  backgroundColor: (tracked.shop?.adsChange ?? 0) >= 0 ? '#22c55e' : '#ef4444'
-                                }}
-                              ></span>
-                              <span className="fw-600">{tracked.shop?.activeAds || 0}</span>
-                              {tracked.shop?.adsChange !== null && tracked.shop?.adsChange !== undefined && tracked.shop.adsChange !== 0 && (
-                                <span 
-                                  style={{ 
-                                    fontSize: '10px',
-                                    fontWeight: 500,
-                                    color: tracked.shop.adsChange > 0 ? '#22c55e' : '#ef4444'
-                                  }}
-                                >
-                                  ({tracked.shop.adsChange > 0 ? '+' : ''}{tracked.shop.adsChange})
-                                </span>
-                              )}
-                            </div>
-                            {tracked.shop?.adsHistoryData && tracked.shop.adsHistoryData.length > 1 && (
-                              <MiniChart 
-                                data={tracked.shop.adsHistoryData}
-                                dates={tracked.shop.adsHistoryDates}
-                                trend={(tracked.shop.adsChange ?? 0) >= 0 ? 'up' : 'down'}
-                                width={80}
-                                height={30}
-                                label="ads actives"
-                              />
-                            )}
-                          </div>
+            {/* Mobile Card View */}
+            <div className="d-lg-none">
+              {isLoading ? (
+                // Mobile skeleton
+                <div className="d-flex flex-column gap-3">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <div key={i} className="border rounded-3 p-3" style={{ backgroundColor: '#fff' }}>
+                      <div className="d-flex gap-3 mb-3">
+                        <div className="skeleton-shimmer" style={{ width: '100px', height: '65px', borderRadius: '8px', flexShrink: 0 }}></div>
+                        <div className="flex-grow-1">
+                          <div className="skeleton-shimmer" style={{ width: '80%', height: '14px', borderRadius: '4px', marginBottom: '8px' }}></div>
+                          <div className="skeleton-shimmer" style={{ width: '60%', height: '12px', borderRadius: '4px' }}></div>
                         </div>
                       </div>
-                    ))}
-                  </div>
+                      <div className="d-flex flex-wrap gap-2">
+                        <div className="skeleton-shimmer" style={{ width: '60px', height: '28px', borderRadius: '4px' }}></div>
+                        <div className="skeleton-shimmer" style={{ width: '70px', height: '28px', borderRadius: '4px' }}></div>
+                        <div className="skeleton-shimmer" style={{ width: '80px', height: '28px', borderRadius: '4px' }}></div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              </>
-            )}
+              ) : sortedShops.length === 0 ? (
+                <div className="text-center py-5">
+                  <i className="ri-store-2-line fs-1 text-muted mb-3 d-block"></i>
+                  <h5>Aucune boutique suivie</h5>
+                  <p className="text-muted">
+                    Entrez l&apos;URL d&apos;une boutique Shopify ci-dessus pour commencer à la suivre.
+                  </p>
+                </div>
+              ) : (
+                <div className="d-flex flex-column gap-3">
+                  {sortedShops.map((tracked) => (
+                    <div 
+                      key={tracked.id}
+                      className={`shop-card border rounded-3 p-3 ${isShareMode && selectedShopIds.includes(tracked.shopId) ? 'selected-card' : ''}`}
+                      style={{ backgroundColor: '#fff', cursor: 'pointer' }}
+                      onClick={(e) => {
+                        if ((e.target as HTMLElement).closest('.action-dropdown') || (e.target as HTMLElement).closest('a')) return;
+                        if (isShareMode) {
+                          handleShopSelect(tracked.shopId);
+                          return;
+                        }
+                        router.push(`/dashboard/track/${tracked.shopId}`);
+                      }}
+                    >
+                      {/* Header: Screenshot + Shop Info */}
+                      <div className="d-flex gap-3 mb-3">
+                        {isShareMode && (
+                          <div className="d-flex align-items-center">
+                            <input
+                              type="checkbox"
+                              className="form-check-input"
+                              checked={selectedShopIds.includes(tracked.shopId)}
+                              onChange={() => handleShopSelect(tracked.shopId)}
+                              onClick={(e) => e.stopPropagation()}
+                              style={{ margin: 0, cursor: 'pointer', width: '20px', height: '20px' }}
+                            />
+                          </div>
+                        )}
+                        <div 
+                          style={{ 
+                            width: '100px', 
+                            height: '65px', 
+                            borderRadius: '8px', 
+                            overflow: 'hidden', 
+                            flexShrink: 0, 
+                            border: '1px solid #e5e7eb',
+                            backgroundColor: '#f9fafb'
+                          }}
+                        >
+                          <img
+                            src={tracked.shop?.screenshot 
+                              ? `https://app.copyfy.io/download/products/screenshots/${tracked.shop.screenshot}`
+                              : `https://image.thum.io/get/width/200/crop/130/${tracked.shop?.url}`
+                            }
+                            alt={`${tracked.shop?.name || "Shop"} preview`}
+                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                            onError={(e) => {
+                              const target = e.target as HTMLImageElement;
+                              if (!target.src.includes('img_not_found')) {
+                                target.src = "/img_not_found.png";
+                              }
+                            }}
+                          />
+                        </div>
+                        <div className="flex-grow-1 d-flex flex-column justify-content-center">
+                          <div className="d-flex align-items-center gap-2 mb-1">
+                            <img 
+                              src={`https://www.google.com/s2/favicons?domain=${tracked.shop?.url}&sz=32`}
+                              alt="Logo"
+                              style={{ width: '20px', height: '20px', borderRadius: '4px' }}
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).style.display = 'none';
+                              }}
+                            />
+                            <h4 className="fs-small mb-0 fw-600 text-dark text-truncate" style={{ maxWidth: '160px' }}>
+                              {tracked.shop?.name || tracked.shop?.url}
+                            </h4>
+                          </div>
+                          <a 
+                            href={`https://${tracked.shop?.url}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-primary fs-xs text-decoration-none text-truncate d-block"
+                            style={{ maxWidth: '180px' }}
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            {tracked.shop?.url}
+                          </a>
+                        </div>
+                        <div className="action-dropdown">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#6b7280" width="20" height="20">
+                                  <circle cx="12" cy="5" r="2"></circle>
+                                  <circle cx="12" cy="12" r="2"></circle>
+                                  <circle cx="12" cy="19" r="2"></circle>
+                                </svg>
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-40">
+                              <DropdownMenuItem onClick={() => handleRefreshShop(tracked.shopId)}>
+                                <i className="ri-refresh-line me-2"></i>
+                                Actualiser
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => router.push(`/dashboard/track/${tracked.shopId}`)}>
+                                <i className="ri-eye-line me-2"></i>
+                                Voir l&apos;analyse
+                              </DropdownMenuItem>
+                              <DropdownMenuItem asChild>
+                                <a href={`https://${tracked.shop?.url}`} target="_blank" rel="noopener noreferrer">
+                                  <i className="ri-external-link-line me-2"></i>
+                                  Visiter le site
+                                </a>
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem 
+                                onClick={() => handleRemoveShop(tracked.id)}
+                                className="text-danger"
+                                disabled={isOnTrial}
+                              >
+                                <i className="ri-delete-bin-line me-2"></i>
+                                Supprimer
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                      </div>
+
+                      {/* Stats Grid */}
+                      <div className="d-flex flex-wrap gap-2" style={{ fontSize: '12px' }}>
+                        {tracked.shop?.countries && tracked.shop.countries.length > 0 && (
+                          <div className="d-flex align-items-center gap-1 bg-light px-2 py-1 rounded">
+                            {tracked.shop.countries.slice(0, 2).map((country, idx) => (
+                              <div key={idx} className="d-flex align-items-center gap-1">
+                                <img 
+                                  src={`/flags/${country.code.toLowerCase()}.svg`}
+                                  alt={country.code}
+                                  style={{ width: '14px', height: '10px' }}
+                                  onError={(e) => {
+                                    (e.target as HTMLImageElement).style.display = 'none';
+                                  }}
+                                />
+                                <span style={{ color: '#6b7280' }}>({country.value}%)</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        <div className="d-flex align-items-center gap-1 bg-light px-2 py-1 rounded">
+                          <span className="fw-500">
+                            {formatCurrency(tracked.shop?.dailyRevenue, tracked.shop?.currency)}
+                          </span>
+                          {tracked.shop?.growthRate !== null && tracked.shop?.growthRate !== undefined && tracked.shop.growthRate !== 0 && (
+                            <i 
+                              className={`ri-arrow-right-${tracked.shop.growthRate > 0 ? 'up' : 'down'}-line`}
+                              style={{ color: tracked.shop.growthRate > 0 ? '#22c55e' : '#ef4444', fontSize: '12px' }}
+                            ></i>
+                          )}
+                        </div>
+
+                        <div className="d-flex align-items-center gap-1 bg-light px-2 py-1 rounded">
+                          <span className="fw-500">
+                            {formatCurrency(tracked.shop?.monthlyRevenue, tracked.shop?.currency)}
+                          </span>
+                          {tracked.shop?.growthRate !== null && tracked.shop?.growthRate !== undefined && tracked.shop.growthRate !== 0 && (
+                            <i 
+                              className={`ri-arrow-right-${tracked.shop.growthRate > 0 ? 'up' : 'down'}-line`}
+                              style={{ color: tracked.shop.growthRate > 0 ? '#22c55e' : '#ef4444', fontSize: '12px' }}
+                            ></i>
+                          )}
+                        </div>
+
+                        <div className="d-flex flex-column bg-light px-2 py-1 rounded">
+                          <div className="d-flex align-items-center gap-1">
+                            <span 
+                              style={{ 
+                                width: '6px', 
+                                height: '6px', 
+                                borderRadius: '50%', 
+                                display: 'inline-block',
+                                backgroundColor: (tracked.shop?.adsChange ?? 0) >= 0 ? '#22c55e' : '#ef4444'
+                              }}
+                            ></span>
+                            <span className="fw-600">{tracked.shop?.activeAds || 0}</span>
+                            {tracked.shop?.adsChange !== null && tracked.shop?.adsChange !== undefined && tracked.shop.adsChange !== 0 && (
+                              <span 
+                                style={{ 
+                                  fontSize: '10px',
+                                  fontWeight: 500,
+                                  color: tracked.shop.adsChange > 0 ? '#22c55e' : '#ef4444'
+                                }}
+                              >
+                                ({tracked.shop.adsChange > 0 ? '+' : ''}{tracked.shop.adsChange})
+                              </span>
+                            )}
+                          </div>
+                          {tracked.shop?.adsHistoryData && tracked.shop.adsHistoryData.length > 1 && (
+                            <MiniChart 
+                              data={tracked.shop.adsHistoryData}
+                              dates={tracked.shop.adsHistoryDates}
+                              trend={(tracked.shop.adsChange ?? 0) >= 0 ? 'up' : 'down'}
+                              width={80}
+                              height={30}
+                              label="ads actives"
+                            />
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  
+                  {/* Mobile loading more */}
+                  {isFetchingNextPage && (
+                    <div className="text-center py-3">
+                      <div className="spinner-border spinner-border-sm text-primary" role="status">
+                        <span className="visually-hidden">Chargement...</span>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Mobile end of list */}
+                  {!hasNextPage && sortedShops.length > 0 && (
+                    <div className="text-center py-3">
+                      <p className="text-muted mb-0 fs-small">
+                        <i className="ri-check-line me-1"></i>
+                        Toutes les boutiques ({sortedShops.length})
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -1174,13 +1336,23 @@ function AnalyzeShopContent() {
       )}
 
       <style jsx global>{`
-        /* Recharts tooltip styling */
+        /* Prevent overflow issues in this page */
+        .home-content-wrapper {
+          overflow: hidden;
+        }
+        
+        /* Recharts tooltip styling - contained within page */
         .recharts-tooltip-wrapper {
           z-index: 9999 !important;
           pointer-events: none !important;
         }
         .recharts-wrapper {
-          overflow: visible !important;
+          overflow: hidden !important;
+        }
+        
+        /* Table overflow control */
+        #shopListTable {
+          overflow: hidden;
         }
         
         .bg-warning-light {

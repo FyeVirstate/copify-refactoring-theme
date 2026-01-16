@@ -3,6 +3,7 @@ import { stripe } from "@/lib/stripe"
 import { headers } from "next/headers"
 import { NextRequest, NextResponse } from "next/server"
 import Stripe from "stripe"
+import { syncUserToCustomerIo, sendCustomerIoEvent, CustomerIoEvents, buildUserPayload } from "@/lib/customerio"
 
 export async function POST(request: NextRequest) {
   if (!prisma) {
@@ -138,6 +139,38 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
       }
     })
     console.log(`[Stripe] Updated credits for user ${userId}`)
+
+    // Send 'subscribed' event to Customer.io
+    sendCustomerIoEvent(Number(userId), CustomerIoEvents.SUBSCRIBED, {
+      plan_identifier: planIdentifier,
+      plan_name: plan.title,
+      plan_price: plan.price,
+    }).catch(err => {
+      console.error('[Stripe] Customer.io event error:', err);
+    });
+
+    // Sync user to Customer.io with updated subscription
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+    });
+    if (user) {
+      const customerIoPayload = await buildUserPayload({
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        createdAt: user.createdAt,
+        lang: user.lang,
+        lastLogin: user.lastLogin,
+        shopifyDomain: user.shopifyDomain,
+        shopifySetupCompleted: user.shopifySetupCompleted,
+      }, {
+        activePlan: { identifier: planIdentifier, title: plan.title },
+        subscriptionStartDate: new Date(),
+      });
+      syncUserToCustomerIo(customerIoPayload).catch(err => {
+        console.error('[Stripe] Customer.io sync error:', err);
+      });
+    }
   }
 }
 
