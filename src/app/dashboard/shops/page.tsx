@@ -7,6 +7,7 @@ import DashboardHeader from "@/components/DashboardHeader";
 import { useStats } from "@/contexts/StatsContext";
 import MiniChart from "@/components/MiniChart";
 import ProductHoverCard from "@/components/ProductHoverCard";
+import AdHoverCard from "@/components/AdHoverCard";
 import {
   Table,
   TableBody,
@@ -1658,51 +1659,24 @@ export default function ShopsPage() {
                           </div>
                         </TableCell>
 
-                        {/* Best Ads Column */}
+                        {/* Best Ads Column - with hover preview */}
                         <TableCell className="align-middle py-3 border-b-gray ads-column">
                           <div className="d-flex gap-2 flex-nowrap">
                             {shop.bestAds && shop.bestAds.length > 0 ? (
                               shop.bestAds.map((ad, adIndex) => (
-                                <div 
+                                <AdHoverCard
                                   key={adIndex}
-                                  className="video-thumbnail-wrapper flex-shrink-0 position-relative"
-                                  style={{ cursor: 'pointer' }}
-                                  onClick={() => ad.video_link && setVideoData({ 
-                                    url: ad.video_link, 
-                                    preview: ad.video_preview_link || ad.image_link || '' 
-                                  })}
-                                >
-                                  <img 
-                                    src={ad.video_preview_link || ad.image_link || '/img_not_found.png'} 
-                                    alt="Video Ad"
-                                    style={{ 
-                                      width: '33px', 
-                                      height: '60px', 
-                                      objectFit: 'cover', 
-                                      borderRadius: '4px' 
-                                    }}
-                                    onError={(e) => {
-                                      const img = e.target as HTMLImageElement;
-                                      img.src = '/img_not_found.png';
-                                    }}
-                                  />
-                                  <div 
-                                    className="position-absolute d-flex align-items-center justify-content-center"
-                                    style={{
-                                      top: '50%',
-                                      left: '50%',
-                                      transform: 'translate(-50%, -50%)',
-                                      width: '20px',
-                                      height: '20px',
-                                      borderRadius: '50%',
-                                      backgroundColor: 'rgba(0,0,0,0.5)'
-                                    }}
-                                  >
-                                    <svg width="8" height="8" viewBox="0 0 12 12" fill="none">
-                                      <path d="M2 1.5L10 6L2 10.5V1.5Z" fill="white" stroke="white" strokeWidth="1" strokeLinejoin="round"/>
-                                    </svg>
-                                  </div>
-                                </div>
+                                  ad={{
+                                    video_link: ad.video_link,
+                                    video_preview_link: ad.video_preview_link,
+                                    image_link: ad.image_link,
+                                    caption: ad.caption,
+                                    page_name: ad.page_name,
+                                  }}
+                                  onVideoClick={(videoUrl, previewUrl) => {
+                                    setVideoData({ url: videoUrl, preview: previewUrl });
+                                  }}
+                                />
                               ))
                             ) : null}
                           </div>
