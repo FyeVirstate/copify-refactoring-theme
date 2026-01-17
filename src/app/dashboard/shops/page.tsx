@@ -971,7 +971,7 @@ export default function ShopsPage() {
       />
 
       <div className="bg-white home-content-wrapper">
-        <div className="p-3 w-max-width-xl mx-auto">
+        <div className="p-3 px-md-4">
           
           {/* Trial Alert Banner - Only show for trial users */}
           {userStats?.plan?.isOnTrial && (

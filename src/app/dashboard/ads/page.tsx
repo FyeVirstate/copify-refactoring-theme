@@ -1010,7 +1010,7 @@ export default function AdsPage() {
       />
 
       <div className="bg-white home-content-wrapper">
-        <div className="p-3 w-max-width-xl mx-auto">
+        <div className="p-3 px-md-4">
           
           {/* Trial Alert Banner - Only show for trial users */}
           {userStats?.plan?.isOnTrial && (
@@ -1693,7 +1693,7 @@ export default function AdsPage() {
         }
         .ads-grid-container {
           display: grid;
-          grid-template-columns: repeat(3, minmax(0, 1fr));
+          grid-template-columns: repeat(4, minmax(0, 1fr));
           gap: 16px;
           padding-bottom: 20px;
         }
@@ -1728,6 +1728,11 @@ export default function AdsPage() {
         .form-check-input:checked {
           background-color: #0c6cfb;
           border-color: #0c6cfb;
+        }
+        @media (max-width: 1600px) {
+          .ads-grid-container {
+            grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+          }
         }
         @media (max-width: 1200px) {
           .ads-grid-container {
