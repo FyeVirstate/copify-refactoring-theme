@@ -40,6 +40,17 @@ export interface AIContent {
   imageWithText?: {
     header?: string;
     text?: string;
+    buttonText?: string;
+    // Benefit tags (custom_tags_cs)
+    tag1?: string;
+    tag2?: string;
+    tag3?: string;
+    tag4?: string;
+    tag5?: string;
+    // Guarantee icons (icon_text_cls_guarantee)
+    guarantee1?: string;
+    guarantee2?: string;
+    guarantee3?: string;
   };
   // Timeline fields
   timeline?: Array<{ timeframe: string; description: string }>;
@@ -62,6 +73,13 @@ export interface AIContent {
   videoGridImages?: string[];
   // Announcement bar
   specialOffer?: string;
+  // Image with FAQ fields
+  imageFaq?: {
+    heading?: string;
+    paragraph?: string;
+    faqItems?: Array<{ question: string; content: string }>;
+  };
+  imageFaqImage?: string;
   // Selected images per section
   selectedMainImages?: string[];
   selectedHeroImage?: string;

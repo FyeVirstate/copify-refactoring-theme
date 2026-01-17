@@ -34,6 +34,7 @@ import {
   FeaturedProductSection,
   AnnouncementBarSection,
   VideoGridSection,
+  ImageFaqSection,
 } from "@/components/ai-store/sections";
 
 // Import AI Image Generator
@@ -54,25 +55,26 @@ const PRODUCT_PAGE_SECTIONS = [
   { id: 'what-makes-us-different', label: 'Caractéristiques', icon: 'ri-thumb-up-line' },            // 4. Benefits/Features
   { id: 'comparison-table', label: 'Tableau Comparatif', icon: 'ri-table-line' },                    // 5. Comparison table
   { id: 'clinical-section', label: 'Statistiques', icon: 'ri-donut-chart-fill' },                    // 6. Statistics/Clinical
-  { id: 'testimonials-marquee', label: 'Témoignages', icon: 'ri-star-line' },                        // 7. Black bar testimonials (star icon) - JUST BEFORE HERO
+  { id: 'testimonials-marquee', label: 'Barre Horizontale', icon: 'ri-star-line' },                  // 7. Black bar testimonials (star icon) - JUST BEFORE HERO
   { id: 'hero', label: 'Héro', icon: 'ri-layout-top-line' },                                          // 8. Hero section
   { id: 'faqs', label: 'FAQ', icon: 'ri-question-answer-line' },                                     // 9. FAQ - last
 ];
 
-// Home page sections (page d'accueil) - Same order for consistency
+// Home page sections (page d'accueil) - Ordre correct selon la preview
 const HOME_PAGE_SECTIONS = [
-  { id: 'announcement-bar', label: 'Barre d\'annonce', icon: 'ri-megaphone-line' },
-  { id: 'product-information', label: 'Informations sur le produit', icon: 'ri-price-tag-3-line' },
-  { id: 'review', label: 'Témoignages', icon: 'ri-text-spacing' },                                     // FIRST testimonials section
-  { id: 'timeline', label: 'Comment Faire', icon: 'ri-time-line' },
-  { id: 'what-makes-us-different', label: 'Caractéristiques', icon: 'ri-thumb-up-line' },
-  { id: 'comparison-table', label: 'Tableau Comparatif', icon: 'ri-table-line' },
-  { id: 'clinical-section', label: 'Statistiques', icon: 'ri-donut-chart-fill' },
-  { id: 'testimonials-marquee', label: 'Témoignages', icon: 'ri-star-line' },                        // SECOND testimonials section (black bar) - JUST BEFORE HERO
-  { id: 'hero', label: 'Héro', icon: 'ri-layout-top-line' },
-  { id: 'faqs', label: 'FAQ', icon: 'ri-question-answer-line' },
-  { id: 'image-with-text', label: 'Image avec Texte', icon: 'ri-image-2-line' },
-  { id: 'video-grid', label: 'Grille Vidéo', icon: 'ri-video-line' },
+  { id: 'announcement-bar', label: 'Barre d\'annonce', icon: 'ri-megaphone-line' },                   // 1. Bande d'annonce
+  { id: 'hero-home', label: 'Héro', icon: 'ri-layout-top-line' },                                     // 2. HERO HOME (image-with-text en HAUT) - SPECIFIQUE HOMEPAGE
+  { id: 'review', label: 'Témoignages', icon: 'ri-text-spacing' },                                     // 3. Témoignage le premier
+  { id: 'timeline', label: 'Comment Faire', icon: 'ri-time-line' },                                   // 4. Comment faire
+  { id: 'product-information', label: 'Informations sur le produit', icon: 'ri-price-tag-3-line' },  // 5. Information Produit
+  { id: 'what-makes-us-different', label: 'Caractéristiques', icon: 'ri-thumb-up-line' },            // 6. CARACTERISTIQUE
+  { id: 'video-grid', label: 'Grille Vidéo', icon: 'ri-video-line' },                                 // 7. Grille Vidéo
+  { id: 'image-faq', label: 'Image avec FAQ', icon: 'ri-question-line' },                             // 8. Image avec FAQ (content_faq_collapsible)
+  { id: 'comparison-table', label: 'Tableau Comparatif', icon: 'ri-table-line' },                    // 9. Tableau Comparatif
+  { id: 'clinical-section', label: 'Statistiques', icon: 'ri-donut-chart-fill' },                    // 10. Statistiques
+  { id: 'testimonials-marquee', label: 'Barre Horizontale', icon: 'ri-star-line' },                  // 11. Barre Horizontale (black bar)
+  { id: 'card-product', label: 'Card Product', icon: 'ri-image-2-line' },                            // 12. Card Product (img-with-txt en BAS)
+  { id: 'faqs', label: 'FAQ', icon: 'ri-question-answer-line' },                                     // 13. FAQ - dernier
 ];
 
 // Map sidebar section IDs to theme section types (matching Laravel sectionTypeMap exactly)
@@ -99,7 +101,8 @@ const SECTION_TYPE_MAP: Record<string, string> = {
   'clinical-section': 'pdp-statistics-column',        // Statistiques
   // Second Témoignages - black bar marquee (star icon)
   'testimonials-marquee': 'marquee',                  // Black bar scrolling text
-  'hero': 'img-with-txt',                             // Hero section
+  'hero': 'img-with-txt',                              // Hero section (Page Produit)
+  'hero-home': 'image-with-text',                      // Hero Home (Homepage - section en HAUT)
   'faqs': 'faq',                                      // FAQ section
   'faq': 'faq',
   'image-faq': 'image-faq',
@@ -111,7 +114,9 @@ const SECTION_TYPE_MAP: Record<string, string> = {
   'middle-page': 'header-with-marquee',
   'video-grid': 'video-gris-slider',
   'video-gris-slider': 'video-gris-slider',
-  'image-with-text': 'image-with-text',
+  'image-with-text': 'img-with-txt',                   // Section image with text générique (en BAS)
+  'card-product': 'img-with-txt',                      // Card Product (en BAS dans la page)
+  'image-faq': 'image-faq',                            // Image avec FAQ (content_faq_collapsible)
   'newsletter': 'custom-newsletter',
   
   // Other Sections
@@ -478,6 +483,78 @@ export default function AIShopEditorPage() {
         defaultContent.hidden_sections = (defaultContent.hidden_sections as string[]).filter(
           id => id !== 'product-information' && id !== 'featured-product'
         );
+      }
+      
+      // Initialize announcement bar text if not already set
+      if (!defaultContent.specialOffer) {
+        defaultContent.specialOffer = (aiContent.announcementText as string) || 
+                                       (aiContent.specialOffer as string) || 
+                                       'Free Shipping on orders over $50 | Fast worldwide delivery';
+      }
+      
+      // Initialize imageWithText for Hero Home section with existing AI content
+      // This ensures the form fields are pre-filled with generated content
+      const existingImageWithText = (aiContent.imageWithText as Record<string, string>) || {};
+      const features = (aiContent.features as string[]) || (aiContent.productFeatures as Array<{title?: string}>) || [];
+      const benefits = (aiContent.benefits as Array<{title?: string}>) || [];
+      
+      // Extract feature titles for tags
+      const getFeatureTitle = (item: unknown, index: number): string => {
+        if (typeof item === 'string') return item;
+        if (item && typeof item === 'object' && 'title' in item) return (item as {title: string}).title;
+        return '';
+      };
+      
+      defaultContent.imageWithText = {
+        // Use existing imageWithText values first, then fall back to AI-generated content
+        header: existingImageWithText.header || (aiContent.mainCatchyText as string) || (aiContent.header as string) || '',
+        text: existingImageWithText.text || (aiContent.subMainCatchyText as string) || (aiContent.description as string) || '',
+        buttonText: existingImageWithText.buttonText || (aiContent.ctaButtonText as string) || 'Shop All Products',
+        // Tags from features/benefits
+        tag1: existingImageWithText.tag1 || getFeatureTitle(features[0] || benefits[0], 0),
+        tag2: existingImageWithText.tag2 || getFeatureTitle(features[1] || benefits[1], 1),
+        tag3: existingImageWithText.tag3 || getFeatureTitle(features[2] || benefits[2], 2),
+        tag4: existingImageWithText.tag4 || getFeatureTitle(features[3] || benefits[3], 3),
+        tag5: existingImageWithText.tag5 || getFeatureTitle(features[4] || benefits[4], 4),
+        // Guarantees
+        guarantee1: existingImageWithText.guarantee1 || '30-Night Risk-Free',
+        guarantee2: existingImageWithText.guarantee2 || 'Free Shipping',
+        guarantee3: existingImageWithText.guarantee3 || 'Hassle-Free Returns',
+      };
+      
+      // Initialize imageFaq for Image avec FAQ section with existing AI content
+      const existingImageFaq = (aiContent.imageFaq as Record<string, unknown>) || {};
+      const existingFaqItems = (existingImageFaq.faqItems as Array<{ question: string; content: string }>) || [];
+      
+      // Use benefits as FAQ items if no faqItems exist
+      const faqFromBenefits = benefits.map((benefit: { title?: string; description?: string } | string, index: number) => {
+        if (typeof benefit === 'string') {
+          return { question: benefit, content: `Learn more about ${benefit}` };
+        }
+        return {
+          question: benefit.title || `Feature ${index + 1}`,
+          content: benefit.description || `Discover the benefits of this feature.`,
+        };
+      });
+      
+      defaultContent.imageFaq = {
+        heading: (existingImageFaq.heading as string) || 
+                 (aiContent.whatMakesUsDifferentHeading as string) || 
+                 (aiContent.featureHeader as string) || 
+                 'Everything You Need',
+        paragraph: (existingImageFaq.paragraph as string) || 
+                   (aiContent.whatMakesUsDifferentText as string) || 
+                   (aiContent.benefitsParagraph as string) || 
+                   (aiContent.subMainCatchyText as string) || 
+                   '',
+        faqItems: existingFaqItems.length > 0 ? existingFaqItems : faqFromBenefits.slice(0, 5),
+      };
+      
+      // Initialize imageFaqImage if not set
+      if (!defaultContent.imageFaqImage) {
+        defaultContent.imageFaqImage = (aiContent.imageFaqImage as string) || 
+                                        (aiContent.landingPageImage as string) ||
+                                        (aiContent.images && aiContent.images.length > 2 ? aiContent.images[2] : undefined);
       }
       
       setEditedContent(defaultContent);
@@ -2648,8 +2725,8 @@ export default function AIShopEditorPage() {
                     />
                   )}
 
-                  {/* Hero Section */}
-                  {activeSection === 'hero' && (
+                  {/* Hero Section (Page Produit) + Card Product (Homepage - uses same Hero data) */}
+                  {(activeSection === 'hero' || activeSection === 'card-product') && (
                     <HeroSection
                       content={editedContent as any}
                       updateField={updateField}
@@ -2721,8 +2798,8 @@ export default function AIShopEditorPage() {
                     />
                   )}
 
-                  {/* Image with Text Section */}
-                  {activeSection === 'image-with-text' && (
+                  {/* Hero Home Section (Homepage - section en HAUT, uses imageWithText data) */}
+                  {(activeSection === 'image-with-text' || activeSection === 'hero-home') && (
                     <ImageWithTextSection
                       content={editedContent as any}
                       updateField={updateField}
@@ -2805,6 +2882,40 @@ export default function AIShopEditorPage() {
                       successField={successField}
                       errorField={errorField}
                       images={allOriginalImages.length > 0 ? allOriginalImages : ((editedContent.images as string[]) || [])}
+                      onEditImage={(imageUrl) => {
+                        setAiEditorSelectedImage(imageUrl);
+                        setAiEditorIsUploadMode(false);
+                        setIsAIEditorOpen(true);
+                      }}
+                      onGenerateImage={() => {
+                        setAiEditorSelectedImage(null);
+                        setAiEditorIsUploadMode(true);
+                        setIsAIEditorOpen(true);
+                      }}
+                    />
+                  )}
+
+                  {/* Image with FAQ Section */}
+                  {activeSection === 'image-faq' && (
+                    <ImageFaqSection
+                      content={editedContent as any}
+                      updateField={updateField}
+                      updateNestedField={updateNestedField}
+                      regenerateField={regenerateField}
+                      regeneratingField={regeneratingField}
+                      successField={successField}
+                      errorField={errorField}
+                      images={allOriginalImages.length > 0 ? allOriginalImages : ((editedContent.images as string[]) || [])}
+                      onEditImage={(imageUrl) => {
+                        setAiEditorSelectedImage(imageUrl);
+                        setAiEditorIsUploadMode(false);
+                        setIsAIEditorOpen(true);
+                      }}
+                      onGenerateImage={() => {
+                        setAiEditorSelectedImage(null);
+                        setAiEditorIsUploadMode(true);
+                        setIsAIEditorOpen(true);
+                      }}
                     />
                   )}
                               </div>

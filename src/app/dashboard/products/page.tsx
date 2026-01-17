@@ -50,6 +50,7 @@ import {
 } from "@/components/filters";
 import { useProducts, ProductsFilters } from "@/lib/hooks/use-products";
 import ShopAnalyticsDrawer from "@/components/ShopAnalyticsDrawer";
+import DebugPanel from "@/components/DebugPanel";
 
 // Currency symbols mapping
 const CURRENCY_SYMBOLS: Record<string, string> = {
@@ -2192,6 +2193,17 @@ function ProductsContent() {
         shopId={analyticsShopId}
         shopUrl={analyticsShopUrl}
         shopName={analyticsShopName}
+      />
+
+      {/* Debug Panel - Only visible in development */}
+      <DebugPanel
+        type="products"
+        data={products}
+        pagination={pagination ? { ...pagination, hasMore: pagination.page < pagination.totalPages } : undefined}
+        filters={filters}
+        isLoading={false}
+        isFetching={isFetching}
+        error={error}
       />
     </>
   );

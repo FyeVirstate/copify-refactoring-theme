@@ -98,10 +98,13 @@ interface Comparison {
 /**
  * Normalize section type by removing unique suffixes
  * e.g., "timeline_points_kerHeV" -> "timeline-points"
+ * Only removes suffixes that look like random IDs (6+ chars with mixed case/numbers)
  */
 export function normalizeSectionType(sectionType: string): string {
-  // Remove unique suffix (e.g., timeline_points_kerHeV -> timeline_points)
-  const baseSectionType = sectionType.replace(/_[a-zA-Z0-9]+$/, '')
+  // Remove unique suffix ONLY if it looks like a random ID (6+ alphanumeric chars at end)
+  // e.g., timeline_points_kerHeV -> timeline_points
+  // But keep: image_with_text (don't remove _text)
+  const baseSectionType = sectionType.replace(/_[a-zA-Z0-9]{6,}$/, '')
   // Normalize to dashes (timeline_points -> timeline-points)
   return baseSectionType.replace(/_/g, '-')
 }
@@ -219,10 +222,12 @@ export function applyContentToSettings(
       color_scheme: 'scheme-3',
     },
     'image-with-text': {
-      heading: aiContent.mainCatchyText || imageWithText.header || aiContent.header || null,
-      text: aiContent.subMainCatchyText || imageWithText.text || null,
-      image: landingPageImage,
+      // HERO HOME (Homepage en HAUT) - uses imageWithText data
+      // Section settings
+      image: imageWithTextImage,
       color_scheme: 'scheme-1',
+      section_color_scheme: 'scheme-1',
+      // Block settings will be applied via block handling below
     },
     'timeline-points': {
       heading: formatTimelineHeading((timeline.heading as string) || (aiContent.timelineHeading as string) || 'Step Into Superior Comfort: Experience the difference'),
@@ -236,9 +241,17 @@ export function applyContentToSettings(
       color_scheme: 'scheme-1',
     },
     'image-faq': {
-      heading: formatWithSpan((aiContent.whatMakesUsDifferentHeading as string) || (aiContent.featureHeader as string) || 'What Makes Us Different', 1),
-      paragraph: (aiContent.whatMakesUsDifferentText as string) || (aiContent.benefitsParagraph as string) || null,
-      image: faqImage,
+      heading: formatWithSpan(
+        (aiContent.imageFaq as Record<string, unknown>)?.heading as string || 
+        (aiContent.whatMakesUsDifferentHeading as string) || 
+        (aiContent.featureHeader as string) || 
+        'What Makes Us Different', 
+        1
+      ),
+      paragraph: (aiContent.imageFaq as Record<string, unknown>)?.paragraph as string || 
+                 (aiContent.whatMakesUsDifferentText as string) || 
+                 (aiContent.benefitsParagraph as string) || null,
+      image: (aiContent.imageFaqImage as string) || faqImage,
       color_scheme: 'scheme-1',
     },
     'pdp-statistics-column': {
@@ -256,6 +269,11 @@ export function applyContentToSettings(
       image: landingPageImage,
       color_scheme: 'scheme-1',
       section_color_scheme: 'scheme-1',
+      // Video grid poster images (for 4 blocks)
+      video_review_poster_1: (aiContent.videoGridImages as string[])?.[0] || productImages[0] || null,
+      video_review_poster_2: (aiContent.videoGridImages as string[])?.[1] || productImages[1] || null,
+      video_review_poster_3: (aiContent.videoGridImages as string[])?.[2] || productImages[2] || null,
+      video_review_poster_4: (aiContent.videoGridImages as string[])?.[3] || productImages[3] || null,
     },
     'text-and-image': {
       heading: imageWithText.header || null,
@@ -282,7 +300,12 @@ export function applyContentToSettings(
       constrain_to_viewport: false,
     },
     'img-with-txt': {
-      heading: formatWithSpan((aiContent.mainCatchyText as string) || 'Transform Your Experience Today', 2),
+      // Hero (Page Produit) + Card Product (Homepage en BAS) - uses mainCatchyText (Hero data)
+      heading: formatWithSpan(
+        (aiContent.mainCatchyText as string) || 
+        'Transform Your Experience Today', 
+        2
+      ),
       text: aiContent.subMainCatchyText || null,
       image: landingPageImage,
       desktop_banner_fifty_img: landingPageImage,
@@ -299,7 +322,10 @@ export function applyContentToSettings(
     'header-with-marquee': {
       heading: persuasiveContent.header || (aiContent.header as string) || 'What Our Customers Say',
     },
-    'announcement-bar': {},
+    'announcement-bar': {
+      // Announcement bar text is also set in blocks, but set it here for settings-level access
+      text: (aiContent.specialOffer as string) || null,
+    },
     'product-reviews': {
       heading: 'Customers Love ' + storeName,
     },
@@ -376,6 +402,7 @@ export function applyContentToBlocks(
     comparison: 0,
     collapsible: 0,
     tableHeading: 0,
+    videoGridImage: 0,
   }
   
   for (const blockId of Object.keys(blocks)) {
@@ -527,19 +554,9 @@ export function applyContentToBlocks(
       })
     }
     
-    // === FAQ BLOCKS ===
-    if (normalizedType === 'image-faq' && blockType === 'faq') {
-      // image-faq uses benefits as accordion items
-      const benefitsList = benefits.length > 0 ? benefits : features
-      if (benefitsList[indexes.faq]) {
-        const b = benefitsList[indexes.faq]
-        const title = typeof b === 'string' ? b : (b.title || b.name || '')
-        const text = typeof b === 'string' ? '' : (b.text || b.description || '')
-        block.settings.question = title
-        block.settings.content = '<p>' + text + '</p>'
-        indexes.faq++
-      }
-    } else if ((blockType === 'faq' || blockType === 'text' || blockType === 'question') &&
+    // === FAQ BLOCKS (regular faq, not image-faq which is handled separately) ===
+    if ((blockType === 'faq' || blockType === 'text' || blockType === 'question') &&
+               normalizedType !== 'image-faq' &&
                ['faq', 'product-faq'].includes(normalizedType)) {
       if (faq[indexes.faq]) {
         const q = faq[indexes.faq]
@@ -781,7 +798,8 @@ export function applyContentToBlocks(
     }
     
     // === HEADING BLOCKS ===
-    if (blockType === 'heading') {
+    // SKIP image-with-text (Hero Home) - handled separately below
+    if (blockType === 'heading' && normalizedType !== 'image-with-text') {
       // Skip heading blocks for actual header/navbar sections - they should use store_name
       // IMPORTANT: Exclude header-with-marquee - that's a testimonials section!
       const isHeaderSection = (normalizedType === 'header' || normalizedType === 'navbar') && 
@@ -794,14 +812,6 @@ export function applyContentToBlocks(
         const imageWithText = (aiContent.imageWithText as Record<string, string>) || {}
         if (normalizedType.includes('text-and-image')) {
           block.settings.heading = imageWithText.header || (block.settings.heading as string) || ''
-        } else if (normalizedType.includes('image-with-text') || sectionType.includes('image_with_text')) {
-          let mainCatchy = (aiContent.mainCatchyText as string) || (aiContent.header as string) || ''
-          if (mainCatchy) {
-            if (!mainCatchy.includes('<strong>')) {
-              mainCatchy = '<strong>' + mainCatchy + '</strong>'
-            }
-            block.settings.heading = mainCatchy
-          }
         } else if (normalizedType.includes('rich-text')) {
           const newHeading = (aiContent.ctaHeading as string) || (aiContent.header as string) || (aiContent.mainCatchyText as string) || null
           if (newHeading) {
@@ -812,7 +822,8 @@ export function applyContentToBlocks(
     }
     
     // === TEXT BLOCKS ===
-    if (blockType === 'text' && !['faq', 'product-faq'].includes(normalizedType)) {
+    // SKIP image-with-text (Hero Home) - handled separately below
+    if (blockType === 'text' && !['faq', 'product-faq'].includes(normalizedType) && normalizedType !== 'image-with-text') {
       const imageWithText = (aiContent.imageWithText as Record<string, string>) || {}
       if (sectionType.includes('text-and-image')) {
         block.settings.text = '<p>' + (imageWithText.text || '') + '</p>'
@@ -825,10 +836,51 @@ export function applyContentToBlocks(
     }
     
     // === BUTTON BLOCKS (img-with-txt hero section) ===
-    if (blockType === 'button') {
+    // SKIP image-with-text (Hero Home) - handled separately below
+    if (blockType === 'button' && normalizedType !== 'image-with-text') {
       const heroButtonText = (aiContent.heroButtonText as string) || ''
       if (heroButtonText) {
         block.settings.text = heroButtonText
+      }
+    }
+    
+    // === IMAGE-WITH-TEXT (Hero Home) BLOCKS ===
+    if (normalizedType === 'image-with-text') {
+      const imageWithText = (aiContent.imageWithText as Record<string, string>) || {}
+      
+      // Ensure block.settings exists
+      if (!block.settings) {
+        block.settings = {}
+      }
+      
+      // Heading block
+      if (blockType === 'heading') {
+        const header = imageWithText.header || ''
+        // Format with span for highlighting (word 2)
+        block.settings.heading = header ? formatWithSpan(header, 2) : (block.settings.heading || '')
+      }
+      
+      // Text block
+      if (blockType === 'text') {
+        const text = imageWithText.text || ''
+        block.settings.text = text ? ('<p>' + text + '</p>') : (block.settings.text || '')
+      }
+      
+      // Benefit tags block
+      if (blockType === 'benefit_tags') {
+        block.settings.tag1 = imageWithText.tag1 || (block.settings.tag1 as string) || ''
+        block.settings.tag2 = imageWithText.tag2 || (block.settings.tag2 as string) || ''
+        block.settings.tag3 = imageWithText.tag3 || (block.settings.tag3 as string) || ''
+        block.settings.tag4 = imageWithText.tag4 || (block.settings.tag4 as string) || ''
+        block.settings.tag5 = imageWithText.tag5 || (block.settings.tag5 as string) || ''
+      }
+      
+      // Button block with guarantees
+      if (blockType === 'button') {
+        block.settings.button_label = imageWithText.buttonText || (block.settings.button_label as string) || 'Shop All Products'
+        block.settings.text_1 = imageWithText.guarantee1 || (block.settings.text_1 as string) || ''
+        block.settings.text_2 = imageWithText.guarantee2 || (block.settings.text_2 as string) || ''
+        block.settings.text_3 = imageWithText.guarantee3 || (block.settings.text_3 as string) || ''
       }
     }
     
@@ -839,6 +891,43 @@ export function applyContentToBlocks(
       }
       if (block.settings.text !== undefined) {
         block.settings.text = (aiContent.newsletterText as string) || (block.settings.text as string)
+      }
+    }
+    
+    // === VIDEO GRID IMAGE BLOCKS ===
+    if (normalizedType === 'video-gris-slider' && blockType === 'image') {
+      const videoGridImages = (aiContent.videoGridImages as string[]) || []
+      const productImages = (aiContent.images as string[]) || []
+      // Use videoGridImages index based on current image block index
+      if (videoGridImages[indexes.videoGridImage]) {
+        block.settings.image_file = videoGridImages[indexes.videoGridImage]
+      } else if (productImages[indexes.videoGridImage]) {
+        block.settings.image_file = productImages[indexes.videoGridImage]
+      }
+      indexes.videoGridImage = (indexes.videoGridImage || 0) + 1
+    }
+    
+    // === IMAGE-FAQ FAQ BLOCKS (using imageFaq.faqItems) ===
+    if (normalizedType === 'image-faq' && blockType === 'faq') {
+      const imageFaq = (aiContent.imageFaq as Record<string, unknown>) || {}
+      const imageFaqItems = (imageFaq.faqItems as Array<{ question: string; content: string }>) || []
+      // Try imageFaq.faqItems first, then fall back to benefits
+      if (imageFaqItems[indexes.faq]) {
+        const item = imageFaqItems[indexes.faq]
+        block.settings.question = item.question || ''
+        block.settings.content = '<p>' + (item.content || '') + '</p>'
+        indexes.faq++
+      } else {
+        // Fall back to benefits/features
+        const benefitsList = benefits.length > 0 ? benefits : features
+        if (benefitsList[indexes.faq]) {
+          const b = benefitsList[indexes.faq]
+          const title = typeof b === 'string' ? b : (b.title || b.name || '')
+          const text = typeof b === 'string' ? '' : (b.text || b.description || '')
+          block.settings.question = title
+          block.settings.content = '<p>' + text + '</p>'
+          indexes.faq++
+        }
       }
     }
   }

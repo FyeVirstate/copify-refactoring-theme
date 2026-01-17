@@ -16,6 +16,7 @@ export { ImageWithTextSection } from './ImageWithTextSection';
 export { FeaturedProductSection } from './FeaturedProductSection';
 export { AnnouncementBarSection } from './AnnouncementBarSection';
 export { VideoGridSection } from './VideoGridSection';
+export { ImageFaqSection } from './ImageFaqSection';
 
 export type { AIContent, SectionProps, InputFieldProps } from './types';
 
@@ -34,7 +35,8 @@ export type { AIContent, SectionProps, InputFieldProps } from './types';
  * _faq-section.blade.php             | FAQSection            | product-faqs
  * _comparison-section.blade.php      | ComparisonSection     | pdp-comparison
  * _timeline-section.blade.php        | TimelineSection       | custom-timeline
- * _image-with-text-section.blade.php | ImageWithTextSection  | image-with-text
- * _video-grid-section.blade.php      | VideoGridSection      | video-grid
+ * _image-with-text-section.blade.php | ImageWithTextSection  | img-with-txt (Header produit)
+ * _video-grid-section.blade.php      | VideoGridSection      | video-gris-slider
  * _announcement-bar-section.blade.php| AnnouncementBarSection| announcement-bar
+ * image-faq.liquid                   | ImageFaqSection       | image-faq
  */

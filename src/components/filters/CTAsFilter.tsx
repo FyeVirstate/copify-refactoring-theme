@@ -18,20 +18,23 @@ export default function CTAsFilter({
   onApply,
   isActive 
 }: CTAsFilterProps) {
+  // CTA values must match EXACTLY what's stored in the database
+  // These values come from the Laravel codebase (ads_filter_new.blade.php)
   const ctas = [
-    { id: "SHOP_NOW", label: "Shop Now" },
-    { id: "LEARN_MORE", label: "Learn More" },
-    { id: "BUY_NOW", label: "Buy Now" },
-    { id: "ORDER_NOW", label: "Order Now" },
-    { id: "GET_OFFER", label: "Get Offer" },
-    { id: "SIGN_UP", label: "Sign Up" },
-    { id: "DOWNLOAD", label: "Download" },
-    { id: "WATCH_MORE", label: "Watch More" },
-    { id: "CONTACT_US", label: "Contact Us" },
-    { id: "BOOK_NOW", label: "Book Now" },
-    { id: "GET_QUOTE", label: "Get Quote" },
-    { id: "SUBSCRIBE", label: "Subscribe" },
-    { id: "NO_BUTTON", label: "No Button" },
+    { id: "Shop Now", label: "Shop Now" },
+    { id: "Learn More", label: "Learn More" },
+    { id: "Buy Now", label: "Buy Now" },
+    { id: "Order Now", label: "Order Now" },
+    { id: "Get Offer", label: "Get Offer" },
+    { id: "Call Now", label: "Call Now" },
+    { id: "View product", label: "View Product" },
+    { id: "Sign Up", label: "Sign Up" },
+    { id: "Download", label: "Download" },
+    { id: "Watch More", label: "Watch More" },
+    { id: "Contact Us", label: "Contact Us" },
+    { id: "Book Now", label: "Book Now" },
+    { id: "Get Quote", label: "Get Quote" },
+    { id: "Subscribe", label: "Subscribe" },
   ];
 
   return (

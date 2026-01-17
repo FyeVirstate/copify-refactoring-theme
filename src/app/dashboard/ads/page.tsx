@@ -29,6 +29,7 @@ import {
   SocialNetworksFilter,
   ProductsFilter,
 } from "@/components/filters";
+import { getActiveAdsRangeFromScores } from "@/components/filters/PerformanceScoreFilter";
 import NicheDropdown from "@/components/NicheDropdown";
 import FilterDropdown, { FilterApplyButton } from "@/components/filters/FilterDropdown";
 import { useAds, AdsFilters } from "@/lib/hooks/use-ads";
@@ -45,6 +46,7 @@ import {
 } from "@/components/ui/dialog";
 import TutorialModal, { TUTORIAL_CONFIGS } from "@/components/TutorialModal";
 import ShopAnalyticsDrawer from "@/components/ShopAnalyticsDrawer";
+import DebugPanel from "@/components/DebugPanel";
 
 // Sort options for ads - "Pertinence" shows videos first then best scoring ads
 const SORT_OPTIONS = [
@@ -582,6 +584,7 @@ export default function AdsPage() {
   const [selectedMediaType, setSelectedMediaType] = useState("");
   const [minActiveAds, setMinActiveAds] = useState<number | undefined>();
   const [maxActiveAds, setMaxActiveAds] = useState<number | undefined>();
+  const [selectedPerformanceScores, setSelectedPerformanceScores] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState("recommended");
   
   // New filter states (from Top Boutiques/Produits)
@@ -633,8 +636,16 @@ export default function AdsPage() {
     if (selectedCTAs.length) f.ctas = selectedCTAs.join(',');
     if (selectedStatus !== 'all') f.status = selectedStatus;
     if (selectedMediaType) f.mediaType = selectedMediaType;
-    if (minActiveAds !== undefined) f.minActiveAds = minActiveAds;
-    if (maxActiveAds !== undefined) f.maxActiveAds = maxActiveAds;
+    
+    // Performance Score filter overrides minActiveAds/maxActiveAds
+    if (selectedPerformanceScores.length > 0) {
+      const scoreRange = getActiveAdsRangeFromScores(selectedPerformanceScores);
+      if (scoreRange.min !== undefined) f.minActiveAds = scoreRange.min;
+      if (scoreRange.max !== undefined) f.maxActiveAds = scoreRange.max;
+    } else {
+      if (minActiveAds !== undefined) f.minActiveAds = minActiveAds;
+      if (maxActiveAds !== undefined) f.maxActiveAds = maxActiveAds;
+    }
     if (euTransparency) f.euTransparency = true;
     
     if (minTraffic !== undefined) f.minVisits = minTraffic;
@@ -665,7 +676,7 @@ export default function AdsPage() {
     
     return f;
   }, [sortBy, sortOrder, appliedSearchText, selectedCountries, selectedNiches, selectedCTAs, 
-      selectedStatus, selectedMediaType, minActiveAds, maxActiveAds, euTransparency,
+      selectedStatus, selectedMediaType, minActiveAds, maxActiveAds, selectedPerformanceScores, euTransparency,
       minTraffic, maxTraffic, minTrafficGrowth, maxTrafficGrowth, minRevenue, maxRevenue,
       minOrders, maxOrders, shopCreationDate, selectedCurrencies, selectedPixels,
       selectedOrigins, selectedLanguages, selectedDomains, minTrustpilotRating,
@@ -712,7 +723,7 @@ export default function AdsPage() {
     try {
       const filtersToSave = {
         selectedCountries, selectedNiches, selectedCTAs, selectedStatus, selectedMediaType,
-        minActiveAds, maxActiveAds, euTransparency, sortBy, sortOrder,
+        minActiveAds, maxActiveAds, selectedPerformanceScores, euTransparency, sortBy, sortOrder,
         minTraffic, maxTraffic, minTrafficGrowth, maxTrafficGrowth, minRevenue, maxRevenue,
         minOrders, maxOrders, shopCreationDate, selectedCurrencies, selectedPixels,
         selectedOrigins, selectedLanguages, selectedDomains, minTrustpilotRating,
@@ -778,6 +789,7 @@ export default function AdsPage() {
     setSelectedMediaType((filters.selectedMediaType as string) || "");
     setMinActiveAds(filters.minActiveAds as number | undefined);
     setMaxActiveAds(filters.maxActiveAds as number | undefined);
+    setSelectedPerformanceScores((filters.selectedPerformanceScores as string[]) || []);
     setEuTransparency((filters.euTransparency as boolean) || false);
     setSortBy((filters.sortBy as string) || "recommended");
     setSortOrder((filters.sortOrder as 'desc' | 'asc') || 'desc');
@@ -925,6 +937,7 @@ export default function AdsPage() {
     setSelectedMediaType("");
     setMinActiveAds(undefined);
     setMaxActiveAds(undefined);
+    setSelectedPerformanceScores([]);
     setSortBy("recommended");
     setSortOrder("desc");
     setActivePreset("");
@@ -1239,7 +1252,13 @@ export default function AdsPage() {
             <p className="text-uppercase fs-xs text-light-gray fw-500 mb-2 mt-1">FILTRES</p>
             <div className="filters-grid mb-3">
               {/* Filtres spécifiques aux publicités */}
-              <PerformanceScoreFilter onOpenChange={() => {}} onApply={handleApplyFilters} isActive={false} />
+              <PerformanceScoreFilter 
+                selectedScores={selectedPerformanceScores} 
+                onScoresChange={setSelectedPerformanceScores} 
+                onOpenChange={() => {}} 
+                onApply={handleApplyFilters} 
+                isActive={selectedPerformanceScores.length > 0} 
+              />
               <CTAsFilter selectedCTAs={selectedCTAs} onCTAsChange={setSelectedCTAs} onOpenChange={() => {}} onApply={handleApplyFilters} isActive={selectedCTAs.length > 0} />
               
               {/* Type de média - Radio style */}
@@ -2002,6 +2021,17 @@ export default function AdsPage() {
         shopId={analyticsShopId}
         shopUrl={analyticsShopUrl}
         shopName={analyticsShopName}
+      />
+
+      {/* Debug Panel - Only visible in development */}
+      <DebugPanel
+        type="ads"
+        data={ads}
+        pagination={pagination}
+        filters={filters}
+        isLoading={isLoading}
+        isFetching={isFetching}
+        error={error}
       />
     </>
   );

@@ -175,19 +175,29 @@ async function fetchFromDataHubApi(productId: string): Promise<AliExpressProduct
     console.log('[ALIEXPRESS API V6] ========================================\n');
 
     // Extract prices with detailed logging
-    console.log('[ALIEXPRESS API V6] Now extracting MAIN PRICE...');
-    const mainPrice1 = extractPrice(item.sku?.def?.price, true, 'V6-sku.def.price');
-    const mainPrice2 = extractPrice(item.price, true, 'V6-item.price');
-    const finalMainPrice = mainPrice1 || mainPrice2 || 0;
+    // PRIORITY: Use PROMOTION price (discounted/sale price) as base, take FIRST value, multiply by 3
+    console.log('[ALIEXPRESS API V6] Now extracting PROMOTION PRICE (priority)...');
+    const promoPrice = extractPrice(item.sku?.def?.promotionPrice, true, 'V6-sku.def.promotionPrice');
+    console.log('[ALIEXPRESS API V6] Promotion price extracted:', promoPrice);
     
-    console.log('[ALIEXPRESS API V6] Now extracting ORIGINAL PRICE...');
-    const origPrice1 = extractPrice(item.sku?.def?.promotionPrice, true, 'V6-sku.def.promotionPrice');
-    const origPrice2 = extractPrice(item.originalPrice, true, 'V6-item.originalPrice');
-    const finalOrigPrice = origPrice1 || origPrice2 || 0;
+    console.log('[ALIEXPRESS API V6] Now extracting REGULAR PRICE (fallback)...');
+    const regularPrice1 = extractPrice(item.sku?.def?.price, true, 'V6-sku.def.price');
+    const regularPrice2 = extractPrice(item.price, true, 'V6-item.price');
+    const regularPrice = regularPrice1 || regularPrice2 || 0;
+    console.log('[ALIEXPRESS API V6] Regular price extracted:', regularPrice);
+    
+    // Use PROMOTION price first (if available), otherwise regular price
+    // Take FIRST value from range (takeMin=true) and multiply by 3
+    const basePrice = promoPrice > 0 ? promoPrice : regularPrice;
+    const retailPrice = Math.round(basePrice * 3 * 100) / 100; // x3 and round to 2 decimals
+    
+    // Original price (compare at) = regular price × 3 (or higher for better discount display)
+    const compareAtPrice = regularPrice > 0 ? Math.round(regularPrice * 3.5 * 100) / 100 : Math.round(retailPrice * 1.3 * 100) / 100;
     
     console.log('\n[ALIEXPRESS API V6] ===== FINAL PRICES =====');
-    console.log('[ALIEXPRESS API V6] Main Price (will be used for x3 calculation):', finalMainPrice);
-    console.log('[ALIEXPRESS API V6] Original Price (compare at):', finalOrigPrice);
+    console.log('[ALIEXPRESS API V6] Base AliExpress Price (promotion or regular):', basePrice);
+    console.log('[ALIEXPRESS API V6] Retail Price (base × 3):', retailPrice);
+    console.log('[ALIEXPRESS API V6] Compare At Price (for strikethrough):', compareAtPrice);
     console.log('[ALIEXPRESS API V6] Currency:', item.currency || 'USD');
     console.log('[ALIEXPRESS API V6] ===========================\n');
 
@@ -197,8 +207,8 @@ async function fetchFromDataHubApi(productId: string): Promise<AliExpressProduct
         html: item.description?.html || item.descriptionHtml || '',
         images: item.description?.images || item.descriptionImages || [],
       },
-      price: finalMainPrice,
-      originalPrice: finalOrigPrice,
+      price: retailPrice,
+      originalPrice: compareAtPrice,
       currency: item.currency || 'USD',
       images: (item.images || []).map(normalizeImageUrl),
       categories: item.categories || [],
@@ -254,18 +264,29 @@ async function fetchFromDataHubApiV2(productId: string): Promise<AliExpressProdu
     console.log('[ALIEXPRESS API V2] ========================================\n');
 
     // Extract prices with detailed logging
-    console.log('[ALIEXPRESS API V2] Now extracting MAIN PRICE...');
-    const mainPrice1 = extractPrice(item.sku?.def?.price, true, 'V2-sku.def.price');
-    const mainPrice2 = extractPrice(item.price, true, 'V2-item.price');
-    const finalMainPrice = mainPrice1 || mainPrice2 || 0;
+    // PRIORITY: Use PROMOTION price (discounted/sale price) as base, take FIRST value, multiply by 3
+    console.log('[ALIEXPRESS API V2] Now extracting PROMOTION PRICE (priority)...');
+    const promoPrice = extractPrice(item.sku?.def?.promotionPrice, true, 'V2-sku.def.promotionPrice');
+    console.log('[ALIEXPRESS API V2] Promotion price extracted:', promoPrice);
     
-    console.log('[ALIEXPRESS API V2] Now extracting ORIGINAL PRICE...');
-    const origPrice1 = extractPrice(item.sku?.def?.promotionPrice, true, 'V2-sku.def.promotionPrice');
-    const finalOrigPrice = origPrice1 || 0;
+    console.log('[ALIEXPRESS API V2] Now extracting REGULAR PRICE (fallback)...');
+    const regularPrice1 = extractPrice(item.sku?.def?.price, true, 'V2-sku.def.price');
+    const regularPrice2 = extractPrice(item.price, true, 'V2-item.price');
+    const regularPrice = regularPrice1 || regularPrice2 || 0;
+    console.log('[ALIEXPRESS API V2] Regular price extracted:', regularPrice);
+    
+    // Use PROMOTION price first (if available), otherwise regular price
+    // Take FIRST value from range (takeMin=true) and multiply by 3
+    const basePrice = promoPrice > 0 ? promoPrice : regularPrice;
+    const retailPrice = Math.round(basePrice * 3 * 100) / 100; // x3 and round to 2 decimals
+    
+    // Original price (compare at) = regular price × 3.5 (or higher for better discount display)
+    const compareAtPrice = regularPrice > 0 ? Math.round(regularPrice * 3.5 * 100) / 100 : Math.round(retailPrice * 1.3 * 100) / 100;
     
     console.log('\n[ALIEXPRESS API V2] ===== FINAL PRICES =====');
-    console.log('[ALIEXPRESS API V2] Main Price (will be used for x3 calculation):', finalMainPrice);
-    console.log('[ALIEXPRESS API V2] Original Price (compare at):', finalOrigPrice);
+    console.log('[ALIEXPRESS API V2] Base AliExpress Price (promotion or regular):', basePrice);
+    console.log('[ALIEXPRESS API V2] Retail Price (base × 3):', retailPrice);
+    console.log('[ALIEXPRESS API V2] Compare At Price (for strikethrough):', compareAtPrice);
     console.log('[ALIEXPRESS API V2] Currency:', item.currency || 'USD');
     console.log('[ALIEXPRESS API V2] ===========================\n');
 
@@ -275,8 +296,8 @@ async function fetchFromDataHubApiV2(productId: string): Promise<AliExpressProdu
         html: item.description?.html || '',
         images: item.description?.images || [],
       },
-      price: finalMainPrice,
-      originalPrice: finalOrigPrice,
+      price: retailPrice,
+      originalPrice: compareAtPrice,
       currency: item.currency || 'USD',
       images: (item.images || []).map(normalizeImageUrl),
       categories: item.categories || [],
@@ -331,18 +352,30 @@ async function fetchFromTrueApi(productId: string): Promise<AliExpressProductDat
     console.log('[ALIEXPRESS TRUE API] ========================================\n');
 
     // Extract prices with detailed logging
-    console.log('[ALIEXPRESS TRUE API] Now extracting MAIN PRICE...');
-    const mainPrice1 = extractPrice(product.sale_price, true, 'TrueAPI-sale_price');
-    const mainPrice2 = extractPrice(product.price, true, 'TrueAPI-price');
-    const finalMainPrice = mainPrice1 || mainPrice2 || 0;
+    // PRIORITY: Use SALE price (discounted price) as base, take FIRST value, multiply by 3
+    console.log('[ALIEXPRESS TRUE API] Now extracting SALE PRICE (priority)...');
+    const salePrice = extractPrice(product.sale_price, true, 'TrueAPI-sale_price');
+    console.log('[ALIEXPRESS TRUE API] Sale price extracted:', salePrice);
     
-    console.log('[ALIEXPRESS TRUE API] Now extracting ORIGINAL PRICE...');
-    const origPrice = extractPrice(product.original_price, true, 'TrueAPI-original_price');
-    const finalOrigPrice = origPrice || 0;
+    console.log('[ALIEXPRESS TRUE API] Now extracting REGULAR PRICE (fallback)...');
+    const regularPrice = extractPrice(product.price, true, 'TrueAPI-price');
+    const originalPrice = extractPrice(product.original_price, true, 'TrueAPI-original_price');
+    console.log('[ALIEXPRESS TRUE API] Regular price extracted:', regularPrice);
+    console.log('[ALIEXPRESS TRUE API] Original price extracted:', originalPrice);
+    
+    // Use SALE price first (if available), otherwise regular price
+    // Take FIRST value from range (takeMin=true) and multiply by 3
+    const basePrice = salePrice > 0 ? salePrice : (regularPrice > 0 ? regularPrice : originalPrice);
+    const retailPrice = Math.round(basePrice * 3 * 100) / 100; // x3 and round to 2 decimals
+    
+    // Original price (compare at) = original/regular price × 3.5 (or higher for better discount display)
+    const higherPrice = originalPrice > 0 ? originalPrice : regularPrice;
+    const compareAtPrice = higherPrice > 0 ? Math.round(higherPrice * 3.5 * 100) / 100 : Math.round(retailPrice * 1.3 * 100) / 100;
     
     console.log('\n[ALIEXPRESS TRUE API] ===== FINAL PRICES =====');
-    console.log('[ALIEXPRESS TRUE API] Main Price (will be used for x3 calculation):', finalMainPrice);
-    console.log('[ALIEXPRESS TRUE API] Original Price (compare at):', finalOrigPrice);
+    console.log('[ALIEXPRESS TRUE API] Base AliExpress Price (sale or regular):', basePrice);
+    console.log('[ALIEXPRESS TRUE API] Retail Price (base × 3):', retailPrice);
+    console.log('[ALIEXPRESS TRUE API] Compare At Price (for strikethrough):', compareAtPrice);
     console.log('[ALIEXPRESS TRUE API] Currency:', product.currency || 'EUR');
     console.log('[ALIEXPRESS TRUE API] ===========================\n');
 
@@ -352,8 +385,8 @@ async function fetchFromTrueApi(productId: string): Promise<AliExpressProductDat
         html: product.description || '',
         images: product.description_images || [],
       },
-      price: finalMainPrice,
-      originalPrice: finalOrigPrice,
+      price: retailPrice,
+      originalPrice: compareAtPrice,
       currency: product.currency || 'EUR',
       images: (product.images || []).map(normalizeImageUrl),
       categories: product.categories?.map((c: string) => ({ name: c })) || [],
@@ -397,8 +430,8 @@ export async function fetchAliExpressProduct(productIdOrUrl: string): Promise<Al
   if (result) {
     console.log('\n[ALIEXPRESS FETCH] ===== FINAL RESULT FROM API V6 =====');
     console.log('[ALIEXPRESS FETCH] Title:', result.title);
-    console.log('[ALIEXPRESS FETCH] PRICE:', result.price, result.currency);
-    console.log('[ALIEXPRESS FETCH] ORIGINAL PRICE:', result.originalPrice, result.currency);
+    console.log('[ALIEXPRESS FETCH] RETAIL PRICE (promo × 3):', result.price, result.currency);
+    console.log('[ALIEXPRESS FETCH] COMPARE AT PRICE (strikethrough):', result.originalPrice, result.currency);
     console.log('[ALIEXPRESS FETCH] ========================================\n');
     return result;
   }
@@ -409,8 +442,8 @@ export async function fetchAliExpressProduct(productIdOrUrl: string): Promise<Al
   if (result) {
     console.log('\n[ALIEXPRESS FETCH] ===== FINAL RESULT FROM API V2 =====');
     console.log('[ALIEXPRESS FETCH] Title:', result.title);
-    console.log('[ALIEXPRESS FETCH] PRICE:', result.price, result.currency);
-    console.log('[ALIEXPRESS FETCH] ORIGINAL PRICE:', result.originalPrice, result.currency);
+    console.log('[ALIEXPRESS FETCH] RETAIL PRICE (promo × 3):', result.price, result.currency);
+    console.log('[ALIEXPRESS FETCH] COMPARE AT PRICE (strikethrough):', result.originalPrice, result.currency);
     console.log('[ALIEXPRESS FETCH] ========================================\n');
     return result;
   }
@@ -421,8 +454,8 @@ export async function fetchAliExpressProduct(productIdOrUrl: string): Promise<Al
   if (result) {
     console.log('\n[ALIEXPRESS FETCH] ===== FINAL RESULT FROM TRUE API =====');
     console.log('[ALIEXPRESS FETCH] Title:', result.title);
-    console.log('[ALIEXPRESS FETCH] PRICE:', result.price, result.currency);
-    console.log('[ALIEXPRESS FETCH] ORIGINAL PRICE:', result.originalPrice, result.currency);
+    console.log('[ALIEXPRESS FETCH] RETAIL PRICE (promo × 3):', result.price, result.currency);
+    console.log('[ALIEXPRESS FETCH] COMPARE AT PRICE (strikethrough):', result.originalPrice, result.currency);
     console.log('[ALIEXPRESS FETCH] ========================================\n');
     return result;
   }

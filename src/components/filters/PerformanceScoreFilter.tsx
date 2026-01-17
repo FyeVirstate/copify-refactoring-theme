@@ -1,22 +1,64 @@
 "use client";
 
-import { useState } from "react";
 import FilterDropdown, { FilterApplyButton } from "./FilterDropdown";
 
+// Score levels mapped to active ads count ranges
+// This is a reasonable proxy: more active ads = better performing shop
+export const SCORE_RANGES: Record<string, { min: number; max?: number }> = {
+  "5-stars": { min: 100 },      // 100+ active ads
+  "4-stars": { min: 50, max: 99 },  // 50-99 active ads
+  "3-stars": { min: 20, max: 49 },  // 20-49 active ads
+  "2-stars": { min: 10, max: 19 },  // 10-19 active ads
+  "1-star": { min: 1, max: 9 },     // 1-9 active ads
+};
+
+// Helper function to convert scores to active ads filter range
+export function getActiveAdsRangeFromScores(scores: string[]): { min?: number; max?: number } {
+  if (scores.length === 0) return {};
+  
+  let min: number | undefined = undefined;
+  let max: number | undefined = undefined;
+  
+  for (const score of scores) {
+    const range = SCORE_RANGES[score];
+    if (range) {
+      if (min === undefined || range.min < min) {
+        min = range.min;
+      }
+      if (range.max !== undefined) {
+        if (max === undefined || range.max > max) {
+          max = range.max;
+        }
+      } else {
+        max = undefined; // If any score has no max, remove the upper bound
+      }
+    }
+  }
+  
+  return { min, max };
+}
+
 interface PerformanceScoreFilterProps {
+  selectedScores: string[];
+  onScoresChange: (scores: string[]) => void;
   onOpenChange?: (open: boolean) => void;
   onApply?: () => void;
   isActive?: boolean;
 }
 
-export default function PerformanceScoreFilter({ onOpenChange, onApply, isActive }: PerformanceScoreFilterProps) {
-  const [selectedScores, setSelectedScores] = useState<string[]>([]);
+export default function PerformanceScoreFilter({ 
+  selectedScores, 
+  onScoresChange,
+  onOpenChange, 
+  onApply, 
+  isActive 
+}: PerformanceScoreFilterProps) {
 
   const handleToggle = (scoreId: string) => {
     if (selectedScores.includes(scoreId)) {
-      setSelectedScores(selectedScores.filter(id => id !== scoreId));
+      onScoresChange(selectedScores.filter(id => id !== scoreId));
     } else {
-      setSelectedScores([...selectedScores, scoreId]);
+      onScoresChange([...selectedScores, scoreId]);
     }
   };
 

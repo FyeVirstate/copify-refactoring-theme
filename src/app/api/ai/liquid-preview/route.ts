@@ -538,12 +538,90 @@ div.color-scheme-3 {
     color: rgb(var(--color-foreground)) !important;
 }
 
-/* Announcement bar */
+/* Announcement bar - ALL TEXT WHITE */
 .announcement-bar-section,
 .announcement-bar,
 .utility-bar {
     background-color: rgb(var(--color-background)) !important;
-    color: rgb(var(--color-foreground)) !important;
+    color: #ffffff !important;
+}
+.announcement-bar-section *,
+.announcement-bar *,
+.utility-bar *,
+.announcement-bar__message,
+.announcement-bar__announcement,
+.announcement-bar a,
+.announcement-bar span,
+.announcement-bar p,
+.announcement-bar div {
+    color: #ffffff !important;
+}
+/* Announcement bar SVG icons (< > carets) - ALL WHITE */
+.announcement-bar svg,
+.announcement-bar .svg-wrapper,
+.announcement-bar .svg-wrapper svg,
+.announcement-bar .icon-caret,
+.announcement-bar-section svg,
+.announcement-bar-section .svg-wrapper,
+.announcement-bar-section .svg-wrapper svg,
+.announcement-bar-section .icon-caret,
+.utility-bar svg,
+.utility-bar .svg-wrapper,
+.utility-bar .svg-wrapper svg,
+.utility-bar .icon-caret,
+.announcement-bar-slider svg,
+.announcement-bar-slider .svg-wrapper,
+.announcement-bar-slider .svg-wrapper svg,
+.announcement-bar-utility svg,
+.announcement-bar-utility .svg-wrapper,
+.announcement-bar-utility .svg-wrapper svg,
+.slider-button--prev svg,
+.slider-button--prev .svg-wrapper,
+.slider-button--prev .svg-wrapper svg,
+.slider-button--next svg,
+.slider-button--next .svg-wrapper,
+.slider-button--next .svg-wrapper svg,
+.announcement-bar .slider-button svg,
+.announcement-bar .slider-button .svg-wrapper svg,
+.announcement-bar-section .slider-button svg,
+.announcement-bar-section .slider-button .svg-wrapper svg {
+    fill: #ffffff !important;
+    stroke: #ffffff !important;
+    color: #ffffff !important;
+}
+.announcement-bar svg path,
+.announcement-bar-section svg path,
+.announcement-bar-slider svg path,
+.announcement-bar-utility svg path,
+.slider-button--prev svg path,
+.slider-button--next svg path,
+.announcement-bar .slider-button svg path {
+    fill: #ffffff !important;
+    stroke: #ffffff !important;
+}
+/* FORCE ALL SVGs in announcement bar to be white - nuclear option */
+[class*="announcement"] svg,
+[class*="announcement"] svg *,
+[class*="announcement"] .svg-wrapper,
+[class*="announcement"] .svg-wrapper *,
+[id*="announcement"] svg,
+[id*="announcement"] svg *,
+section[id*="announcement"] svg,
+section[id*="announcement"] svg *,
+section[id*="announcement"] .slider-button,
+section[id*="announcement"] .slider-button svg,
+section[id*="announcement"] .slider-button svg *,
+section[id*="announcement"] button svg,
+section[id*="announcement"] button svg * {
+    fill: #ffffff !important;
+    stroke: #ffffff !important;
+    color: #ffffff !important;
+}
+/* SVG filter fallback for stubborn icons */
+[class*="announcement"] svg,
+[id*="announcement"] svg,
+section[id*="announcement"] svg {
+    filter: brightness(0) invert(1) !important;
 }
 
 /* Links and highlights */
@@ -1518,10 +1596,12 @@ const FRONTEND_TO_TEMPLATE_TYPE_MAP: Record<string, string[]> = {
   'clinical-section': ['pdp-statistics-column', 'statistics'],
   // Second "Témoignages" - black bar marquee
   'testimonials-marquee': ['marquee'],
-  'hero': ['img-with-txt', 'image-with-text', 'hero'],
-  'faqs': ['faq', 'image-faq'],
-  'faq': ['faq', 'image-faq'],
-  'image-faq': ['image-faq', 'faq'],
+  'hero': ['img-with-txt'],  // Hero (Page Produit) = img-with-txt
+  'hero-home': ['image-with-text'],  // Hero Home (Homepage) = image-with-text (section en HAUT)
+  'img-with-txt': ['img-with-txt'],  // Direct mapping
+  'faqs': ['faq'],
+  'faq': ['faq'],
+  'image-faq': ['image-faq'],  // Image avec FAQ - séparé du FAQ normal
   'product-section': ['product-section-1', 'product-section'],
   // Homepage Sections
   'testimonials': ['header-with-marquee'],
@@ -1529,7 +1609,8 @@ const FRONTEND_TO_TEMPLATE_TYPE_MAP: Record<string, string[]> = {
   'middle-page': ['header-with-marquee'],
   'video-grid': ['video-gris-slider', 'video-grid'],
   'video-gris-slider': ['video-gris-slider'],
-  'image-with-text': ['image-with-text'],
+  'image-with-text': ['image-with-text'],                   // Pour le hover direct
+  'card-product': ['img-with-txt'],                         // Card Product (section en BAS de la page)
   'newsletter': ['custom-newsletter', 'newsletter'],
   // Other Sections
   'images': ['product-images'],
@@ -1754,7 +1835,7 @@ function generateWysiwygScript(): string {
     'product-section-1': '[data-section-type="product-section-1"], .product-section-1, section[id*="product-section"], section[id*="product_section"]',
     'pdp-benefits': '[data-section-type="pdp-benefits"], .pdp-benefits, .pdp_benefits_mainwrapper, section[id*="pdp_benefits"], section[id*="pdp-benefits"]',
     'pdp-statistics-column': '[data-section-type="pdp-statistics-column"], .pdp-statistics, .pdp_statistics__column_mainwrapper, section[id*="pdp_statistics"], section[id*="clinical"]',
-    'image-faq': '[data-section-type="image-faq"], .image-faq, .image_faq_mainwrapper, section[id*="image_faq"], section[id*="image-faq"]',
+    'image-faq': '[data-section-type="image-faq"], .image-faq, .image_faq_mainwrapper, .with_faq_mgtxt, .image_with_text__wrapper.with_faq_mgtxt, [class*="img-faq-"], section[id*="image_faq"], section[id*="image-faq"]',
     'faq': '[data-section-type="faq"], .faq-wp, [class*="faq-wp-faq"], section[id*="faq_"]:not([id*="image_faq"])',
     'pdp-comparison-table': '[data-section-type="pdp-comparison-table"], .pdp-comparison-table, .pdp_comparison_table_mainwrapper, section[id*="comparison"], section[id*="pdp_comparison"]',
     
@@ -1768,10 +1849,12 @@ function generateWysiwygScript(): string {
     'marquee': '[data-section-type="marquee"], .squeeze_scroller_main, .squeeze_scroller_data, [id^="shopify-section-marquee_"], section[id^="marquee_"]',
     
     // Homepage Sections  
-    'img-with-txt': '[data-section-type="img-with-txt"], .img-with-txt, .shopall-img_with_txt, section[id*="img-with-txt"], section[id*="img_with_txt"]',
+    // Hero (img-with-txt) - section en HAUT avec mgtxt__title 
+    'img-with-txt': '[data-section-type="img-with-txt"]',
     'timeline-points': '[data-section-type="timeline-points"], .timeline-points, .timeline__main__wrapper, section[id*="timeline"]',
     'video-gris-slider': '[data-section-type="video-gris-slider"], .video-gris-slider, section[id*="video"]',
-    'image-with-text': '[data-section-type="image-with-text"], .image-with-text, .image_with_text__wrapper, section[id*="image-with-text"]',
+    // Card Product (image-with-text) - section en BAS 
+    'image-with-text': '[data-section-type="image-with-text"]',
     
     // Other Sections
     'announcement-bar': '[data-section-type="announcement-bar"], .announcement-bar, .utility-bar, section[id*="announcement"]',
@@ -1845,8 +1928,36 @@ function generateWysiwygScript(): string {
     // NOTE: header-with-marquee is now handled at the top with the correct selectors
     // (scrolling__card_marquee = testimonial cards, NOT squeeze_scroller which is the black bar)
     
-    // Special handling for FAQ to find store-faq-section
-    if (sectionType === 'faq' || sectionType === 'image-faq') {
+    // Special handling for IMAGE-FAQ (Image avec FAQ) - MUST be before regular FAQ
+    if (sectionType === 'image-faq') {
+      // Try with_faq_mgtxt class first (most specific for image-faq)
+      var imgFaqEl = document.querySelector('.image_with_text__wrapper.with_faq_mgtxt');
+      if (imgFaqEl) {
+        console.log('[WYSIWYG] Found image-faq by with_faq_mgtxt');
+        return imgFaqEl;
+      }
+      // Try img-faq class pattern
+      imgFaqEl = document.querySelector('[class*="img-faq-"]');
+      if (imgFaqEl) {
+        console.log('[WYSIWYG] Found image-faq by img-faq- pattern');
+        return imgFaqEl;
+      }
+      // Try section with image_faq in id
+      imgFaqEl = document.querySelector('section[id*="image_faq"]');
+      if (imgFaqEl) {
+        console.log('[WYSIWYG] Found image-faq by section id');
+        return imgFaqEl;
+      }
+      // Try data-section-type
+      imgFaqEl = document.querySelector('[data-section-type="image-faq"]');
+      if (imgFaqEl) {
+        console.log('[WYSIWYG] Found image-faq by data-section-type');
+        return imgFaqEl;
+      }
+    }
+    
+    // Special handling for regular FAQ (not image-faq)
+    if (sectionType === 'faq') {
       // Try store-faq-section first (most specific)
       var faqEl = document.querySelector('.store-faq-section');
       if (faqEl) {

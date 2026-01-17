@@ -357,16 +357,45 @@ export async function GET(request: NextRequest) {
     }
     
     // Categories/Niche filter (via shops_categories join)
+    // Frontend sends category NAMES (e.g., "Health", "Beauty & Fitness"), not IDs
+    // Lookup category IDs first using Prisma (same approach as shops API)
+    let categoryCondition = ''
     if (categories.length > 0) {
-      const categoryPlaceholders = categories.map((_, i) => `$${paramIndex + i}`).join(', ')
-      shopsConditions.push(`EXISTS (
-        SELECT 1 FROM shops_categories sc 
-        JOIN categories c ON sc.category_id = c.id 
-        WHERE sc.shop_id = s.id 
-        AND (c.id::text IN (${categoryPlaceholders}) OR c.parent_id::text IN (${categoryPlaceholders}))
-      )`)
-      params.push(...categories, ...categories)
-      paramIndex += categories.length * 2
+      console.log(`[Ads API] Category filter requested: ${categories.join(', ')}`)
+      
+      const allCategories = await prisma.category.findMany({
+        select: { id: true, name: true, parentId: true }
+      })
+      
+      type CategoryName = { en?: string; fr?: string; [key: string]: string | undefined }
+      
+      const matchingCategoryIds = allCategories
+        .filter(cat => {
+          const nameObj = cat.name as CategoryName | null
+          return categories.some(name => 
+            nameObj?.en?.toLowerCase().includes(name.toLowerCase()) ||
+            nameObj?.fr?.toLowerCase().includes(name.toLowerCase())
+          )
+        })
+        .map(c => Number(c.id))
+      
+      // Also include child categories if parent is selected
+      const childCategoryIds = allCategories
+        .filter(cat => cat.parentId && matchingCategoryIds.includes(Number(cat.parentId)))
+        .map(c => Number(c.id))
+      
+      const allMatchingIds = [...new Set([...matchingCategoryIds, ...childCategoryIds])]
+      
+      console.log(`[Ads API] Matching category IDs: ${allMatchingIds.join(', ')}`)
+      
+      if (allMatchingIds.length > 0) {
+        categoryCondition = `EXISTS (
+          SELECT 1 FROM shops_categories sc 
+          WHERE sc.shop_id = s.id 
+          AND sc.category_id IN (${allMatchingIds.join(', ')})
+        )`
+        shopsConditions.push(categoryCondition)
+      }
     }
     
     // Social Networks filter (social column in traffic table - JSONB)
@@ -400,21 +429,22 @@ export async function GET(request: NextRequest) {
     }
     
     // EU Transparency filter - filter ads with EU targeting data
+    // Note: eu_total_reach is in the facebook_ads table (not ads or ad_analytics)
+    // facebook_ads has 64K records with eu_total_reach data
+    // ad_analytics only has 159K records total vs 7M ads
     if (euTransparency) {
-      adsConditions.push(`a.eu_total_reach IS NOT NULL AND a.eu_total_reach > 0`)
+      adsConditions.push(`EXISTS (
+        SELECT 1 FROM facebook_ads fa 
+        WHERE fa.ad_archive_id = a.ad_archive_id 
+        AND fa.eu_total_reach IS NOT NULL 
+        AND fa.eu_total_reach > 0
+      )`)
     }
 
-    // Score AI filters for recommended/top_score
-    if (sortBy === 'recommended' || sortBy === 'top_score') {
-      // Top score requires shops with active advertising (minimum 5 ads)
-      shopsConditions.push(`COALESCE(s.active_ads, 0) >= 5`)
-      // ONLY active ads (is_active = 1)
-      adsConditions.push(`a.is_active = 1`)
-      // Minimum 10 days running - proven winners, not new untested ads
-      adsConditions.push(`a.start_date <= NOW() - INTERVAL '10 days'`)
-      // Not too old - still relevant (within 6 months)
-      adsConditions.push(`a.start_date >= NOW() - INTERVAL '180 days'`)
-    }
+    // NOTE: "recommended" and "top_score" are SORTING options, not filters
+    // They use a scoring algorithm in ORDER BY, but don't filter out any ads
+    // The scoring prioritizes: active ads, recent ads, shops with more ads, traffic, etc.
+    // But it still shows ALL ads that match the user's filters
 
     // Build WHERE clauses
     const adsWhereClause = adsConditions.length > 0 ? `WHERE ${adsConditions.join(' AND ')}` : ''
@@ -1065,35 +1095,12 @@ export async function GET(request: NextRequest) {
     console.log(`[Ads API] First 10 video_links: ${JSON.stringify(rawAdsResult.slice(0, 10).map(a => a.video_link ? 'HAS_VIDEO' : 'NO_VIDEO'))}`)
 
     // PHP-style deduplication: 1 ad per shop (like Laravel)
-    // + Additional filtering for recommended/top_score
+    // NOTE: recommended/top_score is a SORT, not a filter - no additional filtering applied
     const seenShops = new Set<number>()
     const adsResult: any[] = []
-    const now = new Date()
     
     for (const ad of rawAdsResult) {
       const shopId = ad.shop_id ? Number(ad.shop_id) : 0
-      
-      // For recommended/top_score, apply strict JavaScript filtering as safety net
-      if (sortBy === 'recommended' || sortBy === 'top_score') {
-        // Must be active
-        if (ad.is_active !== 1) continue
-        
-        // Must have start_date
-        if (!ad.start_date) continue
-        
-        // Calculate days active
-        const startDate = new Date(ad.start_date)
-        const daysActive = Math.ceil((now.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24))
-        
-        // Must be at least 10 days old
-        if (daysActive < 10) continue
-        
-        // Must not be older than 180 days
-        if (daysActive > 180) continue
-        
-        // Shop must have at least 5 active ads
-        if (!ad.shop_active_ads || ad.shop_active_ads < 5) continue
-      }
       
       if (!seenShops.has(shopId)) {
         adsResult.push(ad)
@@ -1110,30 +1117,114 @@ export async function GET(request: NextRequest) {
     console.log(`[Ads API] Final shop IDs: ${JSON.stringify(finalShopIds)}`)
     console.log(`========== [Ads API] END PAGE ${page} ==========\n`)
 
-    // Use ESTIMATED count (like Laravel) - ALWAYS use pg_class estimate
+    // Count logic - use filtered count when filters are applied
     const countStart = Date.now()
-    const cacheKey = `estimate-all`
-    const cached = countCache.get(cacheKey)
     let total: number
     
-    if (cached && Date.now() - cached.timestamp < COUNT_CACHE_TTL) {
-      total = cached.count
-      timings.countQuery = 0
-      console.log(`[Ads API] Count from cache: ${total}`)
-    } else {
-      // Use pg_class estimate like Laravel - FAST!
-      const countQuery = `SELECT COALESCE((SELECT reltuples::BIGINT FROM pg_class WHERE relname = 'ads'), 6800000) as total`
+    // Check if any filters are applied (beyond base filters)
+    const hasActiveFilters = searchText || 
+      status !== 'all' || 
+      mediaType || 
+      cta || 
+      ctas.length > 0 || 
+      allCountries.length > 0 || 
+      categories.length > 0 ||
+      minActiveAds !== null || maxActiveAds !== null ||
+      minVisits !== null || maxVisits !== null ||
+      minRevenue !== null || maxRevenue !== null ||
+      minGrowth !== null || maxGrowth !== null ||
+      minOrders !== null || maxOrders !== null ||
+      currencies.length > 0 || pixels.length > 0 ||
+      origins.length > 0 || languages.length > 0 ||
+      themes.length > 0 || apps.length > 0 ||
+      socialNetworks.length > 0 ||
+      euTransparency
+    
+    if (hasActiveFilters) {
+      // Build a filtered count query using the same conditions
+      const countCacheKey = JSON.stringify({ adsConditions, shopsConditions, trafficConditions, params })
+      const cachedCount = countCache.get(countCacheKey)
       
-      try {
-        const countResult = await prisma.$queryRawUnsafe<[{ total: bigint }]>(countQuery)
-        total = Number(countResult[0]?.total || 6800000)
-        timings.countQuery = Date.now() - countStart
-        console.log(`[Ads API] Count (estimated): ${timings.countQuery}ms - Total: ${total}`)
-        countCache.set(cacheKey, { count: total, timestamp: Date.now() })
-      } catch (countError) {
-        console.error('[Ads API] Count query error:', countError)
-        timings.countQuery = Date.now() - countStart
-        total = 6800000 // Fallback estimate
+      if (cachedCount && Date.now() - cachedCount.timestamp < COUNT_CACHE_TTL) {
+        total = cachedCount.count
+        timings.countQuery = 0
+        console.log(`[Ads API] Filtered count from cache: ${total}`)
+      } else {
+        // Build the count query with filters
+        const adsWhereClause = adsConditions.length > 0 ? `WHERE ${adsConditions.join(' AND ')}` : ''
+        const shopsWhereClause = shopsConditions.length > 0 ? `AND ${shopsConditions.join(' AND ')}` : ''
+        const trafficWhereClause = trafficConditions.length > 0 ? `AND ${trafficConditions.join(' AND ')}` : ''
+        
+        // Use COUNT with the same joins and conditions
+        const needsTrafficForCount = trafficConditions.length > 0
+        const needsShopsForCount = shopsConditions.length > 0 || allCountries.length > 0 || categories.length > 0
+        
+        let countQuery = ''
+        if (needsTrafficForCount) {
+          countQuery = `
+            SELECT COUNT(DISTINCT a.shop_id) as total
+            FROM ads a
+            JOIN shops s ON a.shop_id = s.id AND s.deleted_at IS NULL
+            LEFT JOIN traffic t ON s.id = t.shop_id
+            ${adsWhereClause}
+            ${shopsWhereClause}
+            ${trafficWhereClause}
+          `
+        } else if (needsShopsForCount) {
+          countQuery = `
+            SELECT COUNT(DISTINCT a.shop_id) as total
+            FROM ads a
+            JOIN shops s ON a.shop_id = s.id AND s.deleted_at IS NULL
+            ${adsWhereClause}
+            ${shopsWhereClause}
+          `
+        } else {
+          // Only ads filters
+          countQuery = `
+            SELECT COUNT(DISTINCT a.shop_id) as total
+            FROM ads a
+            ${adsWhereClause}
+          `
+        }
+        
+        try {
+          console.log(`[Ads API] Executing filtered count query with ${params.length} params`)
+          const countResult = await prisma.$queryRawUnsafe<[{ total: bigint }]>(countQuery, ...params)
+          total = Number(countResult[0]?.total || 0)
+          timings.countQuery = Date.now() - countStart
+          console.log(`[Ads API] Filtered count: ${timings.countQuery}ms - Total: ${total}`)
+          countCache.set(countCacheKey, { count: total, timestamp: Date.now() })
+        } catch (countError) {
+          console.error('[Ads API] Filtered count query error:', countError)
+          // Fallback to using results length as minimum
+          total = adsResult.length
+          timings.countQuery = Date.now() - countStart
+        }
+      }
+    } else {
+      // No filters - use table estimate for speed
+      const cacheKey = `estimate-all`
+      const cached = countCache.get(cacheKey)
+      
+      if (cached && Date.now() - cached.timestamp < COUNT_CACHE_TTL) {
+        total = cached.count
+        timings.countQuery = 0
+        console.log(`[Ads API] Count from cache: ${total}`)
+      } else {
+        // Use pg_class estimate like Laravel - FAST!
+        const countQuery = `SELECT COALESCE((SELECT reltuples::BIGINT FROM pg_class WHERE relname = 'ads'), 6800000) as total`
+        
+        try {
+          const countResult = await prisma.$queryRawUnsafe<[{ total: bigint }]>(countQuery)
+          total = Number(countResult[0]?.total || 6800000)
+          timings.countQuery = Date.now() - countStart
+          console.log(`[Ads API] Count (estimated): ${timings.countQuery}ms - Total: ${total}`)
+          countCache.set(cacheKey, { count: total, timestamp: Date.now() })
+        } catch (countError) {
+          console.error('[Ads API] Count query error:', countError)
+          timings.countQuery = Date.now() - countStart
+          total = 6800000 // Fallback estimate
+        }
       }
     }
 

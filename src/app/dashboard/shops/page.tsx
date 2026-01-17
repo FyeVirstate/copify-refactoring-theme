@@ -48,6 +48,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import TutorialModal, { TUTORIAL_CONFIGS } from "@/components/TutorialModal";
 import ShopAnalyticsDrawer from "@/components/ShopAnalyticsDrawer";
+import DebugPanel from "@/components/DebugPanel";
 
 // Sort options for shops - top_score is now "Pertinence" (DEFAULT)
 const SORT_OPTIONS = [
@@ -2218,6 +2219,17 @@ export default function ShopsPage() {
         shopId={analyticsShopId}
         shopUrl={analyticsShopUrl}
         shopName={analyticsShopName}
+      />
+
+      {/* Debug Panel - Only visible in development */}
+      <DebugPanel
+        type="shops"
+        data={shops}
+        pagination={pagination}
+        filters={filters}
+        isLoading={false}
+        isFetching={isFetching}
+        error={error}
       />
     </>
   );

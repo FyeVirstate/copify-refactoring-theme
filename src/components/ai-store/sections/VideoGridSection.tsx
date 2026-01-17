@@ -10,6 +10,7 @@ import type { SectionProps } from "./types";
 /**
  * Video Grid Section - matches Laravel _video-grid-section.blade.php
  * Maps to video-gris-slider section in theme
+ * Contains a grid of 4 images/videos
  */
 export const VideoGridSection: React.FC<SectionProps> = ({
   content,
@@ -27,8 +28,22 @@ export const VideoGridSection: React.FC<SectionProps> = ({
     subheading: '',
   };
 
+  // Get current grid images (array of 4)
+  const videoGridImages = (content.videoGridImages as string[]) || [];
+
   const updateVideoGrid = (field: string, value: string) => {
     updateField('videoGrid', { ...videoGrid, [field]: value });
+  };
+
+  // Update a specific grid image by index
+  const updateGridImage = (index: number, imageUrl: string | undefined) => {
+    const newImages = [...videoGridImages];
+    // Ensure array has enough slots
+    while (newImages.length <= index) {
+      newImages.push('');
+    }
+    newImages[index] = imageUrl || '';
+    updateField('videoGridImages', newImages);
   };
 
   // Helper to get field class names with success/error states
@@ -52,6 +67,11 @@ export const VideoGridSection: React.FC<SectionProps> = ({
           </button>
         </div>
 
+        {/* Description */}
+        <p className="text-muted fs-xs mb-3">
+          Grille de 4 images pour mettre en valeur vos témoignages visuels.
+        </p>
+
         {/* Section Heading */}
         <div className="mb-3">
           <label className="form-label text-dark fw-500 mb-1 fs-small">
@@ -64,7 +84,7 @@ export const VideoGridSection: React.FC<SectionProps> = ({
               className={getFieldClassName('videoGrid.heading', true)}
               value={videoGrid.heading || ''}
               onChange={(e) => updateVideoGrid('heading', e.target.value)}
-              placeholder="Stop Losing Because of Bad Wi-Fi"
+              placeholder="Nos clients ne peuvent s'arrêter de parler de nous"
               disabled={regeneratingField === 'videoGrid.heading'}
             />
             <RegenerateButton
@@ -88,7 +108,7 @@ export const VideoGridSection: React.FC<SectionProps> = ({
               rows={2}
               value={videoGrid.subheading || ''}
               onChange={(e) => updateVideoGrid('subheading', e.target.value)}
-              placeholder="Your skills deserve a connection that keeps up"
+              placeholder="Des histoires qui prouvent que notre produit fait des miracles."
               disabled={regeneratingField === 'videoGrid.subheading'}
             />
             <RegenerateButton
@@ -104,17 +124,43 @@ export const VideoGridSection: React.FC<SectionProps> = ({
         {/* Divider */}
         <div className="horizontal-solid-divider border-top my-3"></div>
 
-        {/* Image/Video Selection */}
-        <ImageSelector
-          images={images}
-          selectedImages={(content.videoGridImages as string[]) || []}
-          sectionLabel="Image de Notre Produit"
-          inputType="checkbox"
-          sortable={true}
-          onSelect={(selected) => updateField('videoGridImages', selected)}
-          onEditImage={onEditImage}
-          onGenerateAI={onGenerateImage}
-        />
+        {/* 4 Image Selections - One for each grid position */}
+        <div className="mb-4">
+          <label className="form-label text-dark fw-500 mb-2 fs-xs">
+            <i className="ri-layout-grid-line me-1 text-light-gray"></i>
+            Images de la grille (4)
+          </label>
+          <p className="text-muted fs-xs mb-3">
+            Sélectionnez une image pour chaque position de la grille.
+          </p>
+
+          {[0, 1, 2, 3].map((index) => {
+            const currentImage = videoGridImages[index] || '';
+            
+            return (
+              <div key={index} className="mb-3">
+                <details className="feature-accordion" open={index === 0}>
+                  <summary className="form-label text-dark fw-500 mb-1 fs-xs cursor-pointer">
+                    <i className="ri-arrow-right-s-line me-1"></i>
+                    Image {index + 1}
+                    {currentImage && <span className="badge bg-success ms-2">Sélectionnée</span>}
+                  </summary>
+                  <div className="ps-3 pt-2">
+                    <ImageSelector
+                      images={images}
+                      selectedImages={currentImage ? [currentImage] : []}
+                      sectionLabel={`Image ${index + 1} de la grille`}
+                      inputType="radio"
+                      onSelect={(selected) => updateGridImage(index, selected[0])}
+                      onEditImage={onEditImage}
+                      onGenerateAI={onGenerateImage}
+                    />
+                  </div>
+                </details>
+              </div>
+            );
+          })}
+        </div>
       </div>
     </TooltipProvider>
   );
