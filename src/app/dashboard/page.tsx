@@ -5,6 +5,133 @@ import Link from "next/link";
 import DashboardHeader from "@/components/DashboardHeader";
 import PromotionalSlider from "@/components/PromotionalSlider";
 import VideoModal from "@/components/VideoModal";
+import ShopAnalyticsDrawer from "@/components/ShopAnalyticsDrawer";
+import { useStats } from "@/contexts/StatsContext";
+
+// Toast Alert Component
+interface ToastAlert {
+  id: string;
+  type: 'success' | 'error' | 'info' | 'limit';
+  message: string;
+  shopUrl?: string;
+  shopId?: number;
+}
+
+function ToastAlerts({ alerts, onDismiss, onViewShop }: { 
+  alerts: ToastAlert[]; 
+  onDismiss: (id: string) => void;
+  onViewShop?: (shopId: number) => void;
+}) {
+  const getAlertStyles = (type: 'success' | 'error' | 'info' | 'limit') => {
+    switch(type) {
+      case 'error':
+      case 'limit':
+        return { backgroundColor: '#dc3545', color: '#fff' };
+      case 'success':
+        return { backgroundColor: '#212529', color: '#fff' };
+      case 'info':
+      default:
+        return { backgroundColor: '#ffc107', color: '#212529' };
+    }
+  };
+
+  return (
+    <div className="position-fixed" style={{ top: '20px', left: '50%', transform: 'translateX(-50%)', zIndex: 9999, width: 'auto', maxWidth: 'calc(100% - 40px)' }}>
+      {alerts.map((alert) => {
+        const alertStyles = getAlertStyles(alert.type);
+        return (
+          <div
+            key={alert.id}
+            className="mb-2"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              padding: '12px 16px',
+              borderRadius: '8px',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+              ...alertStyles,
+            }}
+          >
+            {alert.type === 'success' && (
+              <i className="ri-checkbox-circle-fill" style={{ fontSize: '18px', color: '#fff', flexShrink: 0 }}></i>
+            )}
+            {(alert.type === 'error' || alert.type === 'limit') && (
+              <i className="ri-error-warning-fill" style={{ fontSize: '18px', color: '#fff', flexShrink: 0 }}></i>
+            )}
+            {alert.type === 'info' && (
+              <i className="ri-information-fill" style={{ fontSize: '18px', color: '#212529', flexShrink: 0 }}></i>
+            )}
+            
+            <span style={{ fontSize: '14px', color: alertStyles.color, flexShrink: 1 }}>
+              {alert.message}
+            </span>
+            
+            {alert.type === 'success' && alert.shopId && onViewShop && (
+              <button 
+                className="btn btn-sm" 
+                style={{ 
+                  backgroundColor: 'rgba(255,255,255,0.2)', 
+                  border: 'none', 
+                  color: '#fff',
+                  whiteSpace: 'nowrap',
+                  flexShrink: 0,
+                  padding: '6px 12px',
+                  borderRadius: '6px',
+                }}
+                onClick={() => onViewShop(alert.shopId!)}
+              >
+                Voir l&apos;analyse
+              </button>
+            )}
+            {(alert.type === 'error' || alert.type === 'limit') && (
+              <a 
+                href="/dashboard/plans" 
+                className="btn btn-sm" 
+                style={{ 
+                  backgroundColor: '#fff', 
+                  border: 'none', 
+                  color: '#212529',
+                  whiteSpace: 'nowrap',
+                  flexShrink: 0,
+                  padding: '6px 12px',
+                  borderRadius: '6px',
+                }}
+              >
+                Débloquer l&apos;accès complet
+              </a>
+            )}
+            
+            {alert.type !== 'limit' && (
+              <button 
+                onClick={() => onDismiss(alert.id)}
+                style={{ 
+                  background: 'transparent',
+                  border: 'none',
+                  padding: '4px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                  opacity: 0.7,
+                }}
+              >
+                <i 
+                  className="ri-close-line" 
+                  style={{ 
+                    fontSize: '20px', 
+                    color: alert.type === 'info' ? '#212529' : '#fff',
+                  }}
+                ></i>
+              </button>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
 interface ActionItem {
   id: string;
@@ -65,12 +192,43 @@ const ACTION_ITEMS_KEY = 'copyfy_action_items_completed';
 
 export default function DashboardPage() {
   const { data: session } = useSession();
+  const { refreshStats } = useStats();
   const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
   const [completedActions, setCompletedActions] = useState<string[]>([]);
   const [topProducts, setTopProducts] = useState<TopProduct[]>([]);
   const [topShops, setTopShops] = useState<TopShop[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(false);
   const [loadingShops, setLoadingShops] = useState(false);
+  
+  // Toast alerts state
+  const [toastAlerts, setToastAlerts] = useState<ToastAlert[]>([]);
+  
+  // Analyzing and tracked shops state
+  const [analyzingShopIds, setAnalyzingShopIds] = useState<Set<number>>(new Set());
+  const [trackedShopIds, setTrackedShopIds] = useState<Set<number>>(new Set());
+  
+  // Analytics drawer state
+  const [analyticsDrawerOpen, setAnalyticsDrawerOpen] = useState(false);
+  const [analyticsShopId, setAnalyticsShopId] = useState<number | null>(null);
+  const [analyticsShopUrl, setAnalyticsShopUrl] = useState<string | undefined>();
+  const [analyticsShopName, setAnalyticsShopName] = useState<string | undefined>();
+  
+  // Fetch tracked shops on mount
+  useEffect(() => {
+    const fetchTrackedShops = async () => {
+      try {
+        const res = await fetch('/api/track?page=1&perPage=100');
+        const data = await res.json();
+        if (data.success && data.data) {
+          const ids = new Set<number>(data.data.map((item: { shopId: number }) => item.shopId));
+          setTrackedShopIds(ids);
+        }
+      } catch (err) {
+        console.error('Failed to fetch tracked shops:', err);
+      }
+    };
+    fetchTrackedShops();
+  }, []);
 
   // Load completed actions from localStorage
   useEffect(() => {
@@ -205,26 +363,82 @@ export default function DashboardPage() {
     return new Intl.NumberFormat('fr-FR').format(Math.round(num));
   };
 
-  // Track shop analysis
-  const handleAnalyzeStore = async (shopId: number, shopUrl: string) => {
+  // Toast helpers
+  const addToast = (type: ToastAlert['type'], message: string, shopUrl?: string, shopId?: number) => {
+    const id = Date.now().toString();
+    setToastAlerts(prev => [...prev, { id, type, message, shopUrl, shopId }]);
+    
+    // Don't auto-dismiss limit alerts
+    if (type !== 'limit') {
+      setTimeout(() => {
+        setToastAlerts(prev => prev.filter(a => a.id !== id));
+      }, 5000);
+    }
+  };
+
+  const dismissToast = (id: string) => {
+    setToastAlerts(prev => prev.filter(a => a.id !== id));
+  };
+
+  const handleViewShop = (shopId: number, shopUrl?: string, shopName?: string) => {
+    // Open drawer instead of navigating
+    setAnalyticsShopId(shopId);
+    setAnalyticsShopUrl(shopUrl);
+    setAnalyticsShopName(shopName);
+    setAnalyticsDrawerOpen(true);
+  };
+
+  // Track shop analysis - NO REDIRECT, just toast
+  const handleAnalyzeStore = async (shopId: number, shopUrl: string, shopName?: string) => {
+    // Add to analyzing set
+    setAnalyzingShopIds(prev => new Set(prev).add(shopId));
+    
     try {
       const res = await fetch('/api/track', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ shopId, shopUrl }),
+        body: JSON.stringify({ shopId }),
       });
+      
       const data = await res.json();
-      if (data.success || data.error === 'Already tracking') {
-        // Show success toast or redirect
-        window.location.href = `/dashboard/track/shop/${shopId}`;
+      
+      if (data.success) {
+        // Add to tracked shops set
+        setTrackedShopIds(prev => new Set(prev).add(shopId));
+        addToast('success', `${shopUrl || 'La boutique'} a été ajouté à la liste de vos boutiques suivies`, shopUrl, shopId);
+        // Refresh navbar stats
+        refreshStats();
+      } else if (data.error === 'Already tracking') {
+        // Also add to tracked (in case we missed it)
+        setTrackedShopIds(prev => new Set(prev).add(shopId));
+        addToast('info', `${shopUrl || 'Cette boutique'} est déjà dans votre liste de boutiques suivies`, shopUrl, shopId);
+      } else if (data.limitReached) {
+        addToast('limit', 'Vous avez atteint la limite maximale de boutique à suivre avec votre abonnement.');
+      } else {
+        addToast('error', data.message || 'Erreur lors de l\'analyse de la boutique');
       }
     } catch (error) {
       console.error('Failed to track shop:', error);
+      addToast('error', 'Erreur lors de l\'analyse de la boutique');
+    } finally {
+      // Remove from analyzing set
+      setAnalyzingShopIds(prev => {
+        const next = new Set(prev);
+        next.delete(shopId);
+        return next;
+      });
     }
   };
 
   return (
     <>
+      {/* Toast Alerts */}
+      <ToastAlerts 
+        alerts={toastAlerts} 
+        onDismiss={dismissToast}
+        onViewShop={(shopId) => handleViewShop(shopId)}
+      />
+
       <DashboardHeader
         title="Tableau de bord"
       />
@@ -349,14 +563,66 @@ export default function DashboardPage() {
                           {formatNumber(product.estimatedOrder)}
                         </td>
                         <td className="align-middle py-3 border-b-gray text-end">
-                          <button 
-                            className="btn btn-secondary d-inline-flex align-items-center gap-1"
-                            onClick={() => handleAnalyzeStore(product.shop.id, product.shop.url)}
-                            style={{ fontSize: '13px' }}
-                          >
-                            <i className="ri-focus-3-line"></i>
-                            <span className="d-none d-xl-inline">Analyser</span>
-                          </button>
+                          {trackedShopIds.has(product.shop.id) && !analyzingShopIds.has(product.shop.id) ? (
+                            // Already tracked - Show "Voir l'analyse" button (BLUE)
+                            <button
+                              onClick={() => handleViewShop(product.shop.id, product.shop.url, product.shop.name || undefined)}
+                              className="btn d-inline-flex align-items-center gap-2"
+                              style={{ 
+                                whiteSpace: 'nowrap', 
+                                padding: '8px 16px',
+                                fontSize: '13px',
+                                borderRadius: '6px',
+                                backgroundColor: '#3b82f6',
+                                color: '#fff',
+                                border: 'none',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s ease',
+                              }}
+                            >
+                              <i className="ri-line-chart-line" style={{ fontSize: 14 }}></i>
+                              <span>Voir l&apos;analyse</span>
+                            </button>
+                          ) : analyzingShopIds.has(product.shop.id) ? (
+                            // Currently analyzing - Light yellow with refresh icon
+                            <button
+                              disabled
+                              className="btn d-inline-flex align-items-center gap-2"
+                              style={{ 
+                                whiteSpace: 'nowrap', 
+                                padding: '8px 16px',
+                                fontSize: '13px',
+                                borderRadius: '6px',
+                                backgroundColor: '#fef9c3',
+                                color: '#854d0e',
+                                border: '1px solid #fde047',
+                                cursor: 'not-allowed',
+                                transition: 'all 0.2s ease',
+                              }}
+                            >
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ animation: 'spin 1s linear infinite' }}>
+                                <path d="M23 4v6h-6"></path>
+                                <path d="M1 20v-6h6"></path>
+                                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                              </svg>
+                              <span>Analyse...</span>
+                            </button>
+                          ) : (
+                            // Not tracked - Show analyze button (WHITE/original)
+                            <button
+                              onClick={() => handleAnalyzeStore(product.shop.id, product.shop.url, product.shop.name || undefined)}
+                              className="btn btn-secondary d-inline-flex align-items-center gap-2"
+                              style={{ 
+                                whiteSpace: 'nowrap', 
+                                padding: '8px 16px',
+                                fontSize: '13px',
+                                borderRadius: '6px',
+                              }}
+                            >
+                              <i className="ri-focus-3-line" style={{ fontSize: 14 }}></i>
+                              <span>Suivre les données</span>
+                            </button>
+                          )}
                         </td>
                       </tr>
                     ))}
@@ -472,14 +738,66 @@ export default function DashboardPage() {
                           {shop.trafficGrowth >= 0 ? <i className="ri-arrow-right-up-line text-success"></i> : <i className="ri-arrow-right-down-line text-danger"></i>}
                         </td>
                         <td className="align-middle py-3 border-b-gray text-end">
-                          <button 
-                            className="btn btn-secondary d-inline-flex align-items-center gap-1"
-                            onClick={() => handleAnalyzeStore(shop.id, shop.url)}
-                            style={{ fontSize: '13px' }}
-                          >
-                            <i className="ri-focus-3-line"></i>
-                            <span className="d-none d-xl-inline">Analyser</span>
-                          </button>
+                          {trackedShopIds.has(shop.id) && !analyzingShopIds.has(shop.id) ? (
+                            // Already tracked - Show "Voir l'analyse" button (BLUE)
+                            <button
+                              onClick={() => handleViewShop(shop.id, shop.url, shop.name || undefined)}
+                              className="btn d-inline-flex align-items-center gap-2"
+                              style={{ 
+                                whiteSpace: 'nowrap', 
+                                padding: '8px 16px',
+                                fontSize: '13px',
+                                borderRadius: '6px',
+                                backgroundColor: '#3b82f6',
+                                color: '#fff',
+                                border: 'none',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s ease',
+                              }}
+                            >
+                              <i className="ri-line-chart-line" style={{ fontSize: 14 }}></i>
+                              <span>Voir l&apos;analyse</span>
+                            </button>
+                          ) : analyzingShopIds.has(shop.id) ? (
+                            // Currently analyzing - Light yellow with refresh icon
+                            <button
+                              disabled
+                              className="btn d-inline-flex align-items-center gap-2"
+                              style={{ 
+                                whiteSpace: 'nowrap', 
+                                padding: '8px 16px',
+                                fontSize: '13px',
+                                borderRadius: '6px',
+                                backgroundColor: '#fef9c3',
+                                color: '#854d0e',
+                                border: '1px solid #fde047',
+                                cursor: 'not-allowed',
+                                transition: 'all 0.2s ease',
+                              }}
+                            >
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ animation: 'spin 1s linear infinite' }}>
+                                <path d="M23 4v6h-6"></path>
+                                <path d="M1 20v-6h6"></path>
+                                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                              </svg>
+                              <span>Analyse...</span>
+                            </button>
+                          ) : (
+                            // Not tracked - Show analyze button (WHITE/original)
+                            <button
+                              onClick={() => handleAnalyzeStore(shop.id, shop.url, shop.name || undefined)}
+                              className="btn btn-secondary d-inline-flex align-items-center gap-2"
+                              style={{ 
+                                whiteSpace: 'nowrap', 
+                                padding: '8px 16px',
+                                fontSize: '13px',
+                                borderRadius: '6px',
+                              }}
+                            >
+                              <i className="ri-focus-3-line" style={{ fontSize: 14 }}></i>
+                              <span>Suivre les données</span>
+                            </button>
+                          )}
                         </td>
                       </tr>
                     ))}
@@ -637,6 +955,23 @@ export default function DashboardPage() {
           </>
         )}
       </div>
+
+      {/* Shop Analytics Drawer */}
+      <ShopAnalyticsDrawer
+        isOpen={analyticsDrawerOpen}
+        onClose={() => setAnalyticsDrawerOpen(false)}
+        shopId={analyticsShopId}
+        shopUrl={analyticsShopUrl}
+        shopName={analyticsShopName}
+      />
+
+      {/* Spin animation for loading button */}
+      <style jsx>{`
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
     </>
   );
 }

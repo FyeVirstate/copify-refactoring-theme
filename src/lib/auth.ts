@@ -405,6 +405,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                 where: {
                   stripeStatus: 'active',
                 },
+                orderBy: {
+                  createdAt: 'desc',
+                },
                 take: 1
               }
             }
@@ -441,7 +444,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                   limitVideoGeneration: activePlan.limitVideoGeneration,
                   limitImageGeneration: activePlan.limitImageGeneration,
                   limitProductExport: activePlan.limitProductExporter,
-                  topShopsCount: activePlan.topShopsCount ?? 0,
+                  // Use limitShopTracker as primary (same as stats API), fallback to topShopsCount
+                  topShopsCount: activePlan.limitShopTracker || activePlan.topShopsCount || 0,
                   topProductsCount: activePlan.topProductsCount ?? 0,
                   topAdsCount: activePlan.topAdsCount ?? 0,
                 }
@@ -469,7 +473,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                   limitVideoGeneration: trialPlan?.limitVideoGeneration ?? 0,
                   limitImageGeneration: trialPlan?.limitImageGeneration ?? 0,
                   limitProductExport: trialPlan?.limitProductExporter ?? 0,
-                  topShopsCount: trialPlan?.topShopsCount ?? 0,
+                  // Use limitShopTracker as primary (same as stats API), fallback to topShopsCount
+                  topShopsCount: trialPlan?.limitShopTracker || trialPlan?.topShopsCount || 0,
                   topProductsCount: trialPlan?.topProductsCount ?? 0,
                   topAdsCount: trialPlan?.topAdsCount ?? 0,
                 }

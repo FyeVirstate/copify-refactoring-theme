@@ -41,10 +41,9 @@ import {
 import TutorialModal, { TUTORIAL_CONFIGS } from "@/components/TutorialModal";
 import ShopAnalyticsDrawer from "@/components/ShopAnalyticsDrawer";
 
-// Sort options for ads
+// Sort options for ads - "Pertinence" shows videos first then best scoring ads
 const SORT_OPTIONS = [
   { value: "recommended", label: "Pertinence", icon: "ri-sparkling-line" },
-  { value: "top_score", label: "Score IA (Custom)", icon: "ri-robot-line" },
   { value: "start_date", label: "Plus recentes", icon: "ri-calendar-line" },
   { value: "estimated_monthly", label: "Chiffre d'affaires", icon: "ri-money-euro-circle-line" },
   { value: "last_month_visits", label: "Portee", icon: "ri-eye-line" },
@@ -447,7 +446,12 @@ const AdCard = React.memo(function AdCard({ ad, index, isTracked: initialIsTrack
               onError={(e) => { 
                 const target = e.target as HTMLImageElement;
                 target.onerror = null;
-                target.src = '/img_not_found.png';
+                // Hide broken image and show placeholder
+                target.style.display = 'none';
+                const placeholder = document.createElement('div');
+                placeholder.style.cssText = 'display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:250px;color:#9ca3af;font-size:14px;background:#f3f4f6';
+                placeholder.innerHTML = '<i class="ri-image-line" style="font-size:40px"></i><span style="margin-top:8px">Image non disponible</span>';
+                target.parentElement?.appendChild(placeholder);
               }}
             />
           </>

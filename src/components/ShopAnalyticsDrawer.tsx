@@ -104,8 +104,107 @@ const cardStyle: React.CSSProperties = {
 
 const TRAFFIC_COLORS = ['#3B82F6', '#8B5CF6', '#10B981', '#F59E0B', '#EF4444', '#6366F1'];
 
+// Platform icons for pixels
+const PIXEL_ICON_MAP: Record<string, string> = {
+  'Google': '/img/socials/google.svg',
+  'Facebook': '/img/socials/facebook.svg',
+  'Instagram': '/img/socials/instagram.svg',
+  'TikTok': '/img/socials/tiktok.svg',
+  'Snapchat': '/img/socials/snapchat.svg',
+  'Twitter': '/img/socials/twitter-x-line.svg',
+  'Pinterest': '/img/socials/pinterest.svg',
+  'Reddit': '/img/socials/reddit.svg',
+  'TripleWhale': '/img/socials/triple-whale.svg',
+  'Applovin': '/img/socials/applovin.svg',
+  'Meta': '/img/socials/meta.svg',
+  'Bing': '/img/socials/bing.svg',
+  'LinkedIn': '/img/socials/linkedin.svg',
+};
+
+// Function to get pixel icon path
+const getPixelIcon = (pixelName: string): string | null => {
+  // Try exact match first
+  if (PIXEL_ICON_MAP[pixelName]) return PIXEL_ICON_MAP[pixelName];
+  
+  // Try case-insensitive match
+  const lowerName = pixelName.toLowerCase();
+  for (const [key, value] of Object.entries(PIXEL_ICON_MAP)) {
+    if (key.toLowerCase() === lowerName || lowerName.includes(key.toLowerCase())) {
+      return value;
+    }
+  }
+  return null;
+};
+
+// Simple markdown renderer for AI text
+const renderMarkdown = (text: string) => {
+  if (!text) return null;
+  
+  // Split by lines
+  const lines = text.split('\n');
+  
+  return lines.map((line, lineIndex) => {
+    const trimmedLine = line.trim();
+    if (!trimmedLine) return null;
+    
+    // Check if it's a bullet point
+    const isBullet = trimmedLine.startsWith('•') || trimmedLine.startsWith('-') || trimmedLine.startsWith('*');
+    let content = isBullet ? trimmedLine.replace(/^[•\-\*]\s*/, '') : trimmedLine;
+    
+    // Parse inline markdown: **bold**, *italic*, `code`
+    const parts: React.ReactNode[] = [];
+    let lastIndex = 0;
+    
+    // Match **bold**, *italic*, and `code`
+    const regex = /(\*\*(.+?)\*\*|\*(.+?)\*|`(.+?)`)/g;
+    let match;
+    
+    while ((match = regex.exec(content)) !== null) {
+      // Add text before the match
+      if (match.index > lastIndex) {
+        parts.push(content.slice(lastIndex, match.index));
+      }
+      
+      if (match[2]) {
+        // **bold**
+        parts.push(<strong key={`${lineIndex}-${match.index}`} style={{ fontWeight: 600 }}>{match[2]}</strong>);
+      } else if (match[3]) {
+        // *italic*
+        parts.push(<em key={`${lineIndex}-${match.index}`} style={{ fontStyle: 'italic' }}>{match[3]}</em>);
+      } else if (match[4]) {
+        // `code`
+        parts.push(<code key={`${lineIndex}-${match.index}`} style={{ background: '#F3F4F6', padding: '2px 6px', borderRadius: 4, fontSize: '0.9em' }}>{match[4]}</code>);
+      }
+      
+      lastIndex = match.index + match[0].length;
+    }
+    
+    // Add remaining text
+    if (lastIndex < content.length) {
+      parts.push(content.slice(lastIndex));
+    }
+    
+    // If no markdown was found, use original content
+    const finalContent = parts.length > 0 ? parts : content;
+    
+    if (isBullet) {
+      return (
+        <div key={lineIndex} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: 8 }}>
+          <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#6366F1', marginTop: 8, flexShrink: 0 }} />
+          <span style={{ lineHeight: 1.6 }}>{finalContent}</span>
+        </div>
+      );
+    }
+    
+    return <p key={lineIndex} style={{ margin: '0 0 8px 0', lineHeight: 1.6 }}>{finalContent}</p>;
+  });
+};
+
 const TABS = [
   { id: 'overview', label: 'Traffic', icon: 'ri-line-chart-line' },
+  { id: 'analysis', label: 'Analyse IA', icon: 'ri-brain-line' },
+  { id: 'persona', label: 'Persona', icon: 'ri-user-heart-line' },
+  { id: 'copy-product', label: 'Copy Product', icon: 'ri-file-copy-line' },
   { id: 'products', label: 'Produits', icon: 'ri-shopping-bag-line' },
   { id: 'ads', label: 'Publicités', icon: 'ri-advertisement-line' },
   { id: 'website', label: 'Site Web', icon: 'ri-global-line' },
@@ -158,6 +257,98 @@ export default function ShopAnalyticsDrawer({ isOpen, onClose, shopId, shopUrl, 
   const [aliExpressModalOpen, setAliExpressModalOpen] = useState(false);
   const [selectedProductForAliExpress, setSelectedProductForAliExpress] = useState<{ imageUrl: string; price: number; title: string } | null>(null);
   
+  // Analysis tab state
+  const [analysisData, setAnalysisData] = useState<{
+    globalScore: number;
+    verdict: { type: string; label: string; color: string };
+    scores: {
+      age: { value: number; label: string; details?: string };
+      markets: { value: number; label: string; details?: string };
+      trafficLevel: { value: number; label: string; details?: string };
+      trafficTrend: { value: number; label: string; details?: string };
+      products: { value: number; label: string; details?: string };
+      ads: { value: number; label: string; details?: string };
+    };
+    momentum: string;
+    adsStrength: string;
+    replicationDifficulty: string;
+    strengths: string[];
+    weaknesses: string[];
+    actions: string[];
+    aiInsights?: string;
+    productsAnalysis?: string;
+  } | null>(null);
+  const [analysisLoading, setAnalysisLoading] = useState(false);
+  const [analysisError, setAnalysisError] = useState<string | null>(null);
+  
+  // Persona tab state
+  const [personaData, setPersonaData] = useState<{
+    buyerSummary: string;
+    profile: {
+      age: string;
+      gender: string;
+      location: string;
+      situation: string;
+      budget: string;
+    };
+    problem: {
+      mainProblem: string;
+      frustration: string;
+      urgency: string;
+    };
+    whyThisProduct: {
+      attraction: string;
+      beforeBuying: string;
+      afterBuying: string;
+    };
+    targeting: {
+      platform: string;
+      interests: string[];
+      contentType: string;
+    };
+    adMessage: {
+      mainPhrase: string;
+      hook: string;
+    };
+  } | null>(null);
+  const [personaLoading, setPersonaLoading] = useState(false);
+  const [personaError, setPersonaError] = useState<string | null>(null);
+  
+  // AI Recommendation for Copy Product
+  const [aiRecommendedProductId, setAiRecommendedProductId] = useState<string | null>(null);
+  const [aiRecommendationReason, setAiRecommendationReason] = useState<string | null>(null);
+  const [aiRecommendationLoading, setAiRecommendationLoading] = useState(false);
+  const [aiRecommendationIsValid, setAiRecommendationIsValid] = useState(true); // Whether the recommended product matches source category
+  
+  // Copy Product tab state
+  const [copyProductStep, setCopyProductStep] = useState<1 | 2 | 3>(1); // 1: Select product, 2: Find similar, 3: Review
+  const [selectedProductToCopy, setSelectedProductToCopy] = useState<{
+    id: number;
+    title: string;
+    imageUrl: string;
+    price: number;
+    handle: string;
+  } | null>(null);
+  const [similarProducts, setSimilarProducts] = useState<Array<{
+    id: string;
+    title: string;
+    imageUrl: string;
+    price: number;
+    originalPrice?: number;
+    sales?: number;
+    profit?: number;
+    profitPercent?: number;
+    url: string;
+  }>>([]);
+  const [similarProductsLoading, setSimilarProductsLoading] = useState(false);
+  const [selectedSimilarProduct, setSelectedSimilarProduct] = useState<{
+    id: string;
+    title: string;
+    imageUrl: string;
+    price: number;
+    url: string;
+  } | null>(null);
+  
   const loadMoreRef = useRef<HTMLDivElement>(null);
 
   // Clear old data when shopId changes (before loading new data)
@@ -171,6 +362,25 @@ export default function ShopAnalyticsDrawer({ isOpen, onClose, shopId, shopUrl, 
     setFormatFilter([]);
     setStatusFilter([]);
     setIframeError(false);
+    // Reset analysis state
+    setAnalysisData(null);
+    setAnalysisError(null);
+    setAnalysisLoading(false);
+    // Reset persona state
+    setPersonaData(null);
+    setPersonaError(null);
+    setPersonaLoading(false);
+    // Reset copy product state
+    setCopyProductStep(1);
+    setSelectedProductToCopy(null);
+    setSimilarProducts([]);
+    setSelectedSimilarProduct(null);
+    setSimilarProductsLoading(false);
+    // Reset AI recommendation state
+    setAiRecommendedProductId(null);
+    setAiRecommendationReason(null);
+    setAiRecommendationLoading(false);
+    setAiRecommendationIsValid(true);
   }, [shopId]);
 
   // Load shop details
@@ -193,6 +403,311 @@ export default function ShopAnalyticsDrawer({ isOpen, onClose, shopId, shopUrl, 
       loadDetails();
     }
   }, [isOpen, shopId]);
+
+  // Fetch AI analysis when tab is selected
+  const fetchAnalysis = useCallback(async () => {
+    if (!shopDetails || analysisData) return;
+    
+    // Check localStorage first
+    const cacheKey = `shop_analysis_${shopId}`;
+    const cached = localStorage.getItem(cacheKey);
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached);
+        if (parsed.timestamp && Date.now() - parsed.timestamp < 24 * 60 * 60 * 1000) { // 24h cache
+          setAnalysisData(parsed.data);
+          return;
+        }
+      } catch { /* ignore */ }
+    }
+    
+    setAnalysisLoading(true);
+    setAnalysisError(null);
+    
+    try {
+      // Extract markets from countries
+      const markets = shopDetails.traffic?.countries?.map(c => c.code) || 
+                     (shopDetails.shop?.country ? [shopDetails.shop.country] : []);
+      
+      // Get top products for analysis
+      const topProducts = shopDetails.products?.slice(0, 5).map(p => ({
+        title: p.title,
+        price: p.price || 0,
+        imageUrl: p.imageUrl,
+        bestProduct: p.bestProduct,
+      })) || [];
+      
+      const res = await fetch('/api/ai/shop-analysis', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          shopName: shopDetails.shop?.name || shopName || shopUrl?.replace('www.', '') || 'Boutique',
+          shopUrl: shopDetails.shop?.url || shopUrl || '',
+          createdAt: shopDetails.shop?.whoisAt || shopDetails.shop?.createdAt,
+          markets,
+          trafficCurrent: shopDetails.metrics?.monthlyVisits || 0,
+          traffic3mTrend: parseFloat(shopDetails.metrics?.threeMonthGrowth || '0'),
+          productsCount: shopDetails.shop?.productsCount || 0,
+          activeAdsCount: shopDetails.metrics?.activeAdsCount || 0,
+          activeAds3mTrend: parseFloat(shopDetails.metrics?.adsThreeMonthGrowth || '0'),
+          monthlyRevenue: shopDetails.metrics?.monthlyRevenue,
+          themeName: shopDetails.shop?.themeName,
+          category: shopDetails.shop?.category,
+          topProducts,
+        })
+      });
+      
+      const data = await res.json();
+      if (data.success) {
+        setAnalysisData(data.data);
+        // Cache in localStorage
+        localStorage.setItem(cacheKey, JSON.stringify({ data: data.data, timestamp: Date.now() }));
+      } else {
+        setAnalysisError(data.error || 'Erreur lors de l\'analyse');
+      }
+    } catch (err) {
+      setAnalysisError('Erreur de connexion');
+    } finally {
+      setAnalysisLoading(false);
+    }
+  }, [shopDetails, shopId, analysisData, shopName, shopUrl]);
+  
+  // Fetch Persona analysis when tab is selected
+  const fetchPersona = useCallback(async () => {
+    if (!shopDetails || personaData) return;
+    
+    // Check localStorage first
+    const cacheKey = `shop_persona_${shopId}`;
+    const cached = localStorage.getItem(cacheKey);
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached);
+        if (parsed.timestamp && Date.now() - parsed.timestamp < 24 * 60 * 60 * 1000) { // 24h cache
+          setPersonaData(parsed.data);
+          return;
+        }
+      } catch { /* ignore */ }
+    }
+    
+    setPersonaLoading(true);
+    setPersonaError(null);
+    
+    try {
+      // Get top products for context
+      const topProducts = shopDetails.products?.slice(0, 5).map(p => ({
+        title: p.title,
+        price: p.price || 0,
+        productType: p.productType || '',
+      })) || [];
+      
+      // Get ads with descriptions for better persona analysis
+      const topAds = shopDetails.ads?.slice(0, 5).map(ad => ({
+        title: ad.pageName || '',
+        body: ad.caption || '',
+        platform: 'Meta',
+      })).filter(ad => ad.body && ad.body.length > 10) || [];
+      
+      // Get markets from countries
+      const markets = shopDetails.traffic?.countries?.map(c => c.code) || 
+                     (shopDetails.shop?.country ? [shopDetails.shop.country] : []);
+      
+      const res = await fetch('/api/ai/persona-analysis', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          url: shopDetails.shop?.url || shopUrl || '',
+          name: shopDetails.shop?.name || shopName || '',
+          category: shopDetails.shop?.category,
+          products: topProducts,
+          ads: topAds,
+          markets,
+          traffic: shopDetails.metrics?.monthlyVisits || 0,
+          mainCountry: shopDetails.shop?.country || shopDetails.traffic?.countries?.[0]?.name,
+        })
+      });
+      
+      const data = await res.json();
+      if (data.success && data.persona) {
+        setPersonaData(data.persona);
+        // Cache in localStorage
+        localStorage.setItem(cacheKey, JSON.stringify({ data: data.persona, timestamp: Date.now() }));
+      } else {
+        setPersonaError(data.error || 'Erreur lors de l\'analyse persona');
+      }
+    } catch (err) {
+      setPersonaError('Erreur de connexion');
+    } finally {
+      setPersonaLoading(false);
+    }
+  }, [shopDetails, shopId, personaData, shopName, shopUrl]);
+  
+  // Fetch similar products from AliExpress
+  const fetchSimilarProducts = useCallback(async (product: { imageUrl: string; price: number; title: string }) => {
+    setSimilarProductsLoading(true);
+    setSimilarProducts([]);
+    
+    try {
+      // Clean the image URL (remove query params)
+      const cleanImageUrl = product.imageUrl.split('?')[0];
+      
+      const res = await fetch('/api/search/aliexpress', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          url: cleanImageUrl,
+          price: product.price,
+        })
+      });
+      
+      const data = await res.json();
+      if (data.success && data.items && Array.isArray(data.items)) {
+        // Map the API response to our format
+        const productsWithProfit = data.items.map((item: {
+          item?: {
+            itemId?: string;
+            title?: string;
+            image?: string;
+            itemUrl?: string;
+            sales?: string | number;
+            sku?: {
+              def?: {
+                promotionPrice?: string;
+                price?: string;
+              }
+            }
+          };
+          calculatedProfit?: string;
+          profitPercentage?: string;
+        }) => {
+          const aliPrice = parseFloat(item.item?.sku?.def?.promotionPrice || item.item?.sku?.def?.price || '0');
+          const retailPrice = aliPrice * 3; // x3 markup
+          const profit = retailPrice - aliPrice;
+          const profitPercent = aliPrice > 0 ? Math.round((profit / retailPrice) * 100) : 0;
+          
+          // Parse sales
+          let salesCount = 0;
+          if (item.item?.sales) {
+            const salesStr = String(item.item.sales);
+            const match = salesStr.match(/(\d+[\d,]*)/)?.[1];
+            if (match) {
+              salesCount = parseInt(match.replace(/,/g, ''), 10);
+            }
+          }
+          
+          return {
+            id: item.item?.itemId || Math.random().toString(),
+            title: item.item?.title || '',
+            imageUrl: item.item?.image || '',
+            price: aliPrice,
+            originalPrice: aliPrice,
+            sales: salesCount,
+            profit: Math.round(profit * 100) / 100,
+            profitPercent,
+            url: item.item?.itemUrl || `https://www.aliexpress.com/item/${item.item?.itemId}.html`,
+            calculatedProfit: item.calculatedProfit,
+            profitPercentageFromApi: item.profitPercentage,
+          };
+        }).filter((p: { price: number }) => p.price > 0);
+        
+        setSimilarProducts(productsWithProfit);
+        
+        // Call AI to recommend the best product
+        if (productsWithProfit.length > 0) {
+          setAiRecommendationLoading(true);
+          try {
+            const productsForAI = productsWithProfit.slice(0, 10).map((p: { id: string; title: string; price: number; sales: number; profit: number; profitPercent: number }, i: number) => ({
+              index: i + 1,
+              id: p.id,
+              title: p.title.slice(0, 80),
+              price: p.price,
+              sales: p.sales,
+              profit: p.profit,
+              profitPercent: p.profitPercent,
+            }));
+            
+            const aiRes = await fetch('/api/ai/analyze-products', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ products: productsForAI, sourceProduct: product.title })
+            });
+            
+            const aiData = await aiRes.json();
+            if (aiData.success && aiData.recommendedId) {
+              setAiRecommendedProductId(aiData.recommendedId);
+              setAiRecommendationReason(aiData.reason || 'Meilleur rapport qualité/prix et ventes');
+              setAiRecommendationIsValid(aiData.isValidMatch !== false); // Default to true if not specified
+            }
+          } catch (e) {
+            console.log('AI recommendation skipped:', e);
+          } finally {
+            setAiRecommendationLoading(false);
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching similar products:', err);
+    } finally {
+      setSimilarProductsLoading(false);
+    }
+  }, []);
+  
+  // Handle product selection for copying
+  const handleSelectProductToCopy = useCallback((product: { id: number; title: string; imageUrl: string | null; price: number | null; handle: string }) => {
+    setSelectedProductToCopy({
+      id: product.id,
+      title: product.title,
+      imageUrl: product.imageUrl || '',
+      price: product.price || 0,
+      handle: product.handle,
+    });
+    setCopyProductStep(2);
+    // Fetch similar products
+    fetchSimilarProducts({
+      imageUrl: product.imageUrl || '',
+      price: product.price || 0,
+      title: product.title,
+    });
+  }, [fetchSimilarProducts]);
+  
+  // Redirect to StoreAI with product URL
+  const handleCopyProduct = useCallback((productUrl: string) => {
+    // Clean URL before redirecting - ensure it has proper protocol
+    let cleanUrl = productUrl.trim();
+    if (cleanUrl.startsWith('//')) {
+      cleanUrl = 'https:' + cleanUrl;
+    } else if (!cleanUrl.startsWith('http://') && !cleanUrl.startsWith('https://')) {
+      cleanUrl = 'https://' + cleanUrl;
+    }
+    // Redirect to ai-shop page with product URL as parameter
+    window.location.href = `/dashboard/ai-shop?url=${encodeURIComponent(cleanUrl)}`;
+  }, []);
+  
+  // Trigger analysis fetch when tab changes
+  useEffect(() => {
+    if (activeTab === 'analysis' && shopDetails && !analysisData && !analysisLoading) {
+      fetchAnalysis();
+    }
+  }, [activeTab, shopDetails, analysisData, analysisLoading, fetchAnalysis]);
+  
+  // Trigger persona fetch when tab changes
+  useEffect(() => {
+    if (activeTab === 'persona' && shopDetails && !personaData && !personaLoading) {
+      fetchPersona();
+    }
+  }, [activeTab, shopDetails, personaData, personaLoading, fetchPersona]);
+  
+  // Reset copy product state when tab changes
+  useEffect(() => {
+    if (activeTab !== 'copy-product') {
+      setCopyProductStep(1);
+      setSelectedProductToCopy(null);
+      setSimilarProducts([]);
+      setSelectedSimilarProduct(null);
+      setAiRecommendedProductId(null);
+      setAiRecommendationReason(null);
+      setAiRecommendationIsValid(true);
+    }
+  }, [activeTab]);
 
   // Infinite scroll for ads - load 25 at a time
   const loadMoreAds = useCallback(() => {
@@ -698,6 +1213,1181 @@ export default function ShopAnalyticsDrawer({ isOpen, onClose, shopId, shopUrl, 
                     </div>
                   </div>
                 </>
+              )}
+
+              {/* ========== ANALYSIS TAB - AI SCORING ========== */}
+              {activeTab === 'analysis' && (
+                <div style={{ maxWidth: 1000, margin: '0 auto' }}>
+                  {analysisLoading ? (
+                    <div style={{ ...cardStyle, padding: 80, textAlign: 'center', background: 'linear-gradient(180deg, #EFF6FF 0%, #fff 100%)' }}>
+                      <div style={{ position: 'relative', width: 80, height: 80, margin: '0 auto 24px' }}>
+                        <div style={{ position: 'absolute', inset: 0, borderRadius: 20, background: '#3B82F6', opacity: 0.2, animation: 'ping 1.5s infinite' }}></div>
+                        <div style={{ position: 'relative', width: 80, height: 80, borderRadius: 20, background: 'linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 8px 32px rgba(59, 130, 246, 0.35)' }}>
+                          <i className="ri-brain-line" style={{ fontSize: 36, color: '#fff' }}></i>
+                        </div>
+                      </div>
+                      <h3 style={{ fontSize: 20, fontWeight: 700, color: '#111827', margin: '0 0 8px' }}>Analyse IA en cours...</h3>
+                      <p style={{ fontSize: 14, color: '#6B7280', margin: '0 0 32px', maxWidth: 320, marginLeft: 'auto', marginRight: 'auto' }}>Calcul du score et génération des insights basés sur 6 critères</p>
+                      <div style={{ display: 'flex', justifyContent: 'center', gap: 6 }}>
+                        {[0, 1, 2, 3].map(i => (
+                          <div key={i} style={{ width: 8, height: 8, borderRadius: '50%', background: '#3B82F6', opacity: 0.4 + (i * 0.2), animation: `pulse 1.2s infinite ${i * 0.15}s` }}></div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : analysisError ? (
+                    <div style={{ ...cardStyle, padding: 48, textAlign: 'center', background: '#fff', border: '1px solid #FEE2E2' }}>
+                      <div style={{ width: 64, height: 64, borderRadius: 16, background: '#FEE2E2', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
+                        <i className="ri-error-warning-line" style={{ fontSize: 32, color: '#DC2626' }}></i>
+                      </div>
+                      <h3 style={{ fontSize: 18, fontWeight: 600, color: '#DC2626', margin: '0 0 8px' }}>Erreur lors de l'analyse</h3>
+                      <p style={{ fontSize: 14, color: '#6B7280', margin: '0 0 20px' }}>{analysisError}</p>
+                      <button 
+                        onClick={fetchAnalysis} 
+                        style={{ padding: '12px 24px', background: '#3B82F6', color: '#fff', border: 'none', borderRadius: 10, cursor: 'pointer', fontSize: 14, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 8 }}
+                      >
+                        <i className="ri-refresh-line"></i>Réessayer
+                      </button>
+                    </div>
+                  ) : analysisData ? (
+                    <>
+                      {/* Hero Score Card - Premium Copify Design */}
+                      <div style={{ ...cardStyle, padding: 0, marginBottom: 20, overflow: 'hidden', background: 'linear-gradient(135deg, #1E40AF 0%, #3B82F6 100%)', boxShadow: '0 4px 24px rgba(59, 130, 246, 0.25)' }}>
+                        <div style={{ padding: '28px 32px', position: 'relative' }}>
+                          <div style={{ position: 'absolute', top: 20, right: 20, background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(10px)', padding: '6px 14px', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <i className="ri-sparkling-2-fill" style={{ fontSize: 14, color: '#fff' }}></i>
+                            <span style={{ fontSize: 12, fontWeight: 600, color: '#fff' }}>Analyse IA</span>
+                          </div>
+                          
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 32 }}>
+                            {/* Score Circle */}
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
+                              <div style={{ position: 'relative', width: 140, height: 140 }}>
+                                <svg viewBox="0 0 140 140" style={{ transform: 'rotate(-90deg)' }}>
+                                  <circle cx="70" cy="70" r="60" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="10" />
+                                  <circle cx="70" cy="70" r="60" fill="none" stroke="#fff" strokeWidth="10" strokeLinecap="round" strokeDasharray={`${analysisData.globalScore * 3.77} 377`} style={{ transition: 'stroke-dasharray 1s ease' }} />
+                                </svg>
+                                <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                                  <span style={{ fontSize: 44, fontWeight: 800, color: '#fff', lineHeight: 1 }}>{analysisData.globalScore}</span>
+                                  <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)', fontWeight: 500 }}>/100</span>
+                                </div>
+                              </div>
+                              <div style={{ padding: '8px 20px', borderRadius: 20, fontSize: 13, fontWeight: 700, background: 'rgba(255,255,255,0.95)', color: analysisData.verdict.color, boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}>
+                                {analysisData.verdict.label}
+                              </div>
+                            </div>
+                            
+                            {/* Summary */}
+                            <div style={{ flex: 1 }}>
+                              <h2 style={{ fontSize: 24, fontWeight: 700, color: '#fff', marginBottom: 4 }}>{displayName}</h2>
+                              <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)', marginBottom: 20 }}>Analyse complète basée sur 6 critères de performance</p>
+                              
+                              {/* Quick Stats */}
+                              <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
+                                {[
+                                  { icon: analysisData.momentum === 'growth' ? 'ri-arrow-up-line' : analysisData.momentum === 'decline' ? 'ri-arrow-down-line' : 'ri-arrow-right-line', label: 'Momentum', value: analysisData.momentum === 'growth' ? 'Croissance' : analysisData.momentum === 'decline' ? 'Déclin' : 'Stable', good: analysisData.momentum === 'growth' },
+                                  { icon: 'ri-megaphone-line', label: 'Publicités', value: analysisData.adsStrength === 'strong' ? 'Très actif' : analysisData.adsStrength === 'weak' ? 'Faible' : 'Modéré', good: analysisData.adsStrength === 'strong' },
+                                  { icon: 'ri-file-copy-line', label: 'Réplication', value: analysisData.replicationDifficulty === 'easy' ? 'Facile' : analysisData.replicationDifficulty === 'hard' ? 'Difficile' : 'Moyen', good: analysisData.replicationDifficulty === 'easy' },
+                                ].map((stat, i) => (
+                                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 14px', background: 'rgba(255,255,255,0.1)', borderRadius: 10, backdropFilter: 'blur(10px)' }}>
+                                    <i className={stat.icon} style={{ color: stat.good ? '#4ADE80' : '#FBBF24', fontSize: 16 }}></i>
+                                    <div>
+                                      <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase' }}>{stat.label}</div>
+                                      <div style={{ fontSize: 13, fontWeight: 600, color: '#fff' }}>{stat.value}</div>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                              
+                              {/* AI Insight Box */}
+                              {analysisData.aiInsights && (
+                                <div style={{ background: 'rgba(255,255,255,0.95)', borderRadius: 12, padding: 16 }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+                                    <i className="ri-sparkling-line" style={{ color: '#3B82F6', fontSize: 14 }}></i>
+                                    <span style={{ fontSize: 12, fontWeight: 600, color: '#3B82F6' }}>Insight IA</span>
+                                  </div>
+                                  <div style={{ fontSize: 13, color: '#374151', lineHeight: 1.6 }}>{renderMarkdown(analysisData.aiInsights)}</div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Key Metrics Row - Compact */}
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 20 }}>
+                        {[
+                          { icon: 'ri-money-dollar-circle-line', label: 'Revenu estimé', value: shopDetails?.metrics?.monthlyRevenue ? `${currency}${new Intl.NumberFormat('fr-FR').format(Math.round(shopDetails.metrics.monthlyRevenue))}` : 'N/A', sub: '/mois', color: '#10B981', bg: '#ECFDF5' },
+                          { icon: 'ri-line-chart-line', label: 'Trafic', value: shopDetails?.metrics?.monthlyVisits ? new Intl.NumberFormat('fr-FR').format(shopDetails.metrics.monthlyVisits) : 'N/A', sub: `${parseFloat(shopDetails?.metrics?.threeMonthGrowth || '0') >= 0 ? '+' : ''}${shopDetails?.metrics?.threeMonthGrowth || '0'}% 3m`, color: '#3B82F6', bg: '#EFF6FF', subGood: parseFloat(shopDetails?.metrics?.threeMonthGrowth || '0') >= 0 },
+                          { icon: 'ri-megaphone-line', label: 'Pubs actives', value: shopDetails?.metrics?.activeAdsCount?.toString() ?? 'N/A', sub: `${parseFloat(shopDetails?.metrics?.adsThreeMonthGrowth || '0') >= 0 ? '+' : ''}${shopDetails?.metrics?.adsThreeMonthGrowth || '0'}% 3m`, color: '#F59E0B', bg: '#FEF3C7', subGood: parseFloat(shopDetails?.metrics?.adsThreeMonthGrowth || '0') >= 0 },
+                          { icon: 'ri-shopping-bag-line', label: 'Produits', value: shopDetails?.shop?.productsCount?.toString() ?? 'N/A', sub: 'en ligne', color: '#8B5CF6', bg: '#F5F3FF' },
+                        ].map((m, i) => (
+                          <div key={i} style={{ ...cardStyle, padding: 16 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+                              <div style={{ width: 36, height: 36, borderRadius: 10, background: m.bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <i className={m.icon} style={{ color: m.color, fontSize: 18 }}></i>
+                              </div>
+                              <span style={{ fontSize: 11, color: '#6B7280', fontWeight: 600, textTransform: 'uppercase' }}>{m.label}</span>
+                            </div>
+                            <div style={{ fontSize: 26, fontWeight: 800, color: '#111827', marginBottom: 2 }}>{m.value}</div>
+                            <div style={{ fontSize: 12, color: m.subGood !== undefined ? (m.subGood ? '#10B981' : '#EF4444') : '#6B7280', fontWeight: m.subGood !== undefined ? 600 : 400 }}>{m.sub}</div>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Scores Grid - Clean Cards */}
+                      <div style={{ ...cardStyle, padding: 0, overflow: 'hidden', marginBottom: 20 }}>
+                        <div style={{ padding: '14px 20px', background: '#F8FAFC', borderBottom: '1px solid #E5E7EB', display: 'flex', alignItems: 'center', gap: 10 }}>
+                          <i className="ri-bar-chart-grouped-line" style={{ fontSize: 18, color: '#3B82F6' }}></i>
+                          <h3 style={{ fontSize: 14, fontWeight: 600, color: '#111827', margin: 0 }}>Scores par critère</h3>
+                        </div>
+                        <div style={{ padding: 16, display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 10 }}>
+                          {[
+                            { name: 'Maturité', icon: 'ri-calendar-line', score: analysisData.scores.age },
+                            { name: 'Marchés', icon: 'ri-global-line', score: analysisData.scores.markets },
+                            { name: 'Trafic', icon: 'ri-bar-chart-line', score: analysisData.scores.trafficLevel },
+                            { name: 'Tendance', icon: 'ri-line-chart-line', score: analysisData.scores.trafficTrend },
+                            { name: 'Catalogue', icon: 'ri-shopping-bag-line', score: analysisData.scores.products },
+                            { name: 'Ads', icon: 'ri-advertisement-line', score: analysisData.scores.ads },
+                          ].map((item) => {
+                            const scoreColor = item.score.value >= 70 ? '#10B981' : item.score.value >= 40 ? '#F59E0B' : '#EF4444';
+                            return (
+                              <div key={item.name} style={{ textAlign: 'center', padding: 12, background: '#F9FAFB', borderRadius: 10, border: '1px solid #E5E7EB' }}>
+                                <div style={{ width: 32, height: 32, borderRadius: 8, background: `${scoreColor}15`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 8px' }}>
+                                  <i className={item.icon} style={{ fontSize: 14, color: scoreColor }}></i>
+                                </div>
+                                <div style={{ fontSize: 24, fontWeight: 700, color: scoreColor, marginBottom: 2 }}>{item.score.value}</div>
+                                <div style={{ fontSize: 11, fontWeight: 600, color: '#374151' }}>{item.name}</div>
+                                <div style={{ fontSize: 10, color: '#9CA3AF', marginTop: 2 }}>{item.score.label}</div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                      
+                      {/* Traffic Sources & Markets Row */}
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 20 }}>
+                        {/* Traffic Sources */}
+                        {shopDetails?.traffic?.sources && shopDetails.traffic.sources.length > 0 && (
+                          <div style={{ ...cardStyle, padding: 0, overflow: 'hidden' }}>
+                            <div style={{ padding: '12px 16px', background: '#F8FAFC', borderBottom: '1px solid #E5E7EB', display: 'flex', alignItems: 'center', gap: 8 }}>
+                              <i className="ri-pie-chart-line" style={{ color: '#3B82F6', fontSize: 16 }}></i>
+                              <h3 style={{ fontSize: 13, fontWeight: 600, color: '#111827', margin: 0 }}>Sources de trafic</h3>
+                            </div>
+                            <div style={{ padding: 12 }}>
+                              {shopDetails.traffic.sources.slice(0, 5).map((source, i) => (
+                                <div key={source.name} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', borderBottom: i < Math.min(shopDetails.traffic.sources.length, 5) - 1 ? '1px solid #F3F4F6' : 'none' }}>
+                                  <div style={{ width: 24, height: 24, borderRadius: 6, background: `${TRAFFIC_COLORS[i % TRAFFIC_COLORS.length]}15`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                    <i className={
+                                      source.name.toLowerCase().includes('direct') ? 'ri-cursor-line' :
+                                      source.name.toLowerCase().includes('search') ? 'ri-search-line' :
+                                      source.name.toLowerCase().includes('social') ? 'ri-share-line' :
+                                      source.name.toLowerCase().includes('referral') ? 'ri-links-line' :
+                                      source.name.toLowerCase().includes('mail') ? 'ri-mail-line' : 'ri-global-line'
+                                    } style={{ fontSize: 12, color: TRAFFIC_COLORS[i % TRAFFIC_COLORS.length] }}></i>
+                                  </div>
+                                  <div style={{ flex: 1 }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 3 }}>
+                                      <span style={{ fontSize: 12, fontWeight: 500, color: '#374151' }}>{source.name}</span>
+                                      <span style={{ fontSize: 12, fontWeight: 700, color: '#111827' }}>{source.value}%</span>
+                                    </div>
+                                    <div style={{ height: 3, background: '#E5E7EB', borderRadius: 2 }}>
+                                      <div style={{ height: '100%', width: `${source.value}%`, background: TRAFFIC_COLORS[i % TRAFFIC_COLORS.length], borderRadius: 2 }} />
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        
+                        {/* Markets/Countries */}
+                        {shopDetails?.traffic?.countries && shopDetails.traffic.countries.length > 0 && (
+                          <div style={{ ...cardStyle, padding: 0, overflow: 'hidden' }}>
+                            <div style={{ padding: '12px 16px', background: '#F8FAFC', borderBottom: '1px solid #E5E7EB', display: 'flex', alignItems: 'center', gap: 8 }}>
+                              <i className="ri-earth-line" style={{ color: '#10B981', fontSize: 16 }}></i>
+                              <h3 style={{ fontSize: 13, fontWeight: 600, color: '#111827', margin: 0 }}>Marchés cibles</h3>
+                            </div>
+                            <div style={{ padding: 12 }}>
+                              {shopDetails.traffic.countries.slice(0, 5).map((country, i) => (
+                                <div key={country.code} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', borderBottom: i < Math.min(shopDetails.traffic.countries.length, 5) - 1 ? '1px solid #F3F4F6' : 'none' }}>
+                                  <FlagImage code={country.code} size={20} />
+                                  <div style={{ flex: 1 }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 3 }}>
+                                      <span style={{ fontSize: 12, fontWeight: 500, color: '#374151' }}>{country.name}</span>
+                                      <span style={{ fontSize: 12, fontWeight: 700, color: '#111827' }}>{country.value}%</span>
+                                    </div>
+                                    <div style={{ height: 3, background: '#E5E7EB', borderRadius: 2 }}>
+                                      <div style={{ height: '100%', width: `${country.value}%`, background: '#10B981', borderRadius: 2 }} />
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                      
+                      {/* Shop Details Compact Row */}
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 20 }}>
+                        {[
+                          { icon: 'ri-palette-line', label: 'Thème', value: shopDetails?.shop?.themeName || 'Non détecté', color: '#6366F1' },
+                          { icon: 'ri-price-tag-3-line', label: 'Catégorie', value: shopDetails?.shop?.category || 'Non spécifiée', color: '#EC4899' },
+                          { icon: 'ri-map-pin-line', label: 'Pays', value: shopDetails?.shop?.country || 'N/A', color: '#10B981', flag: shopDetails?.shop?.country },
+                          { icon: 'ri-calendar-line', label: 'Création', value: shopDetails?.shop?.whoisAt ? new Date(shopDetails.shop.whoisAt).toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' }) : shopDetails?.shop?.createdAt ? new Date(shopDetails.shop.createdAt).toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' }) : 'Inconnue', color: '#F59E0B' },
+                        ].map((d, i) => (
+                          <div key={i} style={{ ...cardStyle, padding: 14 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                              {d.flag ? <FlagImage code={d.flag} size={16} /> : <i className={d.icon} style={{ color: d.color, fontSize: 14 }}></i>}
+                              <span style={{ fontSize: 10, color: '#6B7280', fontWeight: 600, textTransform: 'uppercase' }}>{d.label}</span>
+                            </div>
+                            <div style={{ fontSize: 13, fontWeight: 600, color: '#111827' }}>{d.value}</div>
+                          </div>
+                        ))}
+                      </div>
+                      
+                      {/* Apps & Pixels */}
+                      {((shopDetails?.shop?.apps && shopDetails.shop.apps.length > 0) || (shopDetails?.shop?.pixels && shopDetails.shop.pixels.length > 0)) && (
+                        <div style={{ ...cardStyle, padding: 16, marginBottom: 20 }}>
+                          <div style={{ display: 'flex', gap: 24 }}>
+                            {shopDetails?.shop?.apps && shopDetails.shop.apps.length > 0 && (
+                              <div style={{ flex: 1 }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
+                                  <i className="ri-apps-line" style={{ color: '#3B82F6', fontSize: 14 }}></i>
+                                  <span style={{ fontSize: 11, color: '#6B7280', fontWeight: 600, textTransform: 'uppercase' }}>Apps ({shopDetails.shop.apps.length})</span>
+                                </div>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                                  {shopDetails.shop.apps.slice(0, 5).map((app, i) => (
+                                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', background: '#F8FAFC', border: '1px solid #E5E7EB', borderRadius: 6 }}>
+                                      {app.icon ? <img src={app.icon} alt="" style={{ width: 14, height: 14, borderRadius: 3 }} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} /> : <div style={{ width: 14, height: 14, borderRadius: 3, background: '#E5E7EB', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 8, fontWeight: 600, color: '#6B7280' }}>{app.name[0]}</div>}
+                                      <span style={{ fontSize: 11, fontWeight: 500, color: '#374151' }}>{app.name}</span>
+                                    </div>
+                                  ))}
+                                  {shopDetails.shop.apps.length > 5 && <span style={{ padding: '5px 10px', background: '#F3F4F6', borderRadius: 6, fontSize: 11, color: '#6B7280' }}>+{shopDetails.shop.apps.length - 5}</span>}
+                                </div>
+                              </div>
+                            )}
+                            {shopDetails?.shop?.pixels && shopDetails.shop.pixels.length > 0 && (
+                              <div style={{ flex: 1 }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
+                                  <i className="ri-flashlight-line" style={{ color: '#F59E0B', fontSize: 14 }}></i>
+                                  <span style={{ fontSize: 11, color: '#6B7280', fontWeight: 600, textTransform: 'uppercase' }}>Pixels ({shopDetails.shop.pixels.length})</span>
+                                </div>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                                  {shopDetails.shop.pixels.map((pixel, i) => {
+                                    const iconPath = getPixelIcon(pixel);
+                                    return (
+                                      <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', background: '#F8FAFC', border: '1px solid #E5E7EB', borderRadius: 6 }}>
+                                        {iconPath ? <img src={iconPath} alt="" style={{ width: 14, height: 14 }} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} /> : <div style={{ width: 14, height: 14, borderRadius: 3, background: '#E5E7EB', fontSize: 8, fontWeight: 600, color: '#6B7280', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{pixel[0]}</div>}
+                                        <span style={{ fontSize: 11, fontWeight: 500, color: '#374151' }}>{pixel}</span>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Strengths & Weaknesses - Compact Side by Side */}
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 20 }}>
+                        <div style={{ ...cardStyle, padding: 0, overflow: 'hidden' }}>
+                          <div style={{ padding: '12px 16px', background: 'linear-gradient(135deg, #DCFCE7 0%, #F0FDF4 100%)', borderBottom: '1px solid #BBF7D0', display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <div style={{ width: 28, height: 28, borderRadius: 8, background: '#16A34A', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              <i className="ri-thumb-up-fill" style={{ color: '#fff', fontSize: 14 }}></i>
+                            </div>
+                            <h3 style={{ fontSize: 13, fontWeight: 600, color: '#166534', margin: 0 }}>Points forts</h3>
+                          </div>
+                          <div style={{ padding: 14 }}>
+                            {analysisData.strengths.length > 0 ? (
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                                {analysisData.strengths.map((s, i) => (
+                                  <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                                    <div style={{ width: 16, height: 16, borderRadius: '50%', background: '#DCFCE7', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 1 }}>
+                                      <i className="ri-check-line" style={{ fontSize: 10, color: '#16A34A' }}></i>
+                                    </div>
+                                    <span style={{ fontSize: 12, color: '#374151', lineHeight: 1.5 }}>{s}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : <p style={{ fontSize: 12, color: '#9CA3AF', textAlign: 'center', margin: 0 }}>Aucun point fort notable</p>}
+                          </div>
+                        </div>
+                        
+                        <div style={{ ...cardStyle, padding: 0, overflow: 'hidden' }}>
+                          <div style={{ padding: '12px 16px', background: 'linear-gradient(135deg, #FEE2E2 0%, #FEF2F2 100%)', borderBottom: '1px solid #FECACA', display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <div style={{ width: 28, height: 28, borderRadius: 8, background: '#DC2626', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              <i className="ri-error-warning-fill" style={{ color: '#fff', fontSize: 14 }}></i>
+                            </div>
+                            <h3 style={{ fontSize: 13, fontWeight: 600, color: '#991B1B', margin: 0 }}>Risques</h3>
+                          </div>
+                          <div style={{ padding: 14 }}>
+                            {analysisData.weaknesses.length > 0 ? (
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                                {analysisData.weaknesses.map((w, i) => (
+                                  <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                                    <div style={{ width: 16, height: 16, borderRadius: '50%', background: '#FEE2E2', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 1 }}>
+                                      <i className="ri-close-line" style={{ fontSize: 10, color: '#DC2626' }}></i>
+                                    </div>
+                                    <span style={{ fontSize: 12, color: '#374151', lineHeight: 1.5 }}>{w}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : <p style={{ fontSize: 12, color: '#9CA3AF', textAlign: 'center', margin: 0 }}>Aucun risque majeur</p>}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Actions recommandées - Premium Dark Style */}
+                      <div style={{ ...cardStyle, padding: 0, overflow: 'hidden', background: 'linear-gradient(180deg, #0F172A 0%, #1E293B 100%)', boxShadow: '0 4px 24px rgba(0, 0, 0, 0.15)' }}>
+                        <div style={{ padding: '16px 20px', borderBottom: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                            <div style={{ width: 36, height: 36, borderRadius: 10, background: 'linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 12px rgba(59, 130, 246, 0.4)' }}>
+                              <i className="ri-lightbulb-flash-line" style={{ color: '#fff', fontSize: 18 }}></i>
+                            </div>
+                            <div>
+                              <h3 style={{ fontSize: 14, fontWeight: 700, color: '#fff', margin: 0 }}>Actions recommandées</h3>
+                              <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', margin: 0 }}>Verdict: {analysisData.verdict.label}</p>
+                            </div>
+                          </div>
+                          <span style={{ background: analysisData.verdict.color, padding: '4px 12px', borderRadius: 6, fontSize: 11, fontWeight: 600, color: '#fff' }}>{analysisData.globalScore}/100</span>
+                        </div>
+                        <div style={{ padding: 16 }}>
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
+                            {analysisData.actions.map((action, i) => (
+                              <div key={i} style={{ padding: 16, background: 'rgba(59, 130, 246, 0.08)', borderRadius: 10, border: '1px solid rgba(59, 130, 246, 0.15)' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+                                  <div style={{ width: 28, height: 28, borderRadius: 8, background: '#3B82F6', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700 }}>{i + 1}</div>
+                                  <span style={{ fontSize: 10, color: '#60A5FA', fontWeight: 600, textTransform: 'uppercase' }}>Étape {i + 1}</span>
+                                </div>
+                                <p style={{ fontSize: 13, color: '#fff', lineHeight: 1.6, margin: 0 }}>{action}</p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Products Analysis Section with Images */}
+                      {bestsellerProducts.length > 0 && (
+                        <div style={{ ...cardStyle, padding: 0, overflow: 'hidden', marginTop: 20 }}>
+                          <div style={{ padding: '14px 20px', background: 'linear-gradient(135deg, #1E40AF 0%, #3B82F6 100%)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                              <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <i className="ri-shopping-bag-line" style={{ color: '#fff', fontSize: 18 }}></i>
+                              </div>
+                              <div>
+                                <h3 style={{ fontSize: 14, fontWeight: 600, color: '#fff', margin: 0 }}>Analyse des Best-Sellers</h3>
+                                <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.7)', margin: 0 }}>{bestsellerProducts.length} produits</p>
+                              </div>
+                            </div>
+                            <button 
+                              onClick={() => setActiveTab('copy-product')}
+                              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: 8, color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer', backdropFilter: 'blur(10px)' }}
+                            >
+                              <i className="ri-file-copy-line"></i>Copier
+                            </button>
+                          </div>
+                          
+                          <div style={{ padding: 16 }}>
+                            {/* Products Grid with Images */}
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 10, marginBottom: 16 }}>
+                              {bestsellerProducts.slice(0, 5).map((p, idx) => (
+                                <div key={p.id} style={{ border: '1px solid #E5E7EB', borderRadius: 8, overflow: 'hidden', background: '#fff' }}>
+                                  <div style={{ position: 'relative', aspectRatio: '1/1', background: '#F9FAFB' }}>
+                                    <img 
+                                      src={p.imageUrl || 'https://via.placeholder.com/120'} 
+                                      alt={p.title || ''} 
+                                      style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                                      onError={(e) => { (e.target as HTMLImageElement).src = 'https://via.placeholder.com/120'; }}
+                                    />
+                                    <span style={{ position: 'absolute', top: 4, left: 4, background: idx === 0 ? '#3B82F6' : '#6B7280', color: '#fff', padding: '2px 6px', borderRadius: 4, fontSize: 9, fontWeight: 700 }}>
+                                      {idx === 0 ? 'TOP' : `#${idx + 1}`}
+                                    </span>
+                                  </div>
+                                  <div style={{ padding: 8 }}>
+                                    <h4 style={{ fontSize: 10, fontWeight: 500, color: '#374151', margin: 0, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', lineHeight: 1.3, height: '2.6em' }}>{p.title}</h4>
+                                    <div style={{ marginTop: 4 }}>
+                                      <span style={{ fontSize: 13, fontWeight: 700, color: '#3B82F6' }}>{currency}{p.price || 0}</span>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                            
+                            {/* AI Products Analysis */}
+                            {analysisData.productsAnalysis && (
+                              <div style={{ background: '#EFF6FF', borderRadius: 10, padding: 16, border: '1px solid #BFDBFE' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
+                                  <i className="ri-sparkling-line" style={{ color: '#3B82F6', fontSize: 14 }}></i>
+                                  <span style={{ fontSize: 12, fontWeight: 600, color: '#1E40AF' }}>Analyse IA des produits</span>
+                                </div>
+                                <div style={{ fontSize: 13, color: '#374151', lineHeight: 1.6 }}>
+                                  {renderMarkdown(analysisData.productsAnalysis)}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* Footer Actions */}
+                      <div style={{ marginTop: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
+                        <button 
+                          onClick={() => {
+                            localStorage.removeItem(`shop_analysis_${shopId}`);
+                            setAnalysisData(null);
+                            fetchAnalysis();
+                          }}
+                          style={{ padding: '10px 18px', background: '#fff', border: '1px solid #E5E7EB', borderRadius: 8, color: '#374151', fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                        >
+                          <i className="ri-refresh-line" style={{ fontSize: 14 }}></i>Régénérer
+                        </button>
+                        <button 
+                          onClick={() => setActiveTab('persona')}
+                          style={{ padding: '10px 18px', background: '#3B82F6', border: 'none', borderRadius: 8, color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6, boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)' }}
+                        >
+                          <i className="ri-user-heart-line" style={{ fontSize: 14 }}></i>Voir le Persona
+                        </button>
+                      </div>
+                    </>
+                  ) : null}
+                </div>
+              )}
+
+              {/* ========== PERSONA TAB ========== */}
+              {activeTab === 'persona' && (
+                <div style={{ maxWidth: 950, margin: '0 auto' }}>
+                  {personaLoading && (
+                    <div style={{ ...cardStyle, padding: 80, textAlign: 'center', background: 'linear-gradient(180deg, #EFF6FF 0%, #fff 100%)' }}>
+                      <div style={{ position: 'relative', width: 80, height: 80, margin: '0 auto 24px' }}>
+                        <div style={{ position: 'absolute', inset: 0, borderRadius: 20, background: '#3B82F6', opacity: 0.2, animation: 'ping 1.5s infinite' }}></div>
+                        <div style={{ position: 'relative', width: 80, height: 80, borderRadius: 20, background: 'linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 8px 32px rgba(59, 130, 246, 0.35)' }}>
+                          <i className="ri-user-search-line" style={{ fontSize: 36, color: '#fff' }}></i>
+                        </div>
+                      </div>
+                      <h3 style={{ fontSize: 20, fontWeight: 700, color: '#111827', margin: '0 0 8px' }}>Analyse du persona en cours...</h3>
+                      <p style={{ fontSize: 14, color: '#6B7280', margin: '0 0 32px', maxWidth: 320, marginLeft: 'auto', marginRight: 'auto' }}>L'IA analyse les produits et le marché pour identifier votre client idéal</p>
+                      <div style={{ display: 'flex', justifyContent: 'center', gap: 6 }}>
+                        {[0, 1, 2, 3].map(i => (
+                          <div key={i} style={{ width: 8, height: 8, borderRadius: '50%', background: '#3B82F6', opacity: 0.4 + (i * 0.2), animation: `pulse 1.2s infinite ${i * 0.15}s` }}></div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {personaError && (
+                    <div style={{ ...cardStyle, padding: 48, textAlign: 'center', background: '#fff', border: '1px solid #FEE2E2' }}>
+                      <div style={{ width: 64, height: 64, borderRadius: 16, background: '#FEE2E2', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
+                        <i className="ri-error-warning-line" style={{ fontSize: 32, color: '#DC2626' }}></i>
+                      </div>
+                      <h3 style={{ fontSize: 18, fontWeight: 600, color: '#DC2626', margin: '0 0 8px' }}>Erreur d'analyse</h3>
+                      <p style={{ fontSize: 14, color: '#6B7280', margin: '0 0 20px' }}>{personaError}</p>
+                      <button 
+                        onClick={() => { setPersonaError(null); setPersonaData(null); fetchPersona(); }}
+                        style={{ padding: '12px 24px', background: '#3B82F6', color: '#fff', border: 'none', borderRadius: 10, cursor: 'pointer', fontSize: 14, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 8 }}
+                      >
+                        <i className="ri-refresh-line"></i>Réessayer
+                      </button>
+                    </div>
+                  )}
+                  
+                  {personaData && !personaLoading && (
+                    <>
+                      {/* Hero Card - Buyer Summary */}
+                      <div style={{ ...cardStyle, padding: 0, overflow: 'hidden', marginBottom: 20, background: 'linear-gradient(135deg, #1E40AF 0%, #3B82F6 100%)', boxShadow: '0 4px 24px rgba(59, 130, 246, 0.25)' }}>
+                        <div style={{ padding: '28px 28px 24px', position: 'relative' }}>
+                          <div style={{ position: 'absolute', top: 20, right: 20, background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(10px)', padding: '6px 14px', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <i className="ri-sparkling-2-fill" style={{ fontSize: 14, color: '#fff' }}></i>
+                            <span style={{ fontSize: 12, fontWeight: 600, color: '#fff' }}>Généré par IA</span>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 20 }}>
+                            <div style={{ width: 56, height: 56, borderRadius: 16, background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(10px)' }}>
+                              <i className="ri-user-heart-fill" style={{ fontSize: 28, color: '#fff' }}></i>
+                            </div>
+                            <div>
+                              <h2 style={{ fontSize: 22, fontWeight: 700, color: '#fff', margin: 0 }}>Persona Client</h2>
+                              <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)', margin: 0 }}>Votre acheteur idéal identifié</p>
+                            </div>
+                          </div>
+                          <div style={{ background: 'rgba(255,255,255,0.95)', borderRadius: 12, padding: 20 }}>
+                            <p style={{ fontSize: 17, fontWeight: 500, color: '#1E40AF', margin: 0, lineHeight: 1.7 }}>
+                              "{personaData.buyerSummary}"
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Profile Cards Row */}
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12, marginBottom: 20 }}>
+                        {[
+                          { icon: 'ri-time-line', label: 'Âge', value: personaData.profile.age, color: '#3B82F6' },
+                          { icon: 'ri-user-smile-line', label: 'Genre', value: personaData.profile.gender, color: '#8B5CF6' },
+                          { icon: 'ri-wallet-3-line', label: 'Budget', value: personaData.profile.budget, color: '#10B981' },
+                          { icon: 'ri-map-pin-2-line', label: 'Pays', value: personaData.profile.location, color: '#F59E0B' },
+                          { icon: 'ri-user-star-line', label: 'Situation', value: personaData.profile.situation, color: '#EC4899' },
+                        ].map((item, i) => (
+                          <div key={i} style={{ ...cardStyle, padding: 16, textAlign: 'center' }}>
+                            <div style={{ width: 40, height: 40, borderRadius: 12, background: `${item.color}15`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 10px' }}>
+                              <i className={item.icon} style={{ fontSize: 20, color: item.color }}></i>
+                            </div>
+                            <div style={{ fontSize: 10, color: '#6B7280', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 4 }}>{item.label}</div>
+                            <div style={{ fontSize: 13, fontWeight: 600, color: '#111827', lineHeight: 1.4 }}>{item.value}</div>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Problem & Solution Side by Side */}
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 20 }}>
+                        {/* Problem Card */}
+                        <div style={{ ...cardStyle, padding: 0, overflow: 'hidden' }}>
+                          <div style={{ padding: '14px 20px', background: 'linear-gradient(135deg, #FEE2E2 0%, #FEF2F2 100%)', display: 'flex', alignItems: 'center', gap: 10 }}>
+                            <div style={{ width: 32, height: 32, borderRadius: 8, background: '#DC2626', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              <i className="ri-emotion-unhappy-line" style={{ fontSize: 16, color: '#fff' }}></i>
+                            </div>
+                            <h3 style={{ fontSize: 14, fontWeight: 600, color: '#991B1B', margin: 0 }}>Le problème du client</h3>
+                          </div>
+                          <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                            <div style={{ display: 'flex', gap: 12 }}>
+                              <div style={{ width: 24, height: 24, borderRadius: 6, background: '#FEE2E2', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 2 }}>
+                                <i className="ri-focus-3-line" style={{ fontSize: 12, color: '#DC2626' }}></i>
+                              </div>
+                              <div>
+                                <div style={{ fontSize: 10, color: '#DC2626', fontWeight: 600, textTransform: 'uppercase', marginBottom: 3 }}>Problème principal</div>
+                                <p style={{ fontSize: 13, color: '#374151', margin: 0, lineHeight: 1.5 }}>{personaData.problem.mainProblem}</p>
+                              </div>
+                            </div>
+                            <div style={{ display: 'flex', gap: 12 }}>
+                              <div style={{ width: 24, height: 24, borderRadius: 6, background: '#FEF3C7', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 2 }}>
+                                <i className="ri-emotion-sad-line" style={{ fontSize: 12, color: '#D97706' }}></i>
+                              </div>
+                              <div>
+                                <div style={{ fontSize: 10, color: '#D97706', fontWeight: 600, textTransform: 'uppercase', marginBottom: 3 }}>Frustration</div>
+                                <p style={{ fontSize: 13, color: '#374151', margin: 0, lineHeight: 1.5 }}>{personaData.problem.frustration}</p>
+                              </div>
+                            </div>
+                            <div style={{ display: 'flex', gap: 12 }}>
+                              <div style={{ width: 24, height: 24, borderRadius: 6, background: '#DBEAFE', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 2 }}>
+                                <i className="ri-timer-flash-line" style={{ fontSize: 12, color: '#2563EB' }}></i>
+                              </div>
+                              <div>
+                                <div style={{ fontSize: 10, color: '#2563EB', fontWeight: 600, textTransform: 'uppercase', marginBottom: 3 }}>Urgence d'achat</div>
+                                <p style={{ fontSize: 13, color: '#374151', margin: 0, lineHeight: 1.5 }}>{personaData.problem.urgency}</p>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Why This Product Card */}
+                        <div style={{ ...cardStyle, padding: 0, overflow: 'hidden' }}>
+                          <div style={{ padding: '14px 20px', background: 'linear-gradient(135deg, #DBEAFE 0%, #EFF6FF 100%)', display: 'flex', alignItems: 'center', gap: 10 }}>
+                            <div style={{ width: 32, height: 32, borderRadius: 8, background: '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              <i className="ri-lightbulb-flash-line" style={{ fontSize: 16, color: '#fff' }}></i>
+                            </div>
+                            <h3 style={{ fontSize: 14, fontWeight: 600, color: '#1E40AF', margin: 0 }}>Pourquoi il achète</h3>
+                          </div>
+                          <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                            <div style={{ display: 'flex', gap: 12 }}>
+                              <div style={{ width: 24, height: 24, borderRadius: 6, background: '#DBEAFE', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 2 }}>
+                                <i className="ri-magic-line" style={{ fontSize: 12, color: '#2563EB' }}></i>
+                              </div>
+                              <div>
+                                <div style={{ fontSize: 10, color: '#2563EB', fontWeight: 600, textTransform: 'uppercase', marginBottom: 3 }}>Ce qui attire</div>
+                                <p style={{ fontSize: 13, color: '#374151', margin: 0, lineHeight: 1.5 }}>{personaData.whyThisProduct.attraction}</p>
+                              </div>
+                            </div>
+                            <div style={{ display: 'flex', gap: 12 }}>
+                              <div style={{ width: 24, height: 24, borderRadius: 6, background: '#F3F4F6', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 2 }}>
+                                <i className="ri-question-line" style={{ fontSize: 12, color: '#6B7280' }}></i>
+                              </div>
+                              <div>
+                                <div style={{ fontSize: 10, color: '#6B7280', fontWeight: 600, textTransform: 'uppercase', marginBottom: 3 }}>Avant l'achat</div>
+                                <p style={{ fontSize: 13, color: '#374151', margin: 0, lineHeight: 1.5 }}>{personaData.whyThisProduct.beforeBuying}</p>
+                              </div>
+                            </div>
+                            <div style={{ display: 'flex', gap: 12 }}>
+                              <div style={{ width: 24, height: 24, borderRadius: 6, background: '#D1FAE5', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 2 }}>
+                                <i className="ri-emotion-happy-line" style={{ fontSize: 12, color: '#059669' }}></i>
+                              </div>
+                              <div>
+                                <div style={{ fontSize: 10, color: '#059669', fontWeight: 600, textTransform: 'uppercase', marginBottom: 3 }}>Après l'achat</div>
+                                <p style={{ fontSize: 13, color: '#374151', margin: 0, lineHeight: 1.5 }}>{personaData.whyThisProduct.afterBuying}</p>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Targeting Section */}
+                      <div style={{ ...cardStyle, padding: 0, overflow: 'hidden', marginBottom: 20 }}>
+                        <div style={{ padding: '16px 24px', background: 'linear-gradient(135deg, #1E40AF 0%, #3B82F6 100%)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                            <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              <i className="ri-crosshair-2-line" style={{ fontSize: 18, color: '#fff' }}></i>
+                            </div>
+                            <h3 style={{ fontSize: 15, fontWeight: 600, color: '#fff', margin: 0 }}>Comment le cibler en pub</h3>
+                          </div>
+                          <span style={{ background: 'rgba(255,255,255,0.2)', padding: '5px 12px', borderRadius: 6, fontSize: 11, fontWeight: 600, color: '#fff' }}>STRATÉGIE ADS</span>
+                        </div>
+                        <div style={{ padding: 20 }}>
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+                            {/* Platform */}
+                            <div style={{ background: '#F8FAFC', borderRadius: 12, padding: 18, border: '1px solid #E5E7EB' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+                                <div style={{ width: 36, height: 36, borderRadius: 10, background: '#DBEAFE', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                  <i className="ri-advertisement-line" style={{ fontSize: 18, color: '#2563EB' }}></i>
+                                </div>
+                                <span style={{ fontSize: 13, fontWeight: 600, color: '#111827' }}>Plateforme recommandée</span>
+                              </div>
+                              <p style={{ fontSize: 14, color: '#374151', margin: 0, lineHeight: 1.6 }}>{personaData.targeting.platform}</p>
+                            </div>
+                            
+                            {/* Content Type */}
+                            <div style={{ background: '#F8FAFC', borderRadius: 12, padding: 18, border: '1px solid #E5E7EB' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+                                <div style={{ width: 36, height: 36, borderRadius: 10, background: '#FCE7F3', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                  <i className="ri-movie-2-line" style={{ fontSize: 18, color: '#DB2777' }}></i>
+                                </div>
+                                <span style={{ fontSize: 13, fontWeight: 600, color: '#111827' }}>Type de contenu</span>
+                              </div>
+                              <p style={{ fontSize: 14, color: '#374151', margin: 0, lineHeight: 1.6 }}>{personaData.targeting.contentType}</p>
+                            </div>
+                          </div>
+                          
+                          {/* Interests Full Width */}
+                          <div style={{ background: '#F8FAFC', borderRadius: 12, padding: 18, border: '1px solid #E5E7EB' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+                              <div style={{ width: 36, height: 36, borderRadius: 10, background: '#FEF3C7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <i className="ri-heart-3-line" style={{ fontSize: 18, color: '#D97706' }}></i>
+                              </div>
+                              <span style={{ fontSize: 13, fontWeight: 600, color: '#111827' }}>Centres d'intérêt à cibler</span>
+                            </div>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                              {personaData.targeting.interests.map((interest, i) => (
+                                <span key={i} style={{ 
+                                  padding: '8px 14px', 
+                                  background: i === 0 ? '#3B82F6' : '#fff',
+                                  color: i === 0 ? '#fff' : '#374151',
+                                  borderRadius: 8, 
+                                  fontSize: 13, 
+                                  fontWeight: 500,
+                                  border: i === 0 ? 'none' : '1px solid #E5E7EB',
+                                  boxShadow: i === 0 ? '0 2px 8px rgba(59, 130, 246, 0.3)' : 'none'
+                                }}>
+                                  {interest}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Ad Message Card - Premium Design */}
+                      <div style={{ ...cardStyle, padding: 0, overflow: 'hidden', background: 'linear-gradient(180deg, #0F172A 0%, #1E293B 100%)', boxShadow: '0 4px 24px rgba(0, 0, 0, 0.15)' }}>
+                        <div style={{ padding: '20px 24px', borderBottom: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                            <div style={{ width: 40, height: 40, borderRadius: 12, background: 'linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 12px rgba(59, 130, 246, 0.4)' }}>
+                              <i className="ri-megaphone-fill" style={{ fontSize: 20, color: '#fff' }}></i>
+                            </div>
+                            <div>
+                              <h3 style={{ fontSize: 16, fontWeight: 700, color: '#fff', margin: 0 }}>Messages publicitaires</h3>
+                              <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', margin: 0 }}>Prêts à utiliser dans vos pubs</p>
+                            </div>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(59, 130, 246, 0.2)', padding: '6px 12px', borderRadius: 8 }}>
+                            <i className="ri-file-copy-2-line" style={{ fontSize: 14, color: '#60A5FA' }}></i>
+                            <span style={{ fontSize: 11, fontWeight: 600, color: '#60A5FA' }}>COPIER & COLLER</span>
+                          </div>
+                        </div>
+                        <div style={{ padding: 24 }}>
+                          {/* Main Phrase */}
+                          <div style={{ marginBottom: 16 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                              <div style={{ width: 28, height: 28, borderRadius: 8, background: '#3B82F6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <i className="ri-double-quotes-l" style={{ fontSize: 14, color: '#fff' }}></i>
+                              </div>
+                              <span style={{ fontSize: 12, fontWeight: 600, color: '#60A5FA', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Phrase publicitaire</span>
+                            </div>
+                            <div style={{ background: 'rgba(59, 130, 246, 0.08)', borderRadius: 12, padding: 20, border: '1px solid rgba(59, 130, 246, 0.15)', position: 'relative' }}>
+                              <p style={{ fontSize: 16, color: '#fff', margin: 0, lineHeight: 1.7, fontWeight: 500 }}>"{personaData.adMessage.mainPhrase}"</p>
+                              <button 
+                                onClick={() => { navigator.clipboard.writeText(personaData.adMessage.mainPhrase); }}
+                                style={{ position: 'absolute', top: 12, right: 12, padding: '8px 14px', background: '#3B82F6', border: 'none', borderRadius: 8, color: '#fff', fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600, transition: 'all 0.2s' }}
+                              >
+                                <i className="ri-file-copy-line"></i>Copier
+                              </button>
+                            </div>
+                          </div>
+                          
+                          {/* Hook */}
+                          <div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                              <div style={{ width: 28, height: 28, borderRadius: 8, background: '#F59E0B', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <i className="ri-flashlight-fill" style={{ fontSize: 14, color: '#fff' }}></i>
+                              </div>
+                              <span style={{ fontSize: 12, fontWeight: 600, color: '#FBBF24', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Accroche percutante</span>
+                            </div>
+                            <div style={{ background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(251, 191, 36, 0.08) 100%)', borderRadius: 12, padding: 20, border: '1px solid rgba(251, 191, 36, 0.2)', position: 'relative' }}>
+                              <p style={{ fontSize: 18, color: '#FBBF24', margin: 0, lineHeight: 1.6, fontWeight: 700 }}>"{personaData.adMessage.hook}"</p>
+                              <button 
+                                onClick={() => { navigator.clipboard.writeText(personaData.adMessage.hook); }}
+                                style={{ position: 'absolute', top: 12, right: 12, padding: '8px 14px', background: '#F59E0B', border: 'none', borderRadius: 8, color: '#111827', fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600 }}
+                              >
+                                <i className="ri-file-copy-line"></i>Copier
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Footer Actions */}
+                      <div style={{ marginTop: 24, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
+                        <button 
+                          onClick={() => {
+                            localStorage.removeItem(`shop_persona_${shopId}`);
+                            setPersonaData(null);
+                            fetchPersona();
+                          }}
+                          style={{ 
+                            padding: '12px 20px', 
+                            background: '#fff', 
+                            border: '1px solid #E5E7EB', 
+                            borderRadius: 10, 
+                            color: '#374151', 
+                            fontSize: 13, 
+                            fontWeight: 600, 
+                            cursor: 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 8,
+                            transition: 'all 0.2s'
+                          }}
+                        >
+                          <i className="ri-refresh-line" style={{ fontSize: 16 }}></i>Régénérer l'analyse
+                        </button>
+                        <button 
+                          onClick={() => setActiveTab('copy-product')}
+                          style={{ 
+                            padding: '12px 20px', 
+                            background: '#3B82F6', 
+                            border: 'none', 
+                            borderRadius: 10, 
+                            color: '#fff', 
+                            fontSize: 13, 
+                            fontWeight: 600, 
+                            cursor: 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 8,
+                            boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)'
+                          }}
+                        >
+                          <i className="ri-file-copy-2-line" style={{ fontSize: 16 }}></i>Copier un produit
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+
+              {/* ========== COPY PRODUCT TAB ========== */}
+              {activeTab === 'copy-product' && (
+                <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+                  {/* Progress Steps - Premium Design */}
+                  <div style={{ ...cardStyle, padding: '20px 32px', marginBottom: 24 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      {[
+                        { num: 1, label: 'Sélectionner', desc: 'Choisir un produit', icon: 'ri-cursor-line' },
+                        { num: 2, label: 'Trouver', desc: 'Sourcing AliExpress', icon: 'ri-search-line' },
+                        { num: 3, label: 'Créer', desc: 'Store AI', icon: 'ri-magic-line' },
+                      ].map((step, i) => (
+                        <React.Fragment key={step.num}>
+                          {i > 0 && (
+                            <div style={{ flex: 1, height: 3, margin: '0 16px', background: copyProductStep > i ? 'linear-gradient(90deg, #22C55E 0%, #0c6cfb 100%)' : '#E5E7EB', borderRadius: 2 }} />
+                          )}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                            <div style={{
+                              width: 48, height: 48, borderRadius: 12,
+                              background: copyProductStep === step.num ? 'linear-gradient(135deg, #0c6cfb 0%, #3B82F6 100%)' : copyProductStep > step.num ? '#22C55E' : '#F3F4F6',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              boxShadow: copyProductStep === step.num ? '0 4px 14px rgba(12, 108, 251, 0.3)' : 'none'
+                            }}>
+                              {copyProductStep > step.num ? (
+                                <i className="ri-check-line" style={{ fontSize: 22, color: '#fff' }}></i>
+                              ) : (
+                                <i className={step.icon} style={{ fontSize: 20, color: copyProductStep === step.num ? '#fff' : '#6B7280' }}></i>
+                              )}
+                            </div>
+                            <div>
+                              <div style={{ fontSize: 14, fontWeight: 600, color: copyProductStep >= step.num ? '#111827' : '#9CA3AF' }}>{step.label}</div>
+                              <div style={{ fontSize: 12, color: '#6B7280' }}>{step.desc}</div>
+                            </div>
+                          </div>
+                        </React.Fragment>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Step 1: Select Product */}
+                  {copyProductStep === 1 && (
+                    <div style={{ ...cardStyle, padding: 0, overflow: 'hidden' }}>
+                      <div style={{ padding: '20px 24px', borderBottom: '1px solid #E5E7EB', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <div>
+                          <h3 style={{ fontSize: 18, fontWeight: 600, color: '#111827', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <i className="ri-shopping-bag-line" style={{ color: '#0c6cfb' }}></i>
+                            Sélectionnez un best-seller
+                          </h3>
+                          <p style={{ fontSize: 13, color: '#6B7280', margin: 0 }}>Choisissez un produit à succès pour trouver son équivalent sur AliExpress</p>
+                        </div>
+                        <div style={{ padding: '8px 16px', background: '#EFF6FF', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <i className="ri-lightbulb-line" style={{ color: '#0c6cfb' }}></i>
+                          <span style={{ fontSize: 13, color: '#1D4ED8', fontWeight: 500 }}>{bestsellerProducts.length} produits disponibles</span>
+                        </div>
+                      </div>
+                      
+                      <div style={{ padding: 24 }}>
+                        {bestsellerProducts.length > 0 ? (
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
+                            {bestsellerProducts.slice(0, 12).map((p, idx) => (
+                              <div 
+                                key={p.id} 
+                                onClick={() => handleSelectProductToCopy(p)}
+                                style={{ 
+                                  border: '1px solid #E5E7EB', borderRadius: 12, overflow: 'hidden', cursor: 'pointer',
+                                  transition: 'all 0.2s', background: '#fff', position: 'relative'
+                                }}
+                                onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#0c6cfb'; e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.boxShadow = '0 12px 24px rgba(0,0,0,0.1)'; }}
+                                onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#E5E7EB'; e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}
+                              >
+                                <div style={{ position: 'relative', aspectRatio: '1/1', background: '#F9FAFB' }}>
+                                  <img src={p.imageUrl || 'https://via.placeholder.com/200'} alt={p.title || ''} style={{ width: '100%', height: '100%', objectFit: 'contain' }} onError={(e) => { (e.target as HTMLImageElement).src = 'https://via.placeholder.com/200'; }} />
+                                  <div style={{ position: 'absolute', top: 8, left: 8, display: 'flex', gap: 6 }}>
+                                    <span style={{ background: 'linear-gradient(135deg, #0c6cfb 0%, #3B82F6 100%)', color: '#fff', padding: '4px 10px', borderRadius: 6, fontSize: 11, fontWeight: 600 }}>#{idx + 1}</span>
+                                    {p.bestProduct && <span style={{ background: '#DCFCE7', color: '#16A34A', padding: '4px 8px', borderRadius: 6, fontSize: 10, fontWeight: 600 }}>TOP</span>}
+                                  </div>
+                                </div>
+                                <div style={{ padding: 14 }}>
+                                  <h4 style={{ fontSize: 13, fontWeight: 500, color: '#111827', marginBottom: 10, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', lineHeight: 1.4, height: '2.8em' }}>{p.title}</h4>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <span style={{ fontSize: 18, fontWeight: 700, color: '#0c6cfb' }}>{currency}{p.price || 0}</span>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 8px', background: '#F3F4F6', borderRadius: 6 }}>
+                                      <i className="ri-arrow-right-line" style={{ fontSize: 12, color: '#6B7280' }}></i>
+                                      <span style={{ fontSize: 11, color: '#6B7280', fontWeight: 500 }}>Sélectionner</span>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div style={{ textAlign: 'center', padding: 60 }}>
+                            <div style={{ width: 80, height: 80, borderRadius: '50%', background: '#F3F4F6', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
+                              <i className="ri-shopping-bag-line" style={{ fontSize: 36, color: '#9CA3AF' }}></i>
+                            </div>
+                            <p style={{ color: '#6B7280', fontSize: 16, marginBottom: 8 }}>Aucun produit best-seller trouvé</p>
+                            <p style={{ color: '#9CA3AF', fontSize: 13 }}>Cette boutique n&apos;a pas encore de produits identifiés comme best-sellers</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Step 2: Similar Products from AliExpress */}
+                  {copyProductStep === 2 && (
+                    <div>
+                      {/* Selected Product Summary - Better Design */}
+                      {selectedProductToCopy && (
+                        <div style={{ ...cardStyle, padding: 0, marginBottom: 24, overflow: 'hidden' }}>
+                          <div style={{ background: 'linear-gradient(135deg, #F9FAFB 0%, #F3F4F6 100%)', padding: 20, display: 'flex', alignItems: 'center', gap: 20 }}>
+                            <div style={{ width: 80, height: 80, borderRadius: 12, overflow: 'hidden', background: '#fff', border: '1px solid #E5E7EB', flexShrink: 0 }}>
+                              <img src={selectedProductToCopy.imageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                            </div>
+                            <div style={{ flex: 1 }}>
+                              <div style={{ fontSize: 12, color: '#6B7280', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Produit sélectionné</div>
+                              <h4 style={{ fontSize: 15, fontWeight: 600, color: '#111827', marginBottom: 6, lineHeight: 1.4 }}>{selectedProductToCopy.title}</h4>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                                <span style={{ fontSize: 20, fontWeight: 700, color: '#0c6cfb' }}>{currency}{selectedProductToCopy.price}</span>
+                                <span style={{ padding: '4px 10px', background: '#DCFCE7', color: '#16A34A', borderRadius: 6, fontSize: 12, fontWeight: 600 }}>Prix boutique</span>
+                              </div>
+                            </div>
+                            <button 
+                              onClick={() => { setCopyProductStep(1); setSelectedProductToCopy(null); setSimilarProducts([]); }}
+                              style={{ padding: '10px 20px', border: '1px solid #E5E7EB', borderRadius: 8, background: '#fff', fontSize: 13, cursor: 'pointer', fontWeight: 500, display: 'flex', alignItems: 'center', gap: 6 }}
+                            >
+                              <i className="ri-arrow-left-line"></i>Changer
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Loading - Better Animation */}
+                      {similarProductsLoading && (
+                        <div style={{ ...cardStyle, padding: 60, textAlign: 'center' }}>
+                          <div style={{ position: 'relative', width: 80, height: 80, margin: '0 auto 24px' }}>
+                            <div style={{ position: 'absolute', inset: 0, border: '4px solid #E5E7EB', borderTopColor: '#0c6cfb', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+                            <div style={{ position: 'absolute', inset: 12, background: '#fff', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              <img src="/img/icons/aliexpress-icon.png" alt="" style={{ width: 32, height: 32 }} />
+                            </div>
+                          </div>
+                          <p style={{ color: '#111827', fontSize: 16, fontWeight: 600, marginBottom: 4 }}>Recherche sur AliExpress...</p>
+                          <p style={{ color: '#6B7280', fontSize: 13, margin: 0 }}>Analyse de l&apos;image pour trouver des produits similaires</p>
+                        </div>
+                      )}
+
+                      {/* Similar Products Grid - Table Design like existing modal */}
+                      {!similarProductsLoading && similarProducts.length > 0 && (
+                        <div style={{ ...cardStyle, padding: 0, overflow: 'hidden' }}>
+                          <div style={{ padding: '20px 24px', borderBottom: '1px solid #E5E7EB', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                              <img src="/img/icons/aliexpress-icon.png" alt="" style={{ width: 28, height: 28 }} />
+                              <div>
+                                <h3 style={{ fontSize: 16, fontWeight: 600, color: '#111827', margin: 0 }}>Produits similaires trouvés</h3>
+                                <p style={{ fontSize: 12, color: '#6B7280', margin: 0 }}>{similarProducts.length} résultats • Triés par ventes</p>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          {/* AI Recommendation Banner - Different styles for valid vs invalid match */}
+                          {aiRecommendedProductId && !aiRecommendationLoading && aiRecommendationIsValid && (
+                            <div style={{ padding: '16px 24px', background: 'linear-gradient(135deg, #ECFDF5 0%, #D1FAE5 100%)', borderBottom: '1px solid #6EE7B7', display: 'flex', alignItems: 'center', gap: 16 }}>
+                              <div style={{ width: 44, height: 44, borderRadius: 12, background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)' }}>
+                                <i className="ri-checkbox-circle-fill" style={{ color: '#fff', fontSize: 22 }}></i>
+                              </div>
+                              <div style={{ flex: 1 }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                                  <span style={{ fontSize: 14, fontWeight: 700, color: '#065F46' }}>Recommandation IA</span>
+                                  <span style={{ padding: '3px 10px', background: '#10B981', color: '#fff', borderRadius: 10, fontSize: 10, fontWeight: 700 }}>✓ MEILLEUR CHOIX</span>
+                                </div>
+                                <div style={{ fontSize: 13, color: '#047857', lineHeight: 1.5 }}>{renderMarkdown(aiRecommendationReason || 'Ce produit offre le meilleur rapport qualité/prix/ventes pour maximiser vos profits.')}</div>
+                              </div>
+                              <button 
+                                onClick={() => {
+                                  const recommended = similarProducts.find(p => p.id === aiRecommendedProductId);
+                                  if (recommended) { setSelectedSimilarProduct(recommended); setCopyProductStep(3); }
+                                }}
+                                style={{ 
+                                  padding: '10px 20px', background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)', 
+                                  border: 'none', borderRadius: 10, color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                                  display: 'flex', alignItems: 'center', gap: 6, boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)'
+                                }}
+                              >
+                                <i className="ri-magic-line"></i>Copier celui-ci
+                              </button>
+                            </div>
+                          )}
+                          
+                          {/* AI Warning Banner - Category mismatch */}
+                          {aiRecommendedProductId && !aiRecommendationLoading && !aiRecommendationIsValid && (
+                            <div style={{ padding: '16px 24px', background: 'linear-gradient(135deg, #FEF2F2 0%, #FEE2E2 100%)', borderBottom: '1px solid #FECACA', display: 'flex', alignItems: 'flex-start', gap: 16 }}>
+                              <div style={{ width: 44, height: 44, borderRadius: 12, background: 'linear-gradient(135deg, #EF4444 0%, #DC2626 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 12px rgba(239, 68, 68, 0.3)', flexShrink: 0 }}>
+                                <i className="ri-error-warning-fill" style={{ color: '#fff', fontSize: 22 }}></i>
+                              </div>
+                              <div style={{ flex: 1 }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                                  <span style={{ fontSize: 14, fontWeight: 700, color: '#991B1B' }}>Alerte IA</span>
+                                  <span style={{ padding: '3px 10px', background: '#DC2626', color: '#fff', borderRadius: 10, fontSize: 10, fontWeight: 700 }}>⚠ CATÉGORIE DIFFÉRENTE</span>
+                                </div>
+                                <div style={{ fontSize: 13, color: '#B91C1C', lineHeight: 1.6 }}>{renderMarkdown(aiRecommendationReason || 'Les produits trouvés ne correspondent pas à la catégorie du produit source. Essayez une recherche plus spécifique.')}</div>
+                                <div style={{ marginTop: 10, padding: '10px 14px', background: 'rgba(239, 68, 68, 0.08)', borderRadius: 8, border: '1px solid rgba(239, 68, 68, 0.15)' }}>
+                                  <span style={{ fontSize: 12, color: '#7F1D1D' }}>
+                                    <i className="ri-lightbulb-line me-1"></i>
+                                    <strong>Conseil :</strong> Les résultats AliExpress ne correspondent pas au produit source. Sélectionnez manuellement un produit de la même catégorie dans la liste ci-dessous.
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                          
+                          {/* AI Loading */}
+                          {aiRecommendationLoading && (
+                            <div style={{ padding: '12px 24px', background: '#F5F3FF', borderBottom: '1px solid #E9D5FF', display: 'flex', alignItems: 'center', gap: 12 }}>
+                              <div style={{ width: 20, height: 20, border: '2px solid #E9D5FF', borderTopColor: '#8B5CF6', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+                              <span style={{ fontSize: 13, color: '#7C3AED' }}>L&apos;IA analyse les produits pour vous recommander le meilleur...</span>
+                            </div>
+                          )}
+                          
+                          <div className="table-responsive">
+                            <table className="table mb-0" style={{ width: '100%' }}>
+                              <thead>
+                                <tr style={{ backgroundColor: '#F5F7FA' }}>
+                                  <th style={{ width: 70, padding: '12px 16px' }}></th>
+                                  <th style={{ padding: '12px 16px' }}><span className="text-sub fs-small fw-500">Nom du produit</span></th>
+                                  <th className="text-center" style={{ padding: '12px 16px' }}><span className="text-sub fs-small fw-500">Coût</span></th>
+                                  <th className="text-center" style={{ padding: '12px 16px' }}><span className="text-sub fs-small fw-500">Prix vente (x3)</span></th>
+                                  <th className="text-center" style={{ padding: '12px 16px' }}><span className="text-sub fs-small fw-500">Profit</span></th>
+                                  <th className="text-center" style={{ padding: '12px 16px' }}><span className="text-sub fs-small fw-500">Ventes</span></th>
+                                  <th style={{ padding: '12px 16px' }}></th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {similarProducts.slice(0, 15).map((product) => {
+                                  const isRecommended = product.id === aiRecommendedProductId;
+                                  const isValidRecommendation = isRecommended && aiRecommendationIsValid;
+                                  const isInvalidRecommendation = isRecommended && !aiRecommendationIsValid;
+                                  
+                                  // Define colors based on recommendation status
+                                  const rowBg = isValidRecommendation 
+                                    ? 'linear-gradient(135deg, #ECFDF5 0%, #D1FAE5 100%)' 
+                                    : isInvalidRecommendation 
+                                      ? 'linear-gradient(135deg, #FEF2F2 0%, #FEE2E2 100%)' 
+                                      : 'transparent';
+                                  const accentColor = isValidRecommendation ? '#10B981' : isInvalidRecommendation ? '#EF4444' : '#3B82F6';
+                                  const textColor = isValidRecommendation ? '#065F46' : isInvalidRecommendation ? '#991B1B' : '#111827';
+                                  
+                                  return (
+                                  <tr 
+                                    key={product.id} 
+                                    style={{ 
+                                      borderBottom: '1px solid #E5E7EB',
+                                      background: rowBg,
+                                      position: 'relative'
+                                    }}
+                                  >
+                                    <td style={{ padding: '12px 16px', verticalAlign: 'middle', position: 'relative' }}>
+                                      <div style={{ position: 'relative' }}>
+                                        <img src={product.imageUrl || '/img_not_found.png'} alt="" style={{ width: 56, height: 56, objectFit: 'contain', borderRadius: 8, border: isRecommended ? `2px solid ${accentColor}` : '1px solid #E5E7EB', background: '#F9FAFB' }} onError={(e) => { (e.target as HTMLImageElement).src = '/img_not_found.png'; }} />
+                                        {isRecommended && (
+                                          <div style={{ position: 'absolute', top: -6, right: -6, width: 22, height: 22, borderRadius: '50%', background: accentColor, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 2px 8px ${accentColor}60` }}>
+                                            <i className={isValidRecommendation ? 'ri-check-line' : 'ri-alert-line'} style={{ color: '#fff', fontSize: 12 }}></i>
+                                          </div>
+                                        )}
+                                      </div>
+                                    </td>
+                                    <td style={{ padding: '12px 16px', verticalAlign: 'middle', maxWidth: 280 }}>
+                                      <div>
+                                        {isValidRecommendation && (
+                                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px', background: '#10B981', color: '#fff', borderRadius: 6, fontSize: 10, fontWeight: 600, marginBottom: 4 }}>
+                                            <i className="ri-trophy-line" style={{ fontSize: 10 }}></i>RECOMMANDÉ
+                                          </span>
+                                        )}
+                                        {isInvalidRecommendation && (
+                                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px', background: '#EF4444', color: '#fff', borderRadius: 6, fontSize: 10, fontWeight: 600, marginBottom: 4 }}>
+                                            <i className="ri-error-warning-line" style={{ fontSize: 10 }}></i>CATÉGORIE DIFFÉRENTE
+                                          </span>
+                                        )}
+                                        <p style={{ margin: 0, fontSize: 13, color: textColor, fontWeight: isRecommended ? 600 : 400, overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', lineHeight: 1.4 }}>{product.title}</p>
+                                      </div>
+                                    </td>
+                                    <td style={{ padding: '12px 16px', verticalAlign: 'middle', textAlign: 'center' }}>
+                                      <span style={{ fontSize: 15, fontWeight: 600, color: '#EF4444' }}>${product.price.toFixed(2)}</span>
+                                    </td>
+                                    <td style={{ padding: '12px 16px', verticalAlign: 'middle', textAlign: 'center' }}>
+                                      <span style={{ fontSize: 15, fontWeight: 600, color: '#111827' }}>${(product.price * 3).toFixed(2)}</span>
+                                    </td>
+                                    <td style={{ padding: '12px 16px', verticalAlign: 'middle', textAlign: 'center' }}>
+                                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 10px', background: isValidRecommendation ? '#A7F3D0' : isInvalidRecommendation ? '#FECACA' : '#DCFCE7', borderRadius: 6 }}>
+                                        <span style={{ fontSize: 14, fontWeight: 600, color: isValidRecommendation ? '#065F46' : isInvalidRecommendation ? '#991B1B' : '#16A34A' }}>+${product.profit?.toFixed(2)}</span>
+                                        <span style={{ fontSize: 11, color: isValidRecommendation ? '#065F46' : isInvalidRecommendation ? '#991B1B' : '#16A34A' }}>({product.profitPercent}%)</span>
+                                      </div>
+                                    </td>
+                                    <td style={{ padding: '12px 16px', verticalAlign: 'middle', textAlign: 'center' }}>
+                                      <span style={{ fontSize: 13, color: '#6B7280' }}>{product.sales ? product.sales.toLocaleString() : '—'}</span>
+                                    </td>
+                                    <td style={{ padding: '12px 16px', verticalAlign: 'middle' }}>
+                                      <div style={{ display: 'flex', gap: 8 }}>
+                                        <a href={product.url} target="_blank" rel="noopener noreferrer" className="btn btn-secondary" style={{ padding: '8px 12px', fontSize: 12 }}>
+                                          <img src="/img/icons/aliexpress-icon.png" alt="" style={{ width: 14, height: 14, marginRight: 4 }} />Voir
+                                        </a>
+                                        <button 
+                                          onClick={() => { setSelectedSimilarProduct(product); setCopyProductStep(3); }}
+                                          className={isRecommended ? '' : 'btn btn-primary'}
+                                          style={isRecommended ? { 
+                                            padding: '8px 16px', fontSize: 12, fontWeight: 600, cursor: 'pointer', border: 'none', borderRadius: 6,
+                                            background: isValidRecommendation ? 'linear-gradient(135deg, #10B981 0%, #059669 100%)' : '#6B7280', 
+                                            color: '#fff', display: 'flex', alignItems: 'center', gap: 4
+                                          } : { padding: '8px 16px', fontSize: 12 }}
+                                        >
+                                          {isValidRecommendation && <i className="ri-magic-line" style={{ fontSize: 12 }}></i>}
+                                          Copier
+                                        </button>
+                                      </div>
+                                    </td>
+                                  </tr>
+                                  );
+                                })}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* No Results - Better Design */}
+                      {!similarProductsLoading && similarProducts.length === 0 && selectedProductToCopy && (
+                        <div style={{ ...cardStyle, padding: 60, textAlign: 'center' }}>
+                          <div style={{ width: 80, height: 80, borderRadius: '50%', background: '#FEF3C7', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
+                            <i className="ri-search-line" style={{ fontSize: 36, color: '#D97706' }}></i>
+                          </div>
+                          <p style={{ color: '#111827', fontSize: 16, fontWeight: 600, marginBottom: 8 }}>Aucun produit similaire trouvé</p>
+                          <p style={{ color: '#6B7280', fontSize: 14, marginBottom: 24 }}>L&apos;image du produit n&apos;a pas permis de trouver des correspondances sur AliExpress</p>
+                          <button 
+                            onClick={() => { setCopyProductStep(1); setSelectedProductToCopy(null); }}
+                            className="btn btn-primary" style={{ padding: '12px 24px' }}
+                          >
+                            <i className="ri-arrow-left-line me-2"></i>Choisir un autre produit
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Step 3: Confirm and Copy - Premium Design */}
+                  {copyProductStep === 3 && selectedSimilarProduct && (
+                    <div style={{ ...cardStyle, padding: 0, maxWidth: 700, margin: '0 auto', overflow: 'hidden' }}>
+                      {/* Success Header */}
+                      <div style={{ background: 'linear-gradient(135deg, #22C55E 0%, #16A34A 100%)', padding: '32px 40px', textAlign: 'center' }}>
+                        <div style={{ width: 72, height: 72, borderRadius: '50%', background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+                          <i className="ri-check-double-line" style={{ fontSize: 36, color: '#fff' }}></i>
+                        </div>
+                        <h3 style={{ fontSize: 22, fontWeight: 700, color: '#fff', marginBottom: 8 }}>Produit sélectionné avec succès !</h3>
+                        <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.9)', margin: 0 }}>Cliquez sur le bouton ci-dessous pour créer votre boutique</p>
+                      </div>
+                      
+                      {/* Product Summary - Card Style */}
+                      <div style={{ padding: 32 }}>
+                        <div style={{ background: '#F9FAFB', borderRadius: 16, padding: 24, marginBottom: 24 }}>
+                          <div style={{ display: 'flex', gap: 20 }}>
+                            <div style={{ width: 120, height: 120, borderRadius: 12, overflow: 'hidden', background: '#fff', border: '1px solid #E5E7EB', flexShrink: 0 }}>
+                              <img src={selectedSimilarProduct.imageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                            </div>
+                            <div style={{ flex: 1 }}>
+                              <h4 style={{ fontSize: 15, fontWeight: 600, color: '#111827', marginBottom: 16, lineHeight: 1.5 }}>{selectedSimilarProduct.title}</h4>
+                              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
+                                <div style={{ background: '#fff', padding: 12, borderRadius: 10, border: '1px solid #E5E7EB' }}>
+                                  <div style={{ fontSize: 11, color: '#6B7280', marginBottom: 4, textTransform: 'uppercase' }}>Coût AliExpress</div>
+                                  <div style={{ fontSize: 20, fontWeight: 700, color: '#EF4444' }}>${selectedSimilarProduct.price.toFixed(2)}</div>
+                                </div>
+                                <div style={{ background: '#fff', padding: 12, borderRadius: 10, border: '1px solid #E5E7EB' }}>
+                                  <div style={{ fontSize: 11, color: '#6B7280', marginBottom: 4, textTransform: 'uppercase' }}>Prix de vente</div>
+                                  <div style={{ fontSize: 20, fontWeight: 700, color: '#111827' }}>${(selectedSimilarProduct.price * 3).toFixed(2)}</div>
+                                </div>
+                                <div style={{ background: '#DCFCE7', padding: 12, borderRadius: 10, border: '1px solid #BBF7D0' }}>
+                                  <div style={{ fontSize: 11, color: '#16A34A', marginBottom: 4, textTransform: 'uppercase' }}>Profit / vente</div>
+                                  <div style={{ fontSize: 20, fontWeight: 700, color: '#16A34A' }}>${(selectedSimilarProduct.price * 2).toFixed(2)}</div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Actions */}
+                        <div style={{ display: 'flex', gap: 16 }}>
+                          <button 
+                            onClick={() => { setCopyProductStep(2); setSelectedSimilarProduct(null); }}
+                            style={{ flex: 1, padding: '14px', border: '1px solid #E5E7EB', borderRadius: 10, background: '#fff', fontSize: 14, cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+                          >
+                            <i className="ri-arrow-left-line"></i>Retour
+                          </button>
+                          <button 
+                            onClick={() => handleCopyProduct(selectedSimilarProduct.url)}
+                            style={{ flex: 2, padding: '14px', background: 'linear-gradient(135deg, #0c6cfb 0%, #3B82F6 100%)', border: 'none', borderRadius: 10, fontSize: 15, color: '#fff', cursor: 'pointer', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, boxShadow: '0 4px 14px rgba(12, 108, 251, 0.3)' }}
+                          >
+                            <i className="ri-magic-line" style={{ fontSize: 18 }}></i>
+                            Créer ma boutique avec Store AI
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
               )}
 
               {/* ========== PRODUCTS TAB - EXACT DESIGN ========== */}

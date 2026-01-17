@@ -122,6 +122,13 @@ export async function GET(request: NextRequest) {
 
     // Base filters - exclude very old ads (2 years)
     adsConditions.push(`a.created_at >= NOW() - INTERVAL '2 years'`)
+    
+    // CRITICAL: Exclude ads without valid media (must have image_link OR video_link)
+    adsConditions.push(`(
+      (a.image_link IS NOT NULL AND a.image_link != '' AND a.image_link NOT LIKE '%img_not_found%' AND a.image_link NOT LIKE '%copyfycloudinary%')
+      OR 
+      (a.video_link IS NOT NULL AND a.video_link != '')
+    )`)
 
     // Search text
     if (searchText) {
@@ -142,11 +149,11 @@ export async function GET(request: NextRequest) {
       adsConditions.push(`a.is_active = 0`)
     }
 
-    // Media type filter
-    if (mediaType) {
-      adsConditions.push(`a.type = $${paramIndex}`)
-      params.push(mediaType)
-      paramIndex++
+    // Media type filter - use video_link/image_link instead of type column
+    if (mediaType === 'video') {
+      adsConditions.push(`a.video_link IS NOT NULL AND a.video_link != ''`)
+    } else if (mediaType === 'image') {
+      adsConditions.push(`(a.video_link IS NULL OR a.video_link = '') AND a.image_link IS NOT NULL AND a.image_link != ''`)
     }
 
     // CTA filter
@@ -391,11 +398,23 @@ export async function GET(request: NextRequest) {
       params.push(maxTrustpilotReviews)
       paramIndex++
     }
+    
+    // EU Transparency filter - filter ads with EU targeting data
+    if (euTransparency) {
+      adsConditions.push(`a.eu_total_reach IS NOT NULL AND a.eu_total_reach > 0`)
+    }
 
-    // NOTE: top_score is a SORT, not a FILTER
-    // The scoring algorithm naturally ranks better ads higher (active, proven winners, etc.)
-    // but we don't filter them out - users can still browse ALL ads
-    // The algorithm components already handle these signals in the ORDER BY
+    // Score AI filters for recommended/top_score
+    if (sortBy === 'recommended' || sortBy === 'top_score') {
+      // Top score requires shops with active advertising (minimum 5 ads)
+      shopsConditions.push(`COALESCE(s.active_ads, 0) >= 5`)
+      // ONLY active ads (is_active = 1)
+      adsConditions.push(`a.is_active = 1`)
+      // Minimum 10 days running - proven winners, not new untested ads
+      adsConditions.push(`a.start_date <= NOW() - INTERVAL '10 days'`)
+      // Not too old - still relevant (within 6 months)
+      adsConditions.push(`a.start_date >= NOW() - INTERVAL '180 days'`)
+    }
 
     // Build WHERE clauses
     const adsWhereClause = adsConditions.length > 0 ? `WHERE ${adsConditions.join(' AND ')}` : ''
@@ -407,8 +426,8 @@ export async function GET(request: NextRequest) {
     const hourSeed = new Date().getHours()
     const order = sortOrder === 'asc' ? 'ASC' : 'DESC'
     let orderByClause = ''
-    // Only these sorts ACTUALLY need traffic data - recommended/trending use created_at, not traffic
-    const needsTrafficJoin = ['highest_reach', 'most_engaging', 'highest_spend', 'last_month_visits', 'estimated_monthly', 'growth_rate', 'top_score'].includes(sortBy)
+    // These sorts need traffic data for scoring
+    const needsTrafficJoin = ['highest_reach', 'most_engaging', 'highest_spend', 'last_month_visits', 'estimated_monthly', 'growth_rate', 'recommended', 'top_score'].includes(sortBy)
     
     switch (sortBy) {
       case 'most_recent':
@@ -456,43 +475,22 @@ export async function GET(request: NextRequest) {
         ) ${order} NULLS LAST`
         break
       case 'top_score':
-        // Custom AI Score - DISCOVERY scoring favoring sweet spot shops
-        orderByClause = `ORDER BY (
-          -- Sweet spot shops (20-300 ads) get priority over giants
-          CASE 
-            WHEN fa.is_active = 1 AND COALESCE(fa.shop_active_ads, 0) BETWEEN 100 AND 300 THEN 500000000
-            WHEN fa.is_active = 1 AND COALESCE(fa.shop_active_ads, 0) BETWEEN 50 AND 99 THEN 450000000
-            WHEN fa.is_active = 1 AND COALESCE(fa.shop_active_ads, 0) BETWEEN 20 AND 49 THEN 400000000
-            WHEN fa.is_active = 1 AND COALESCE(fa.shop_active_ads, 0) BETWEEN 301 AND 500 THEN 350000000
-            WHEN fa.is_active = 1 AND COALESCE(fa.shop_active_ads, 0) > 500 THEN 300000000
-            WHEN fa.is_active = 1 AND COALESCE(fa.shop_active_ads, 0) BETWEEN 5 AND 19 THEN 200000000
-            ELSE 0
-          END +
-          
-          -- Traffic (LOG scale)
-          LN(1 + COALESCE(fa.last_month_visits, 0)) * 1000000 +
-          
-          -- Active ads (CAPPED at 300)
-          LN(1 + LEAST(COALESCE(fa.shop_active_ads, 0), 300)) * 500000 +
-          
-          -- Random rotation
-          (MOD(ABS(HASHTEXT(COALESCE(fa.ad_archive_id::text, fa.id::text) || '${dailySeed}' || '${hourSeed}')), 1000))
-        ) ${order} NULLS LAST`
-        break
       case 'recommended':
       default:
-        // Smart ranking based on multiple factors
+        // Custom AI Score algorithm for winning ads
         orderByClause = `ORDER BY (
-          fa.last_month_visits * 0.25 +
-          fa.estimated_monthly * 0.1 +
-          fa.growth_rate * 10 * 0.15 +
-          CASE
-            WHEN fa.start_date >= NOW() - INTERVAL '7 days' THEN 1500
-            WHEN fa.start_date >= NOW() - INTERVAL '30 days' THEN 1000
-            WHEN fa.start_date >= NOW() - INTERVAL '90 days' THEN 500
-            ELSE 100
-          END * 0.25 +
-          (fa.id % 1000) * 3
+          -- 1) Winner signals (log scale to avoid outliers dominating)
+          LN(1 + COALESCE(fa.shop_active_ads, 0)) * 0.28
+          + LN(1 + COALESCE(fa.estimated_order, 0)) * 0.22
+          + COALESCE(fa.growth_rate, 0) * 0.15
+          -- 2) Freshness bonus (more recent = better)
+          + LEAST(0.18, 0.18 * GREATEST(0.01, EXP(-LEAST(30, EXTRACT(EPOCH FROM (NOW() - COALESCE(fa.end_date, fa.start_date, NOW()))) / 86400.0) / 4.0)))
+          -- 3) Stability bonus: ads running ~14 days = winner-like pattern
+          + LEAST(0.20, EXP(-POWER((LEAST(60, GREATEST(0, EXTRACT(EPOCH FROM (NOW() - COALESCE(fa.start_date, NOW()))) / 86400.0)) - 14.0) / 10.0, 2)) * 0.20)
+          -- 4) Traffic growth bonus
+          + GREATEST(COALESCE(fa.growth_rate, 0), 0) * 0.12
+          -- 5) Random factor for rotation
+          + (MOD(ABS(HASHTEXT(COALESCE(fa.ad_archive_id::text, fa.id::text) || '${dailySeed}' || '${hourSeed}')), 1000) / 1000.0) * 0.05
         ) ${order} NULLS LAST`
         break
     }
@@ -500,13 +498,14 @@ export async function GET(request: NextRequest) {
     const offset = (page - 1) * perPage
 
     // Path selection logic:
-    // 1. FAST PATH: No filters, recommended/trending sort - pure index scan
+    // 1. FAST PATH: No filters, trending sort only - pure index scan
     // 2. MEDIUM PATH: Shop filters only (language, country, etc) - join shops but NOT traffic
     // 3. SLOW PATH: Traffic filters needed - full joins with traffic table
+    // NOTE: recommended now uses Score AI which needs traffic, so no fast path for it
     
     const canUseFastPath = shopsConditions.length === 0 && 
                            trafficConditions.length === 0 &&
-                           (sortBy === 'recommended' || sortBy === 'trending')
+                           sortBy === 'trending'
     
     const canUseMediumPath = !canUseFastPath && 
                               trafficConditions.length === 0 && 
@@ -596,8 +595,10 @@ export async function GET(request: NextRequest) {
       for (const ad of rawAdsResult) {
         const imageLink = ad.image_link || ''
         const videoLink = ad.video_link || ''
-        if (imageLink.includes('copyfycloudinary') || videoLink.includes('copyfycloudinary')) {
-          continue
+        // Skip if image contains placeholder
+        if (imageLink.includes('copyfycloudinary') || imageLink.includes('img_not_found')) {
+          // But allow if there's a valid video
+          if (!videoLink) continue
         }
         if (!imageLink && !videoLink) {
           continue
@@ -665,8 +666,8 @@ export async function GET(request: NextRequest) {
           title: ad.title || '',
           body: ad.description || '',
           description: ad.description || '',
-          mediaType: ad.type || (ad.video_link ? 'video' : 'image'),
-          imageLink: ad.image_link || null,
+          mediaType: (ad.video_link && ad.video_link !== '') ? 'video' : 'image',
+          imageLink: (ad.image_link && !ad.image_link.includes('img_not_found') && !ad.image_link.includes('copyfycloudinary')) ? ad.image_link : null,
           videoUrl: ad.video_link || null,
           videoPreview: ad.video_preview_link || null,
           targetUrl: ad.target_url || null,
@@ -721,7 +722,7 @@ export async function GET(request: NextRequest) {
       console.log(`[Ads API] Using MEDIUM PATH: simple SQL + PHP dedup (Laravel style)`)
       
       const shopsWhereClause = shopsConditions.length > 0 ? 'AND ' + shopsConditions.join(' AND ') : ''
-      const mediaFilter = `a.image_link NOT LIKE '%copyfycloudinary%' AND (a.image_link IS NOT NULL AND a.image_link != '' OR a.video_link IS NOT NULL AND a.video_link != '')`
+      const mediaFilter = `a.image_link NOT LIKE '%copyfycloudinary%' AND a.image_link NOT LIKE '%img_not_found%' AND ((a.image_link IS NOT NULL AND a.image_link != '') OR (a.video_link IS NOT NULL AND a.video_link != ''))`
       const mediumWhereClause = adsConditions.length > 0 
         ? `WHERE ${adsConditions.join(' AND ')} AND ${mediaFilter}`
         : `WHERE ${mediaFilter}`
@@ -850,8 +851,8 @@ export async function GET(request: NextRequest) {
           title: ad.title || '',
           body: ad.description || '',
           description: ad.description || '',
-          mediaType: ad.type || (ad.video_link ? 'video' : 'image'),
-          imageLink: ad.image_link || null,
+          mediaType: (ad.video_link && ad.video_link !== '') ? 'video' : 'image',
+          imageLink: (ad.image_link && !ad.image_link.includes('img_not_found') && !ad.image_link.includes('copyfycloudinary')) ? ad.image_link : null,
           videoUrl: ad.video_link || null,
           videoPreview: ad.video_preview_link || null,
           targetUrl: ad.target_url || null,
@@ -905,7 +906,7 @@ export async function GET(request: NextRequest) {
       // SLOW PATH: Traffic join - SIMPLE SQL + PHP DEDUP (like Laravel)
       console.log(`[Ads API] Using SLOW PATH: simple SQL + PHP dedup (Laravel style)`)
       
-      const mediaFilter = `a.image_link NOT LIKE '%copyfycloudinary%' AND (a.image_link IS NOT NULL AND a.image_link != '' OR a.video_link IS NOT NULL AND a.video_link != '')`
+      const mediaFilter = `a.image_link NOT LIKE '%copyfycloudinary%' AND a.image_link NOT LIKE '%img_not_found%' AND ((a.image_link IS NOT NULL AND a.image_link != '') OR (a.video_link IS NOT NULL AND a.video_link != ''))`
       const allSlowConditions = [...adsConditions, ...shopsConditions, ...trafficConditions, mediaFilter]
       const slowWhere = `WHERE ${allSlowConditions.join(' AND ')}`
       
@@ -913,29 +914,22 @@ export async function GET(request: NextRequest) {
       const extendedPerPage = perPage * 10
       const extendedOffset = (page - 1) * extendedPerPage
       
-      // Build custom ORDER BY for top_score, otherwise use created_at
+      // Build custom ORDER BY for recommended/top_score
       let slowOrderBy = 'ORDER BY a.created_at DESC'
-      if (sortBy === 'top_score') {
+      if (sortBy === 'recommended' || sortBy === 'top_score') {
         slowOrderBy = `ORDER BY (
-          -- Sweet spot shops (20-300 ads) get priority over giants
-          CASE 
-            WHEN a.is_active = 1 AND COALESCE(s.active_ads, 0) BETWEEN 100 AND 300 THEN 500000000
-            WHEN a.is_active = 1 AND COALESCE(s.active_ads, 0) BETWEEN 50 AND 99 THEN 450000000
-            WHEN a.is_active = 1 AND COALESCE(s.active_ads, 0) BETWEEN 20 AND 49 THEN 400000000
-            WHEN a.is_active = 1 AND COALESCE(s.active_ads, 0) BETWEEN 301 AND 500 THEN 350000000
-            WHEN a.is_active = 1 AND COALESCE(s.active_ads, 0) > 500 THEN 300000000
-            WHEN a.is_active = 1 AND COALESCE(s.active_ads, 0) BETWEEN 5 AND 19 THEN 200000000
-            ELSE 0
-          END +
-          
-          -- Traffic (LOG scale)
-          LN(1 + COALESCE(t.last_month_visits, 0)) * 1000000 +
-          
-          -- Active ads (CAPPED at 300)
-          LN(1 + LEAST(COALESCE(s.active_ads, 0), 300)) * 500000 +
-          
-          -- Random rotation
-          (MOD(ABS(HASHTEXT(COALESCE(a.ad_archive_id::text, a.id::text) || '${dailySeed}' || '${hourSeed}')), 1000))
+          -- 1) Winner signals (log scale to avoid outliers dominating)
+          LN(1 + COALESCE(s.active_ads, 0)) * 0.28
+          + LN(1 + COALESCE(t.estimated_order, 0)) * 0.22
+          + COALESCE(t.growth_rate, 0) * 0.15
+          -- 2) Freshness bonus (more recent = better)
+          + LEAST(0.18, 0.18 * GREATEST(0.01, EXP(-LEAST(30, EXTRACT(EPOCH FROM (NOW() - COALESCE(a.end_date, a.start_date, NOW()))) / 86400.0) / 4.0)))
+          -- 3) Stability bonus: ads running ~14 days = winner-like pattern
+          + LEAST(0.20, EXP(-POWER((LEAST(60, GREATEST(0, EXTRACT(EPOCH FROM (NOW() - COALESCE(a.start_date, NOW()))) / 86400.0)) - 14.0) / 10.0, 2)) * 0.20)
+          -- 4) Traffic growth bonus
+          + GREATEST(COALESCE(t.growth_rate, 0), 0) * 0.12
+          -- 5) Random factor for rotation
+          + (MOD(ABS(HASHTEXT(COALESCE(a.ad_archive_id::text, a.id::text) || '${dailySeed}' || '${hourSeed}')), 1000) / 1000.0) * 0.05
         ) DESC NULLS LAST`
       }
       
@@ -997,7 +991,7 @@ export async function GET(request: NextRequest) {
       // ELSE PATH: Simple filtered query + PHP DEDUP (like Laravel)
       console.log(`[Ads API] Using ELSE PATH: simple SQL + PHP dedup (Laravel style)`)
       
-      const mediaFilter = `a.image_link NOT LIKE '%copyfycloudinary%' AND (a.image_link IS NOT NULL AND a.image_link != '' OR a.video_link IS NOT NULL AND a.video_link != '')`
+      const mediaFilter = `a.image_link NOT LIKE '%copyfycloudinary%' AND a.image_link NOT LIKE '%img_not_found%' AND ((a.image_link IS NOT NULL AND a.image_link != '') OR (a.video_link IS NOT NULL AND a.video_link != ''))`
       const allConditions = [...adsConditions, ...shopsConditions, mediaFilter]
       const combinedWhere = `WHERE ${allConditions.join(' AND ')}`
       
@@ -1061,21 +1055,45 @@ export async function GET(request: NextRequest) {
     const rawAdsResult = await prisma.$queryRawUnsafe<any[]>(mainQuery, ...params)
     timings.mainQuery = Date.now() - mainQueryStart
     
-    // DEBUG: Log raw ad IDs and shop IDs
+    // DEBUG: Log raw ad IDs, shop IDs, and VIDEO COUNT
     const rawAdIds = rawAdsResult.slice(0, 10).map(a => Number(a.id))
     const rawShopIds = rawAdsResult.slice(0, 10).map(a => Number(a.shop_id))
-    console.log(`[Ads API] Main Query: ${timings.mainQuery}ms - ${rawAdsResult.length} raw results`)
+    const videoCount = rawAdsResult.filter(a => a.video_link && a.video_link !== '').length
+    console.log(`[Ads API] Main Query: ${timings.mainQuery}ms - ${rawAdsResult.length} raw results (${videoCount} VIDEOS)`)
     console.log(`[Ads API] First 10 raw ad IDs: ${JSON.stringify(rawAdIds)}`)
     console.log(`[Ads API] First 10 raw shop IDs: ${JSON.stringify(rawShopIds)}`)
+    console.log(`[Ads API] First 10 video_links: ${JSON.stringify(rawAdsResult.slice(0, 10).map(a => a.video_link ? 'HAS_VIDEO' : 'NO_VIDEO'))}`)
 
     // PHP-style deduplication: 1 ad per shop (like Laravel)
-    // NOTE: top_score is just a SORT - no filtering needed
-    // The scoring algorithm naturally ranks better ads higher
+    // + Additional filtering for recommended/top_score
     const seenShops = new Set<number>()
     const adsResult: any[] = []
+    const now = new Date()
     
     for (const ad of rawAdsResult) {
       const shopId = ad.shop_id ? Number(ad.shop_id) : 0
+      
+      // For recommended/top_score, apply strict JavaScript filtering as safety net
+      if (sortBy === 'recommended' || sortBy === 'top_score') {
+        // Must be active
+        if (ad.is_active !== 1) continue
+        
+        // Must have start_date
+        if (!ad.start_date) continue
+        
+        // Calculate days active
+        const startDate = new Date(ad.start_date)
+        const daysActive = Math.ceil((now.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24))
+        
+        // Must be at least 10 days old
+        if (daysActive < 10) continue
+        
+        // Must not be older than 180 days
+        if (daysActive > 180) continue
+        
+        // Shop must have at least 5 active ads
+        if (!ad.shop_active_ads || ad.shop_active_ads < 5) continue
+      }
       
       if (!seenShops.has(shopId)) {
         adsResult.push(ad)
@@ -1141,8 +1159,8 @@ export async function GET(request: NextRequest) {
         title: ad.title || '',
         body: ad.description || '',
         description: ad.description || '',
-        mediaType: ad.type || (ad.video_link ? 'video' : 'image'),
-        imageLink: ad.image_link || null,
+        mediaType: (ad.video_link && ad.video_link !== '') ? 'video' : 'image',
+        imageLink: (ad.image_link && !ad.image_link.includes('img_not_found') && !ad.image_link.includes('copyfycloudinary')) ? ad.image_link : null,
         videoUrl: ad.video_link || null,
         videoPreview: ad.video_preview_link || null,
         targetUrl: ad.target_url || null,

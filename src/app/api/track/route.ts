@@ -219,19 +219,27 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
 
-    // Get user's subscription and plan
-    const subscription = await prisma.subscription.findFirst({
-      where: { 
-        userId,
-        stripeStatus: { in: ['active', 'trialing'] } 
-      }
-    })
-
-    const plan = subscription ? await prisma.plan.findUnique({
+    // Get user's subscription and plan - use raw SQL with ORDER BY id DESC to get the most recent one
+    const subscriptions = await prisma.$queryRaw<Array<{
+      id: bigint;
+      name: string;
+      stripe_status: string;
+    }>>`
+      SELECT id, name, stripe_status
+      FROM subscriptions 
+      WHERE user_id = ${userId}::bigint 
+        AND stripe_status IN ('active', 'trialing')
+      ORDER BY id DESC
+      LIMIT 1
+    `;
+    
+    const subscription = subscriptions[0] || null;
+    
+    const plan = subscription ? await prisma.plan.findFirst({
       where: { identifier: subscription.name }
     }) : null
 
-    const isTrialing = subscription?.stripeStatus === 'trialing'
+    const isTrialing = subscription?.stripe_status === 'trialing'
     
     // Trial users have a limit of 5 shops (like Laravel)
     const trialLimit = 5
@@ -243,7 +251,10 @@ export async function POST(request: NextRequest) {
       where: { userId }
     })
 
+    console.log(`[Track API] User ${userId}: subscription=${subscription?.name || 'none'}, plan limit=${planLimit}, current=${currentCount}, final limit=${limit}`)
+
     if (currentCount >= limit) {
+      console.log(`[Track API] BLOCKED - User ${userId} at ${currentCount}/${limit}`)
       return NextResponse.json({
         success: false,
         error: 'Tracking limit reached',

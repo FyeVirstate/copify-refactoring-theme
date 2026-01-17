@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import DashboardHeader from "@/components/DashboardHeader";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -830,6 +830,7 @@ const COLOR_PRESETS = [
 export default function AIShopPage() {
   const { data: session } = useSession();
   const router = useRouter();
+  const searchParams = useSearchParams();
   
   // Step management
   const [currentStep, setCurrentStep] = useState(1);
@@ -1148,6 +1149,35 @@ export default function AIShopPage() {
       }
     };
   }, []);
+
+  // Pre-fill URL from query parameter (for Copy Product feature)
+  useEffect(() => {
+    const urlFromParams = searchParams.get('url');
+    if (urlFromParams && !productUrl) {
+      // Clean the URL - remove leading // if present
+      let cleanedUrl = urlFromParams.trim();
+      if (cleanedUrl.startsWith('//')) {
+        cleanedUrl = 'https:' + cleanedUrl;
+      } else if (!cleanedUrl.startsWith('http://') && !cleanedUrl.startsWith('https://')) {
+        cleanedUrl = 'https://' + cleanedUrl;
+      }
+      
+      setProductUrl(cleanedUrl);
+      setDisplayUrl(cleanedUrl);
+      
+      // Trigger validation immediately
+      validateProductUrl(cleanedUrl, true);
+      
+      // Auto-scroll to the input area
+      setTimeout(() => {
+        const inputEl = document.querySelector('input[placeholder*="aliexpress"]') as HTMLInputElement;
+        if (inputEl) {
+          inputEl.focus();
+          inputEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 500);
+    }
+  }, [searchParams, productUrl, validateProductUrl]);
 
   // Get language flag
   const getLanguageFlag = (lang: string) => {

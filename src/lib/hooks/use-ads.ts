@@ -179,7 +179,7 @@ export function useAds(
     initialPageParam: 1,
   })
 
-  // Flatten all pages into a single array + deduplicate by shop
+  // Flatten all pages into a single array + deduplicate by shop + filter invalid media
   const { ads, seenShopIds } = useMemo(() => {
     if (!data?.pages) return { ads: [], seenShopIds: new Set<number>() }
     
@@ -188,6 +188,11 @@ export function useAds(
     
     for (const page of data.pages) {
       for (const ad of page.data) {
+        // Skip ads without valid media (no image and no video)
+        const hasValidImage = ad.imageLink && ad.imageLink !== '' && !ad.imageLink.includes('img_not_found')
+        const hasValidVideo = ad.videoUrl && ad.videoUrl !== ''
+        if (!hasValidImage && !hasValidVideo) continue
+        
         // Deduplicate by shop - 1 ad per shop
         const shopId = ad.shopId ?? 0
         if (!seen.has(shopId)) {

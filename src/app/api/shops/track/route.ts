@@ -42,7 +42,35 @@ export async function POST(request: NextRequest) {
       where: { userId }
     })
 
-    const shopTrackerLimit = session.user.activePlan?.topShopsCount ?? 3
+    // Fetch the user's current plan limit directly from DB using same logic as stats API
+    let shopTrackerLimit = 3 // default
+    
+    // Use raw SQL query exactly like stats API does (ORDER BY id DESC)
+    const subscriptions = await prisma.$queryRaw<Array<{
+      id: bigint;
+      name: string;
+    }>>`
+      SELECT id, name
+      FROM subscriptions 
+      WHERE user_id = ${userId}::bigint 
+        AND stripe_status = 'active'
+      ORDER BY id DESC
+      LIMIT 1
+    `;
+    
+    if (subscriptions[0]) {
+      const plan = await prisma.plan.findFirst({
+        where: { identifier: subscriptions[0].name }
+      })
+      if (plan) {
+        shopTrackerLimit = plan.limitShopTracker
+        console.log(`[Track] User ${userId} plan: ${subscriptions[0].name}, limit: ${shopTrackerLimit}`)
+      }
+    } else {
+      // No active subscription - use session fallback or default
+      shopTrackerLimit = session.user.activePlan?.topShopsCount ?? 3
+      console.log(`[Track] User ${userId} no active sub, using session limit: ${shopTrackerLimit}`)
+    }
     
     // Check if already tracking
     const existing = await prisma.userShop.findUnique({
@@ -144,11 +172,37 @@ export async function GET(_request: NextRequest) {
       trackedAt: ts.createdAt,
     }))
 
+    // Fetch the user's current plan limit directly from DB using same logic as stats API
+    let shopTrackerLimit = 3 // default
+    
+    const subscriptions = await prisma.$queryRaw<Array<{
+      id: bigint;
+      name: string;
+    }>>`
+      SELECT id, name
+      FROM subscriptions 
+      WHERE user_id = ${userId}::bigint 
+        AND stripe_status = 'active'
+      ORDER BY id DESC
+      LIMIT 1
+    `;
+    
+    if (subscriptions[0]) {
+      const plan = await prisma.plan.findFirst({
+        where: { identifier: subscriptions[0].name }
+      })
+      if (plan) {
+        shopTrackerLimit = plan.limitShopTracker
+      }
+    } else {
+      shopTrackerLimit = session.user.activePlan?.topShopsCount ?? 3
+    }
+
     return NextResponse.json({
       success: true,
       data: shops,
       total: shops.length,
-      limit: session.user.activePlan?.topShopsCount ?? 3,
+      limit: shopTrackerLimit,
     })
   } catch (error) {
     console.error('Failed to fetch tracked shops:', error)
