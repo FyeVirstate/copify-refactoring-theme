@@ -319,6 +319,14 @@ export default function ShopsPage() {
   const [minTrustpilotReviews, setMinTrustpilotReviews] = useState<number | undefined>();
   const [maxTrustpilotReviews, setMaxTrustpilotReviews] = useState<number | undefined>();
   
+  // Saved searches state
+  const [savedSearches, setSavedSearches] = useState<Array<{ id: number; name: string; filters: Record<string, unknown> }>>([]);
+  const [showSaveSearchModal, setShowSaveSearchModal] = useState(false);
+  const [saveSearchName, setSaveSearchName] = useState("");
+  const [saveSearchLoading, setSaveSearchLoading] = useState(false);
+  const [saveSearchSuccess, setSaveSearchSuccess] = useState(false);
+  const [activeSavedSearchId, setActiveSavedSearchId] = useState<number | null>(null);
+  
   // Track if filters have been loaded from storage
   const [filtersLoaded, setFiltersLoaded] = useState(false);
   
@@ -423,6 +431,131 @@ export default function ShopsPage() {
     minPrice, maxPrice, minCatalogSize, maxCatalogSize,
     minTrustpilotRating, maxTrustpilotRating, minTrustpilotReviews, maxTrustpilotReviews
   ]);
+
+  // Load saved searches on mount
+  useEffect(() => {
+    const loadSavedSearches = async () => {
+      try {
+        const res = await fetch('/api/saved-searches?type=shops');
+        const data = await res.json();
+        if (data.success && data.data) {
+          setSavedSearches(data.data);
+        }
+      } catch (error) {
+        console.error('Failed to load saved searches:', error);
+      }
+    };
+    loadSavedSearches();
+  }, []);
+
+  // Save current search
+  const handleSaveSearch = async () => {
+    if (!saveSearchName.trim()) return;
+    
+    setSaveSearchLoading(true);
+    setSaveSearchSuccess(false);
+    
+    try {
+      const filtersToSave = {
+        selectedCountries, selectedNiches, selectedCurrencies, selectedPixels,
+        selectedOrigins, selectedLanguages, selectedDomains, selectedThemes,
+        selectedApplications, selectedSocialNetworks, shopCreationDate,
+        sortBy, sortOrder, minRevenue, maxRevenue, minTraffic, maxTraffic,
+        minProducts, maxProducts, minActiveAds, maxActiveAds, minTrafficGrowth, maxTrafficGrowth,
+        minOrders, maxOrders, minPrice, maxPrice, minCatalogSize, maxCatalogSize,
+        minTrustpilotRating, maxTrustpilotRating, minTrustpilotReviews, maxTrustpilotReviews,
+        searchText: appliedSearchText,
+      };
+      
+      const res = await fetch('/api/saved-searches', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: saveSearchName.trim(),
+          type: 'shops',
+          filters: filtersToSave,
+        }),
+      });
+      
+      const data = await res.json();
+      if (data.success) {
+        setSaveSearchSuccess(true);
+        setSavedSearches(prev => [data.data, ...prev]);
+        setTimeout(() => {
+          setShowSaveSearchModal(false);
+          setSaveSearchName("");
+          setSaveSearchSuccess(false);
+        }, 1500);
+      }
+    } catch (error) {
+      console.error('Failed to save search:', error);
+    } finally {
+      setSaveSearchLoading(false);
+    }
+  };
+
+  // Delete a saved search
+  const handleDeleteSavedSearch = async (id: number) => {
+    try {
+      const res = await fetch(`/api/saved-searches?id=${id}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (data.success) {
+        setSavedSearches(prev => prev.filter(s => s.id !== id));
+        // Clear active state if deleting the active search
+        if (activeSavedSearchId === id) {
+          setActiveSavedSearchId(null);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to delete saved search:', error);
+    }
+  };
+
+  // Apply a saved search
+  const handleApplySavedSearch = (searchId: number, filters: Record<string, unknown>) => {
+    // Set active saved search
+    setActiveSavedSearchId(searchId);
+    
+    // Apply all filter values from the saved search (use defaults for missing values)
+    setSelectedCountries((filters.selectedCountries as string[]) || []);
+    setSelectedNiches((filters.selectedNiches as string[]) || []);
+    setSelectedCurrencies((filters.selectedCurrencies as string[]) || []);
+    setSelectedPixels((filters.selectedPixels as string[]) || []);
+    setSelectedOrigins((filters.selectedOrigins as string[]) || []);
+    setSelectedLanguages((filters.selectedLanguages as string[]) || []);
+    setSelectedDomains((filters.selectedDomains as string[]) || []);
+    setSelectedThemes((filters.selectedThemes as string[]) || []);
+    setSelectedApplications((filters.selectedApplications as string[]) || []);
+    setSelectedSocialNetworks((filters.selectedSocialNetworks as string[]) || []);
+    setShopCreationDate((filters.shopCreationDate as string) || "");
+    setSortBy((filters.sortBy as string) || "top_score");
+    setSortOrder((filters.sortOrder as 'desc' | 'asc') || 'desc');
+    setMinRevenue(filters.minRevenue as number | undefined);
+    setMaxRevenue(filters.maxRevenue as number | undefined);
+    setMinTraffic(filters.minTraffic as number | undefined);
+    setMaxTraffic(filters.maxTraffic as number | undefined);
+    setMinProducts(filters.minProducts as number | undefined);
+    setMaxProducts(filters.maxProducts as number | undefined);
+    setMinActiveAds(filters.minActiveAds as number | undefined);
+    setMaxActiveAds(filters.maxActiveAds as number | undefined);
+    setMinTrafficGrowth(filters.minTrafficGrowth as number | undefined);
+    setMaxTrafficGrowth(filters.maxTrafficGrowth as number | undefined);
+    setMinOrders(filters.minOrders as number | undefined);
+    setMaxOrders(filters.maxOrders as number | undefined);
+    setMinPrice(filters.minPrice as number | undefined);
+    setMaxPrice(filters.maxPrice as number | undefined);
+    setMinCatalogSize(filters.minCatalogSize as number | undefined);
+    setMaxCatalogSize(filters.maxCatalogSize as number | undefined);
+    setMinTrustpilotRating(filters.minTrustpilotRating as number | undefined);
+    setMaxTrustpilotRating(filters.maxTrustpilotRating as number | undefined);
+    setMinTrustpilotReviews(filters.minTrustpilotReviews as number | undefined);
+    setMaxTrustpilotReviews(filters.maxTrustpilotReviews as number | undefined);
+    // Always reset search text (to saved value or empty)
+    const savedSearchText = (filters.searchText as string) || "";
+    setSearchText(savedSearchText);
+    setAppliedSearchText(savedSearchText);
+    setPage(1);
+  };
 
   // Build filters object - memoized for TanStack Query
   const filters = useMemo((): ShopsFilters => {
@@ -601,6 +734,7 @@ export default function ShopsPage() {
     setSortBy("top_score");
     setSortOrder("desc");
     setActivePreset("");
+    setActiveSavedSearchId(null);
     // Clear localStorage
     try {
       localStorage.removeItem('copyfy_filters_shops');
@@ -1371,6 +1505,7 @@ export default function ShopsPage() {
                 {/* Save Filters Button */}
                 <button
                   type="button"
+                  onClick={() => setShowSaveSearchModal(true)}
                   style={{
                     backgroundColor: 'transparent',
                     border: '1px solid #0c6cfb',
@@ -1388,6 +1523,65 @@ export default function ShopsPage() {
                   <i className="ri-save-line"></i> Enregistrer les filtres
                 </button>
             </div>
+            )}
+
+            {/* Saved Searches Display */}
+            {savedSearches.length > 0 && (
+              <div className="d-flex align-items-center gap-2 mt-3 flex-wrap">
+                <span style={{ 
+                  backgroundColor: '#8B5CF6', 
+                  color: '#fff', 
+                  padding: '6px 12px', 
+                  borderRadius: '20px', 
+                  fontSize: '12px', 
+                  fontWeight: '600',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}>
+                  <i className="ri-bookmark-line"></i>
+                  Recherches enregistrées :
+                </span>
+                {savedSearches.map((search) => {
+                  const isActive = activeSavedSearchId === search.id;
+                  return (
+                  <button
+                    key={search.id}
+                    type="button"
+                    onClick={() => handleApplySavedSearch(search.id, search.filters)}
+                    style={{
+                      backgroundColor: isActive ? '#8B5CF6' : '#F3E8FF',
+                      border: isActive ? '2px solid #7C3AED' : '1px solid #DDD6FE',
+                      color: isActive ? '#fff' : '#7C3AED',
+                      padding: '6px 12px',
+                      borderRadius: '20px',
+                      fontSize: '12px',
+                      fontWeight: isActive ? '600' : '500',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      boxShadow: isActive ? '0 2px 8px rgba(139, 92, 246, 0.3)' : 'none',
+                      transition: 'all 0.2s ease'
+                    }}
+                  >
+                    {isActive && <i className="ri-check-line" style={{ fontSize: '14px' }}></i>}
+                    {search.name}
+                    <span 
+                      onClick={(e) => { e.stopPropagation(); handleDeleteSavedSearch(search.id); }}
+                      style={{ 
+                        cursor: 'pointer', 
+                        opacity: 0.7,
+                        display: 'flex',
+                        alignItems: 'center'
+                      }}
+                    >
+                      <i className="ri-close-line" style={{ fontSize: '14px' }}></i>
+                    </span>
+                  </button>
+                  );
+                })}
+              </div>
             )}
 
             <div className="horizontal-solid-divider mb-4 mt-2"></div>
@@ -1965,6 +2159,55 @@ export default function ShopsPage() {
               Votre navigateur ne supporte pas la lecture vidéo.
             </video>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Save Search Modal */}
+      <Dialog open={showSaveSearchModal} onOpenChange={setShowSaveSearchModal}>
+        <DialogContent className="sm:max-w-[450px]" style={{ padding: '24px' }}>
+          <DialogTitle style={{ fontSize: '18px', fontWeight: '600', marginBottom: '20px' }}>
+            Enregistrer la recherche sous
+          </DialogTitle>
+          <div>
+            <Input
+              type="text"
+              placeholder="Entrez le nom de la recherche"
+              value={saveSearchName}
+              onChange={(e) => setSaveSearchName(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleSaveSearch()}
+              style={{ marginBottom: '16px', padding: '12px', fontSize: '14px' }}
+            />
+            <Button 
+              onClick={handleSaveSearch}
+              disabled={saveSearchLoading || !saveSearchName.trim()}
+              style={{ 
+                width: '100%', 
+                padding: '12px', 
+                fontSize: '14px', 
+                fontWeight: '500',
+                backgroundColor: '#3b82f6',
+                color: '#fff'
+              }}
+            >
+              {saveSearchLoading ? 'Enregistrement...' : 'Enregistrer'}
+            </Button>
+            <p style={{ fontSize: '13px', color: '#6B7280', marginTop: '16px', lineHeight: '1.5' }}>
+              Enregistrer cette recherche enregistrera la requête et tous les filtres actuellement appliqués. 
+              Les résultats de vos recherches enregistrées apparaîtront dans les résultats.
+            </p>
+            {saveSearchSuccess && (
+              <div style={{ 
+                marginTop: '16px', 
+                padding: '12px', 
+                backgroundColor: '#DCFCE7', 
+                borderRadius: '8px',
+                color: '#166534',
+                fontSize: '14px'
+              }}>
+                Search saved successfully!
+              </div>
+            )}
+          </div>
         </DialogContent>
       </Dialog>
 
