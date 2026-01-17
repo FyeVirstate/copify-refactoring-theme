@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef, Suspense } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import DashboardHeader from "@/components/DashboardHeader";
@@ -827,7 +827,7 @@ const COLOR_PRESETS = [
   { primary: '#9a4e34', tertiary: '#ebddd3' },
 ];
 
-export default function AIShopPage() {
+function AIShopPageContent() {
   const { data: session } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -3466,5 +3466,21 @@ export default function AIShopPage() {
         </div>
       </div>
     </>
+  );
+}
+
+// Wrapper component with Suspense boundary for useSearchParams
+export default function AIShopPage() {
+  return (
+    <Suspense fallback={
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', background: '#F8FAFC' }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ width: 48, height: 48, border: '4px solid #E5E7EB', borderTopColor: '#3B82F6', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 16px' }} />
+          <p style={{ color: '#6B7280', fontSize: 14 }}>Chargement...</p>
+        </div>
+      </div>
+    }>
+      <AIShopPageContent />
+    </Suspense>
   );
 }
